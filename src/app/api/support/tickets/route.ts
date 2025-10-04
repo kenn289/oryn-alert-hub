@@ -26,6 +26,16 @@ export async function GET(request: NextRequest) {
 
     if (error) {
       console.error('Error fetching tickets:', error)
+      
+      // Check if it's a table not found error
+      if (error.code === 'PGRST205' || error.message.includes('Could not find the table')) {
+        return NextResponse.json({ 
+          error: 'Database table not found',
+          message: 'The support_tickets table is missing. Please run the database setup script.',
+          tickets: []
+        }, { status: 503 })
+      }
+      
       return NextResponse.json({ error: 'Failed to fetch tickets' }, { status: 500 })
     }
 
@@ -140,7 +150,7 @@ async function sendEmailNotification(ticket: any, type: string) {
             <p><strong>Priority:</strong> ${ticket.priority}</p>
             <p><strong>Category:</strong> ${ticket.category}</p>
             <p><strong>User:</strong> ${ticket.user_email}</p>
-            <p><strong>Created:</strong> ${new Date(ticket.created_at).toLocaleString()}</p>
+            <p><strong>Created:</strong> ${new Date(ticket.created_at).toLocaleString('en-US', { timeZone: 'UTC' })}</p>
           </div>
           <div style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">
             <h3>Description:</h3>

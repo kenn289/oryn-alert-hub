@@ -14,16 +14,22 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Title and message are required' }, { status: 400 })
     }
 
-    // Get all users
-    const { data: users, error: usersError } = await supabase.auth.admin.listUsers()
+    // Get all users from the users table instead of auth
+    const { data: users, error: usersError } = await supabase
+      .from('users')
+      .select('id, email')
     
     if (usersError) {
       console.error('Error fetching users:', usersError)
       return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
     }
 
+    if (!users || users.length === 0) {
+      return NextResponse.json({ error: 'No users found' }, { status: 404 })
+    }
+
     // Create notifications for all users
-    const notifications = users.users.map(user => ({
+    const notifications = users.map(user => ({
       user_id: user.id,
       type: type || 'info',
       title,
@@ -48,8 +54,8 @@ export async function POST(request: NextRequest) {
 
     return NextResponse.json({ 
       success: true, 
-      message: `Notification sent to ${users.users.length} users`,
-      count: users.users.length
+      message: `Notification sent to ${users.length} users`,
+      count: users.length
     })
 
   } catch (error) {
@@ -57,3 +63,4 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+

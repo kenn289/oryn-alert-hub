@@ -14,6 +14,7 @@ import {
   WifiOff,
   Database
 } from "lucide-react"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface ApiStatus {
   name: string
@@ -32,6 +33,7 @@ interface ApiStatusResponse {
 }
 
 export function MultiApiStatus() {
+  const { selectedTimezone } = useCurrency()
   const [status, setStatus] = useState<ApiStatusResponse | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -198,7 +200,7 @@ export function MultiApiStatus() {
           {/* Last Updated */}
           {status?.timestamp && (
             <div className="text-xs text-muted-foreground text-center pt-2 border-t">
-              Last updated: {new Date(status.timestamp).toLocaleString()}
+              Last updated: {new Date(status.timestamp).toLocaleString('en-US', { timeZone: selectedTimezone })}
             </div>
           )}
         </div>

@@ -10,6 +10,7 @@ import { Badge } from "@/components/ui/badge"
 import { Search, TrendingUp, DollarSign, Activity, Star, X } from "lucide-react"
 import { toast } from "sonner"
 import { getStockSuggestions, WatchlistService } from "@/lib/watchlist"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface WatchlistModalProps {
   isOpen: boolean
@@ -17,15 +18,15 @@ interface WatchlistModalProps {
   onAdd: (ticker: string) => void
 }
 
-const popularStocks = [
-  { ticker: "AAPL", name: "Apple Inc.", sector: "Technology", price: "$175.43", change: "+2.4%" },
-  { ticker: "MSFT", name: "Microsoft Corp.", sector: "Technology", price: "$378.85", change: "-1.2%" },
-  { ticker: "GOOGL", name: "Alphabet Inc.", sector: "Technology", price: "$142.56", change: "+0.8%" },
-  { ticker: "AMZN", name: "Amazon.com Inc.", sector: "Consumer Discretionary", price: "$155.23", change: "+1.5%" },
-  { ticker: "TSLA", name: "Tesla Inc.", sector: "Automotive", price: "$248.50", change: "+3.2%" },
-  { ticker: "NVDA", name: "NVIDIA Corp.", sector: "Technology", price: "$875.30", change: "+5.1%" },
-  { ticker: "META", name: "Meta Platforms Inc.", sector: "Technology", price: "$485.20", change: "+2.8%" },
-  { ticker: "NFLX", name: "Netflix Inc.", sector: "Communication Services", price: "$425.60", change: "-0.5%" },
+const popularStocksData = [
+  { ticker: "AAPL", name: "Apple Inc.", sector: "Technology", price: 175.43, change: "+2.4%" },
+  { ticker: "MSFT", name: "Microsoft Corp.", sector: "Technology", price: 378.85, change: "-1.2%" },
+  { ticker: "GOOGL", name: "Alphabet Inc.", sector: "Technology", price: 142.56, change: "+0.8%" },
+  { ticker: "AMZN", name: "Amazon.com Inc.", sector: "Consumer Discretionary", price: 155.23, change: "+1.5%" },
+  { ticker: "TSLA", name: "Tesla Inc.", sector: "Automotive", price: 248.50, change: "+3.2%" },
+  { ticker: "NVDA", name: "NVIDIA Corp.", sector: "Technology", price: 875.30, change: "+5.1%" },
+  { ticker: "META", name: "Meta Platforms Inc.", sector: "Technology", price: 485.20, change: "+2.8%" },
+  { ticker: "NFLX", name: "Netflix Inc.", sector: "Communication Services", price: 425.60, change: "-0.5%" },
 ]
 
 const sectors = [
@@ -34,6 +35,7 @@ const sectors = [
 ]
 
 export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) {
+  const { formatCurrency } = useCurrency()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSector, setSelectedSector] = useState("")
   const [suggestions, setSuggestions] = useState<Array<{ticker: string, name: string, sector: string}>>([])
@@ -61,7 +63,7 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
     return () => clearTimeout(timeoutId)
   }, [searchTerm])
 
-  const filteredStocks = popularStocks.filter(stock => 
+  const filteredStocks = popularStocksData.filter(stock => 
     stock.ticker.toLowerCase().includes(searchTerm.toLowerCase()) ||
     stock.name.toLowerCase().includes(searchTerm.toLowerCase())
   ).filter(stock => 
@@ -233,7 +235,7 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <DollarSign className="h-3 w-3 text-success" />
-                        <span className="text-sm font-medium">{stock.price}</span>
+                        <span className="text-sm font-medium">{formatCurrency(stock.price, 'USD')}</span>
                       </div>
                       <span className={`text-sm font-medium ${
                         stock.change.startsWith('+') ? 'text-success' : 'text-destructive'

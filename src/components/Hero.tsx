@@ -21,21 +21,21 @@ export function Hero() {
       <div className="absolute top-1/2 left-1/4 w-16 h-16 bg-accent/10 rounded-full blur-lg animate-float" style={{ animationDelay: '2s' }} />
       
       <div className="container mx-auto px-4 relative z-10">
-        <div className="grid lg:grid-cols-2 gap-12 items-center">
+        <div className="grid lg:grid-cols-2 gap-8 lg:gap-12 items-center">
           {/* Left Content */}
-          <div className="space-y-8 animate-slide-in">
-            <div className="space-y-4">
-              <h1 className="text-4xl md:text-6xl font-bold leading-tight">
+          <div className="space-y-6 lg:space-y-8 animate-slide-in">
+            <div className="space-y-3 lg:space-y-4">
+              <h1 className="text-3xl sm:text-4xl md:text-5xl lg:text-6xl font-bold leading-tight">
                 Stock Intelligence
                 <span className="block gradient-text animate-gradient-shift">Platform</span>
               </h1>
-              <p className="text-xl text-muted-foreground max-w-2xl animate-fade-in" style={{ animationDelay: '0.2s' }}>
+              <p className="text-lg sm:text-xl text-muted-foreground max-w-2xl animate-fade-in" style={{ animationDelay: '0.2s' }}>
                 Get smarter alerts for earnings calls, options flow, insider trades, 
                 and market movements. One platform, endless possibilities.
               </p>
             </div>
 
-            <div className="flex flex-col sm:flex-row gap-4 animate-slide-up" style={{ animationDelay: '0.4s' }}>
+            <div className="flex flex-col sm:flex-row gap-3 sm:gap-4 animate-slide-up" style={{ animationDelay: '0.4s' }}>
               <Link href="/auth">
                 <Button size="lg" variant="gradient" className="w-full sm:w-auto micro-interaction hover-lift">
                   <OrynLogo size={20} className="mr-2 h-5 w-5" />
@@ -50,28 +50,28 @@ export function Hero() {
             </div>
 
             {/* Feature highlights */}
-            <div className="grid grid-cols-2 gap-4 pt-8 animate-fade-in" style={{ animationDelay: '0.6s' }}>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 sm:gap-4 pt-6 lg:pt-8 animate-fade-in" style={{ animationDelay: '0.6s' }}>
               <div className="flex items-center space-x-2 micro-interaction">
-                <TrendingUp className="h-5 w-5 text-primary animate-bounce-subtle" />
-                <span className="text-sm">Real-time Alerts</span>
+                <TrendingUp className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-bounce-subtle" />
+                <span className="text-sm sm:text-base">Real-time Alerts</span>
               </div>
               <div className="flex items-center space-x-2 micro-interaction">
-                <AlertCircle className="h-5 w-5 text-primary animate-bounce-subtle" style={{ animationDelay: '0.5s' }} />
-                <span className="text-sm">Options Flow</span>
+                <AlertCircle className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-bounce-subtle" style={{ animationDelay: '0.5s' }} />
+                <span className="text-sm sm:text-base">Options Flow</span>
               </div>
               <div className="flex items-center space-x-2 micro-interaction">
-                <Zap className="h-5 w-5 text-primary animate-bounce-subtle" style={{ animationDelay: '1s' }} />
-                <span className="text-sm">AI Summaries</span>
+                <Zap className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-bounce-subtle" style={{ animationDelay: '1s' }} />
+                <span className="text-sm sm:text-base">AI Summaries</span>
               </div>
               <div className="flex items-center space-x-2 micro-interaction">
-                <Activity className="h-5 w-5 text-primary animate-bounce-subtle" style={{ animationDelay: '1.5s' }} />
-                <span className="text-sm">Multi-Channel</span>
+                <Activity className="h-4 w-4 sm:h-5 sm:w-5 text-primary animate-bounce-subtle" style={{ animationDelay: '1.5s' }} />
+                <span className="text-sm sm:text-base">Multi-Channel</span>
               </div>
             </div>
 
             {/* Call to action */}
-            <div className="pt-4">
-              <div className="inline-flex items-center space-x-2 bg-muted/50 px-4 py-2 rounded-full">
+            <div className="pt-3 lg:pt-4">
+              <div className="inline-flex items-center space-x-2 bg-muted/50 px-3 sm:px-4 py-2 rounded-full">
                 <Activity className="h-4 w-4 text-primary" />
                 <span className="text-sm font-medium">Join the community of traders</span>
               </div>

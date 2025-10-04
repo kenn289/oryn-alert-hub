@@ -9,6 +9,7 @@ import { useTheme } from "next-themes"
 import { useAuth } from "@/contexts/AuthContext"
 import { OrynLogo } from "@/components/OrynLogo"
 import { NotificationCenter } from "@/components/NotificationCenter"
+import { CurrencySelector } from "@/components/CurrencySelector"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
@@ -181,6 +182,7 @@ export function Navigation() {
             </Button>
             {user ? (
               <>
+                <CurrencySelector />
                 <NotificationCenter />
                 <Button variant="ghost" size="sm" onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />

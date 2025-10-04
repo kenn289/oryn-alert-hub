@@ -33,3 +33,4 @@ Write-Host "   - Create a test support ticket" -ForegroundColor White
 Write-Host "   - Check your email!" -ForegroundColor White
 Write-Host ""
 Write-Host "Ready to test!" -ForegroundColor Green
+

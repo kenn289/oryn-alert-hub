@@ -117,6 +117,19 @@ export default function TeamPage() {
             >
               Upgrade to Pro
             </Button>
+            
+            <div className="mt-4 text-center">
+              <p className="text-sm text-muted-foreground">
+                Already have a Pro account? 
+                <Button 
+                  variant="link" 
+                  onClick={() => router.push('/team/join?ref=pro-team')}
+                  className="p-0 h-auto text-primary hover:text-primary/80"
+                >
+                  Join team here
+                </Button>
+              </p>
+            </div>
           </Card>
         </div>
       </div>

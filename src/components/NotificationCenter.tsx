@@ -9,6 +9,7 @@ import { useAuth } from '@/contexts/AuthContext'
 import { toast } from 'sonner'
 import { ClearNotificationsDialog } from '@/components/ConfirmationDialog'
 import { realtimeSupportService } from '@/lib/realtime-support-service'
+import { simpleNotificationService } from '@/lib/simple-notification-service'
 
 interface Notification {
   id: string
@@ -63,7 +64,7 @@ export function NotificationCenter() {
       }
       
       // Fallback to simple notification service
-      const { simpleNotificationService } = await import('@/lib/simple-notification-service')
+      // Use static import instead of dynamic import
       const data = await simpleNotificationService.getNotifications(user?.id || '')
       setNotifications(data)
     } catch (error) {
@@ -93,7 +94,7 @@ export function NotificationCenter() {
       }
       
       // Fallback to simple service
-      const { simpleNotificationService } = await import('@/lib/simple-notification-service')
+      // Use static import instead of dynamic import
       await simpleNotificationService.markAsRead(notificationId)
       setNotifications(prev => 
         prev.map(n => n.id === notificationId ? { ...n, read: true } : n)
@@ -120,7 +121,7 @@ export function NotificationCenter() {
       }
       
       // Fallback to simple service
-      const { simpleNotificationService } = await import('@/lib/simple-notification-service')
+      // Use static import instead of dynamic import
       await simpleNotificationService.markAllAsRead(user?.id || '')
       setNotifications(prev => prev.map(n => ({ ...n, read: true })))
       
@@ -158,7 +159,7 @@ export function NotificationCenter() {
       }
       
       // Fallback to simple service
-      const { simpleNotificationService } = await import('@/lib/simple-notification-service')
+      // Use static import instead of dynamic import
       await simpleNotificationService.clearAllNotifications(user?.id || '')
       
       // Force reload notifications to get empty array

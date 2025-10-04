@@ -101,7 +101,7 @@ export class EmailService {
             </tr>
             <tr>
               <td style="padding: 8px 0; font-weight: bold; color: #666;">Created:</td>
-              <td style="padding: 8px 0;">${new Date(ticket.created_at).toLocaleString()}</td>
+              <td style="padding: 8px 0;">${new Date(ticket.created_at).toLocaleString('en-US', { timeZone: 'UTC' })}</td>
             </tr>
           </table>
         </div>

@@ -24,7 +24,12 @@ import { DataFreshnessIndicator, RateLimitBanner } from "@/components/DataFreshn
 import { useAuth } from "@/contexts/AuthContext"
 import { subscriptionService } from "@/lib/subscription-service"
 import { stockDataService } from "@/lib/stock-data-service"
+import { globalStockService } from "@/lib/global-stock-service"
 import { StockSuggestionsService, StockSuggestion } from "@/lib/stock-suggestions"
+import { GlobalStockSelector } from "@/components/GlobalStockSelector"
+import { localizationService } from "@/lib/localization-service"
+import { currencyConversionService } from "@/lib/currency-conversion-service"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface PortfolioItem {
   id: string
@@ -37,6 +42,9 @@ interface PortfolioItem {
   gainLoss: number
   gainLossPercent: number
   addedAt: string
+  market?: string
+  currency?: string
+  exchange?: string
 }
 
 interface PortfolioSummary {
@@ -84,8 +92,12 @@ export function PortfolioTracker() {
     ticker: '',
     name: '',
     shares: '',
-    avgPrice: ''
+    avgPrice: '',
+    market: 'US',
+    currency: 'USD'
   })
+  const [isIndianUser, setIsIndianUser] = useState(false)
+  const [showGlobalSelector, setShowGlobalSelector] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
   const [loadingPrice, setLoadingPrice] = useState(false)
 
@@ -94,7 +106,23 @@ export function PortfolioTracker() {
       loadUserPlan()
       loadPortfolio()
     }
+    detectUserLocation()
   }, [user])
+
+  const detectUserLocation = () => {
+    const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
+    const isIndia = timezone === 'Asia/Kolkata' || timezone === 'Asia/Calcutta'
+    setIsIndianUser(isIndia)
+    
+    // Set default market for Indian users
+    if (isIndia) {
+      setNewItem(prev => ({
+        ...prev,
+        market: 'IN',
+        currency: 'INR'
+      }))
+    }
+  }
 
   const loadUserPlan = async () => {
     if (!user) return
@@ -107,7 +135,7 @@ export function PortfolioTracker() {
   }
 
   // Fetch current stock price when ticker changes
-  const fetchCurrentPrice = async (ticker: string) => {
+  const fetchCurrentPrice = async (ticker: string, market: string = 'US') => {
     if (!ticker || ticker.length < 1) {
       setCurrentPrice(null)
       return
@@ -115,14 +143,44 @@ export function PortfolioTracker() {
 
     setLoadingPrice(true)
     try {
-      console.log(`📊 Fetching current price for ${ticker}...`)
-      const response = await fetch(`/api/stock/multi/${ticker}`)
+      // Determine the correct market based on the ticker
+      let correctMarket = market
+      if (ticker === 'RELIANCE' || ticker === 'TCS' || ticker === 'INFY' || ticker === 'HDFCBANK' || ticker === 'ICICIBANK') {
+        correctMarket = 'IN'
+      } else if (ticker === '7203' || ticker === '6758' || ticker === '9984') {
+        correctMarket = 'JP'
+      } else if (ticker === 'TSCO' || ticker === 'VOD' || ticker === 'BP') {
+        correctMarket = 'GB'
+      }
+      
+      console.log(`📊 Fetching current price for ${ticker} from ${correctMarket}...`)
+      const response = await fetch(`/api/stock/global/${ticker}?market=${correctMarket}`)
       
       if (response.ok) {
         const stockData = await response.json()
         if (stockData && stockData.price) {
-          setCurrentPrice(stockData.price)
-          console.log(`✅ Current price for ${ticker}: $${stockData.price}`)
+          const stockCurrency = stockData.currency || 'USD'
+          console.log(`📊 Full API response:`, stockData)
+          console.log(`📊 Stock data: ${stockData.symbol} = ${stockData.price} ${stockCurrency}`)
+          
+          // Convert to USD if the stock is in a different currency
+          let priceInUSD = stockData.price
+          if (stockCurrency !== 'USD') {
+            try {
+              priceInUSD = currencyConversionService.convertCurrency(stockData.price, stockCurrency, 'USD')
+              console.log(`🔄 Converted ${stockCurrency} ${stockData.price} to USD ${priceInUSD}`)
+            } catch (error) {
+              console.error(`❌ Conversion failed:`, error)
+              priceInUSD = stockData.price // Fallback to original price
+            }
+          } else {
+            console.log(`✅ Already in USD: ${stockData.price}`)
+          }
+          
+          // Always store in USD
+          setNewItem(prev => ({ ...prev, currency: 'USD' }))
+          setCurrentPrice(priceInUSD)
+          console.log(`✅ Final price for ${ticker}: $${priceInUSD.toFixed(2)} USD`)
         } else {
           setCurrentPrice(null)
         }
@@ -278,18 +336,19 @@ export function PortfolioTracker() {
     
     // Fetch current price for the ticker
     if (value.length >= 1) {
-      fetchCurrentPrice(value.toUpperCase())
+      fetchCurrentPrice(value.toUpperCase(), newItem.market)
     } else {
       setCurrentPrice(null)
     }
     
     if (value.length > 0) {
       setLoadingSuggestions(true)
-      const suggestions = StockSuggestionsService.getSuggestions(value, 8)
+      // Use global search to find stocks from all countries
+      const suggestions = await StockSuggestionsService.getGlobalSuggestions(value, 8)
       // Fetch price data for suggestions
       const suggestionsWithPrices = await Promise.all(
         suggestions.map(async (suggestion) => {
-          const stockWithPrice = await StockSuggestionsService.getStockWithPrice(suggestion.symbol)
+          const stockWithPrice = await StockSuggestionsService.getStockWithPrice(suggestion.symbol, suggestion.market)
           return stockWithPrice || suggestion
         })
       )
@@ -307,11 +366,25 @@ export function PortfolioTracker() {
       ...newItem, 
       ticker: suggestion.symbol,
       name: suggestion.name,
+      market: suggestion.market || 'US',
+      currency: suggestion.currency || 'USD',
       avgPrice: suggestion.avgPrice?.toString() || ''
     })
     setShowSuggestions(false)
     // Fetch current price for the selected ticker
-    fetchCurrentPrice(suggestion.symbol)
+    fetchCurrentPrice(suggestion.symbol, suggestion.market || 'US')
+  }
+
+  const handleGlobalStockSelect = (stock: any) => {
+    setNewItem({
+      ...newItem,
+      ticker: stock.symbol,
+      name: stock.name,
+      market: stock.market,
+      currency: stock.currency
+    })
+    setShowGlobalSelector(false)
+    fetchCurrentPrice(stock.symbol, stock.market)
   }
 
   const handleAddStock = async () => {
@@ -336,19 +409,24 @@ export function PortfolioTracker() {
 
     setAddingStock(true)
     try {
-      const currentPrice = await fetchStockPrice(newItem.ticker)
+      // Validate numeric inputs first
       const shares = parseFloat(newItem.shares)
       const avgPrice = parseFloat(newItem.avgPrice)
       
-      // Note: Cache info is handled at the service level
-      
-      // Validate numeric inputs
       if (isNaN(shares) || isNaN(avgPrice) || shares <= 0 || avgPrice <= 0) {
         toast.error('Please enter valid numbers for shares and price')
         return
       }
+
+      // Use the current price that was already fetched and converted in fetchCurrentPrice
+      const fetchedCurrentPrice = currentPrice || avgPrice
       
-      const totalValue = shares * currentPrice
+      if (!fetchedCurrentPrice) {
+        toast.error('Unable to fetch current price. Please try again.')
+        return
+      }
+      
+      const totalValue = shares * fetchedCurrentPrice
       const gainLoss = totalValue - (shares * avgPrice)
       const gainLossPercent = (gainLoss / (shares * avgPrice)) * 100
 
@@ -357,12 +435,15 @@ export function PortfolioTracker() {
         ticker: newItem.ticker.toUpperCase(),
         name: newItem.name || newItem.ticker.toUpperCase(),
         shares,
-        avgPrice,
-        currentPrice,
-        totalValue,
-        gainLoss,
+        avgPrice: avgPrice, // Store in USD
+        currentPrice: fetchedCurrentPrice, // Already in USD
+        totalValue, // Already in USD
+        gainLoss, // Already in USD
         gainLossPercent,
-        addedAt: new Date().toISOString()
+        addedAt: new Date().toISOString(),
+        market: newItem.market,
+        currency: 'USD', // Always store in USD
+        exchange: newItem.market === 'IN' ? 'NSE' : newItem.market === 'US' ? 'NASDAQ' : 'Unknown'
       }
 
       const updatedPortfolio = [...portfolio, newPortfolioItem]
@@ -441,11 +522,11 @@ export function PortfolioTracker() {
     }
   }
 
-  const formatCurrency = (amount: number) => {
-    return new Intl.NumberFormat('en-US', {
-      style: 'currency',
-      currency: 'USD'
-    }).format(amount)
+  const { formatCurrency: contextFormatCurrency } = useCurrency()
+  
+  const formatCurrency = (amount: number, currency?: string, originalCurrency?: string) => {
+    // Use the currency context for consistent formatting
+    return contextFormatCurrency(amount, originalCurrency)
   }
 
   const formatPercent = (percent: number) => {
@@ -525,9 +606,9 @@ export function PortfolioTracker() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalValue)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(summary.totalValue, 'USD')}</div>
             <p className="text-xs text-muted-foreground">
-              {formatCurrency(summary.dayChange)} today
+              {formatCurrency(summary.dayChange, 'USD')} today
             </p>
           </CardContent>
         </Card>
@@ -543,7 +624,7 @@ export function PortfolioTracker() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${summary.totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {formatCurrency(summary.totalGainLoss)}
+              {formatCurrency(summary.totalGainLoss, 'USD')}
             </div>
             <p className="text-xs text-muted-foreground">
               {formatPercent(summary.totalGainLossPercent)}
@@ -557,7 +638,7 @@ export function PortfolioTracker() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalInvested)}</div>
+            <div className="text-2xl font-bold">{formatCurrency(summary.totalInvested, 'USD')}</div>
             <p className="text-xs text-muted-foreground">Initial investment</p>
           </CardContent>
         </Card>
@@ -573,7 +654,7 @@ export function PortfolioTracker() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${summary.dayChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {formatCurrency(summary.dayChange)}
+              {formatCurrency(summary.dayChange, isIndianUser ? 'INR' : 'USD')}
             </div>
             <p className="text-xs text-muted-foreground">
               {formatPercent(summary.dayChangePercent)}
@@ -593,36 +674,47 @@ export function PortfolioTracker() {
             <div className="grid md:grid-cols-2 gap-4">
               <div className="relative">
                 <Label htmlFor="ticker">Stock Ticker *</Label>
-                <Input
-                  id="ticker"
-                  value={newItem.ticker}
-                  onChange={(e) => handleTickerChange(e.target.value)}
-                  onFocus={async () => {
-                    if (newItem.ticker.length > 0) {
-                      setShowSuggestions(true)
-                    } else {
-                      setLoadingSuggestions(true)
-                      // Show popular stocks when field is focused but empty
-                      const popularStocks = StockSuggestionsService.getPopularStocks(8)
-                      // Fetch price data for popular stocks
-                      const popularStocksWithPrices = await Promise.all(
-                        popularStocks.map(async (stock) => {
-                          const stockWithPrice = await StockSuggestionsService.getStockWithPrice(stock.symbol)
-                          return stockWithPrice || stock
-                        })
-                      )
-                      setStockSuggestions(popularStocksWithPrices)
-                      setShowSuggestions(true)
-                      setLoadingSuggestions(false)
-                    }
-                  }}
-                  onBlur={() => {
-                    // Delay hiding suggestions to allow clicks
-                    setTimeout(() => setShowSuggestions(false), 200)
-                  }}
-                  placeholder="e.g., AAPL"
-                  required
-                />
+                <div className="flex gap-2">
+                  <Input
+                    id="ticker"
+                    value={newItem.ticker}
+                    onChange={(e) => handleTickerChange(e.target.value)}
+                    onFocus={async () => {
+                      if (newItem.ticker.length > 0) {
+                        setShowSuggestions(true)
+                      } else {
+                        setLoadingSuggestions(true)
+                        // Show popular stocks when field is focused but empty
+                        const popularStocks = StockSuggestionsService.getPopularStocks(8)
+                        // Fetch price data for popular stocks
+                        const popularStocksWithPrices = await Promise.all(
+                          popularStocks.map(async (stock) => {
+                            const stockWithPrice = await StockSuggestionsService.getStockWithPrice(stock.symbol)
+                            return stockWithPrice || stock
+                          })
+                        )
+                        setStockSuggestions(popularStocksWithPrices)
+                        setShowSuggestions(true)
+                        setLoadingSuggestions(false)
+                      }
+                    }}
+                    onBlur={() => {
+                      // Delay hiding suggestions to allow clicks
+                      setTimeout(() => setShowSuggestions(false), 200)
+                    }}
+                    placeholder="e.g., AAPL, RELIANCE"
+                    required
+                    className="flex-1"
+                  />
+                  <Button
+                    type="button"
+                    variant="outline"
+                    onClick={() => setShowGlobalSelector(true)}
+                    className="px-3"
+                  >
+                    🌍
+                  </Button>
+                </div>
                 {showSuggestions && (
                   <div className="absolute z-50 w-full mt-1 bg-background border border-border rounded-md shadow-lg max-h-60 overflow-y-auto">
                     {loadingSuggestions ? (
@@ -643,7 +735,12 @@ export function PortfolioTracker() {
                             <div className="text-xs text-muted-foreground">{suggestion.name}</div>
                             {suggestion.price && (
                               <div className="text-xs text-green-600 font-medium">
-                                ${suggestion.price.toFixed(2)}
+                                {suggestion.currency === 'INR' ? `₹${suggestion.price.toLocaleString('en-IN')}` : 
+                                 suggestion.currency === 'USD' ? `$${suggestion.price.toFixed(2)}` :
+                                 suggestion.currency === 'EUR' ? `€${suggestion.price.toFixed(2)}` :
+                                 suggestion.currency === 'GBP' ? `£${suggestion.price.toFixed(2)}` :
+                                 suggestion.currency === 'JPY' ? `¥${suggestion.price.toFixed(0)}` :
+                                 `$${suggestion.price.toFixed(2)}`}
                               </div>
                             )}
                           </div>
@@ -680,7 +777,12 @@ export function PortfolioTracker() {
                     ) : currentPrice ? (
                       <div className="flex items-center gap-2 text-sm">
                         <DollarSign className="h-4 w-4 text-green-600" />
-                        <span className="font-medium">Current Price: ${currentPrice.toFixed(2)}</span>
+                        <button
+                          onClick={() => setNewItem(prev => ({ ...prev, avgPrice: currentPrice.toString() }))}
+                          className="font-medium text-green-600 hover:text-green-700 underline cursor-pointer"
+                        >
+                          Current Price: {formatCurrency(currentPrice, 'USD')}
+                        </button>
                         <Badge variant="outline" className="text-xs">
                           Live
                         </Badge>
@@ -703,6 +805,39 @@ export function PortfolioTracker() {
                 />
               </div>
               <div>
+                <Label htmlFor="market">Market</Label>
+                <select
+                  id="market"
+                  value={newItem.market}
+                  onChange={(e) => setNewItem({ ...newItem, market: e.target.value, currency: e.target.value === 'IN' ? 'INR' : e.target.value === 'UK' ? 'GBP' : 'USD' })}
+                  className="w-full px-3 py-2 border border-border rounded-md bg-background text-foreground focus:border-primary focus:ring-primary/20"
+                >
+                  {isIndianUser ? (
+                    <>
+                      <option value="IN">🇮🇳 India (INR) - Recommended</option>
+                      <option value="US">🇺🇸 United States (USD)</option>
+                      <option value="UK">🇬🇧 United Kingdom (GBP)</option>
+                      <option value="JP">🇯🇵 Japan (JPY)</option>
+                      <option value="AU">🇦🇺 Australia (AUD)</option>
+                      <option value="CA">🇨🇦 Canada (CAD)</option>
+                      <option value="DE">🇩🇪 Germany (EUR)</option>
+                      <option value="FR">🇫🇷 France (EUR)</option>
+                    </>
+                  ) : (
+                    <>
+                      <option value="US">🇺🇸 United States (USD)</option>
+                      <option value="IN">🇮🇳 India (INR)</option>
+                      <option value="UK">🇬🇧 United Kingdom (GBP)</option>
+                      <option value="JP">🇯🇵 Japan (JPY)</option>
+                      <option value="AU">🇦🇺 Australia (AUD)</option>
+                      <option value="CA">🇨🇦 Canada (CAD)</option>
+                      <option value="DE">🇩🇪 Germany (EUR)</option>
+                      <option value="FR">🇫🇷 France (EUR)</option>
+                    </>
+                  )}
+                </select>
+              </div>
+              <div>
                 <Label htmlFor="shares">Number of Shares *</Label>
                 <Input
                   id="shares"
@@ -717,16 +852,47 @@ export function PortfolioTracker() {
               </div>
               <div>
                 <Label htmlFor="avgPrice">Average Price per Share *</Label>
-                <Input
-                  id="avgPrice"
-                  type="number"
-                  min="0.01"
-                  step="0.01"
-                  value={newItem.avgPrice}
-                  onChange={(e) => setNewItem({ ...newItem, avgPrice: e.target.value })}
-                  placeholder="e.g., 150.00"
-                  required
-                />
+                <div className="flex items-center gap-2">
+                  <Input
+                    id="avgPrice"
+                    type="number"
+                    min="0.01"
+                    step="0.01"
+                    value={newItem.avgPrice}
+                    onChange={(e) => setNewItem({ ...newItem, avgPrice: e.target.value })}
+                    placeholder="e.g., 150.00"
+                    required
+                    className="flex-1"
+                  />
+                  <div className="flex flex-col gap-1">
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentPrice = parseFloat(newItem.avgPrice) || 0
+                        setNewItem({ ...newItem, avgPrice: (currentPrice + 1).toString() })
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      +
+                    </Button>
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      onClick={() => {
+                        const currentPrice = parseFloat(newItem.avgPrice) || 0
+                        if (currentPrice > 0.01) {
+                          setNewItem({ ...newItem, avgPrice: (currentPrice - 1).toString() })
+                        }
+                      }}
+                      className="h-8 w-8 p-0"
+                    >
+                      -
+                    </Button>
+                  </div>
+                </div>
               </div>
             </div>
             <div className="flex gap-2">
@@ -777,6 +943,14 @@ export function PortfolioTracker() {
                       <div>
                         <div className="font-medium">{item.ticker}</div>
                         <div className="text-sm text-muted-foreground">{item.name}</div>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Badge variant="outline" className="text-xs">
+                            {item.market || 'US'}
+                          </Badge>
+                          <Badge variant="outline" className="text-xs">
+                            {item.exchange || 'NASDAQ'}
+                          </Badge>
+                        </div>
                       </div>
                       <Badge variant="outline">
                         {item.shares} shares
@@ -785,16 +959,16 @@ export function PortfolioTracker() {
                     <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
                       <div>
                         <div className="text-muted-foreground">Current Price</div>
-                        <div className="font-medium">{formatCurrency(item.currentPrice)}</div>
+                        <div className="font-medium">{formatCurrency(item.currentPrice, 'USD')}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Total Value</div>
-                        <div className="font-medium">{formatCurrency(item.totalValue)}</div>
+                        <div className="font-medium">{formatCurrency(item.totalValue, 'USD')}</div>
                       </div>
                       <div>
                         <div className="text-muted-foreground">Gain/Loss</div>
                         <div className={`font-medium ${item.gainLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-                          {formatCurrency(item.gainLoss)}
+                          {formatCurrency(item.gainLoss, 'USD')}
                         </div>
                       </div>
                       <div>
@@ -944,6 +1118,24 @@ export function PortfolioTracker() {
             )}
           </CardContent>
         </Card>
+      )}
+
+      {/* Global Stock Selector Modal */}
+      {showGlobalSelector && (
+        <div className="fixed inset-0 bg-black/50 backdrop-blur-sm flex items-center justify-center z-50 p-4">
+          <div className="w-full max-w-4xl max-h-[80vh] overflow-y-auto">
+            <GlobalStockSelector
+              onStockSelect={handleGlobalStockSelect}
+              selectedMarket={newItem.market}
+              onMarketChange={(market) => setNewItem({ ...newItem, market, currency: market === 'IN' ? 'INR' : market === 'UK' ? 'GBP' : 'USD' })}
+            />
+            <div className="mt-4 flex justify-end">
+              <Button variant="outline" onClick={() => setShowGlobalSelector(false)}>
+                Close
+              </Button>
+            </div>
+          </div>
+        </div>
       )}
     </div>
   )

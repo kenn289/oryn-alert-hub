@@ -56,3 +56,4 @@ CREATE POLICY "Users can update their own tickets" ON support_tickets
 -- Create policy for admins to see all tickets (you'll need to set up admin role)
 -- CREATE POLICY "Admins can view all tickets" ON support_tickets
 --     FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
+

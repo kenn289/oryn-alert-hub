@@ -31,6 +31,8 @@ import { cn } from "@/lib/utils"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { stockDataService } from "@/lib/stock-data-service"
+import { localizationService } from "@/lib/localization-service"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface ProFeature {
   id: string
@@ -66,6 +68,7 @@ const getTrendColor = (trend: 'up' | 'down' | 'stable') => {
 
 export function ProFeatures() {
   const { user } = useAuth()
+  const { formatCurrency } = useCurrency()
   const [features, setFeatures] = useState<ProFeature[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
@@ -98,7 +101,7 @@ export function ProFeatures() {
       const portfolio = localStorage.getItem('oryn_portfolio')
       if (portfolio) {
         try {
-          const portfolioItems = JSON.parse(portfolio) as Array<{ shares: number; currentPrice: number; avgPrice: number }>
+          const portfolioItems = JSON.parse(portfolio) as Array<{ shares: number; currentPrice: number; avgPrice: number; currency?: string }>
           setPortfolioData(portfolioItems)
           
           // Calculate portfolio analytics
@@ -108,7 +111,7 @@ export function ProFeatures() {
           
           setAnalyticsData(prev => ({
             ...prev,
-            portfolioValue: totalValue,
+            portfolioValue: totalValue, // This is already in the correct currency from PortfolioTracker
             totalReturn: totalReturn,
             sharpeRatio: 1.89, // Calculated from portfolio data
             maxDrawdown: -8.2 // Calculated from portfolio data
@@ -507,15 +510,15 @@ export function ProFeatures() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Unusual Activities Today</span>
-                      <span className="text-2xl font-bold">47</span>
+                      <span className="text-2xl font-bold">{analyticsData.unusualActivity}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Total Volume</span>
-                      <span className="text-lg font-semibold">$1.25M</span>
+                      <span className="text-sm text-muted-foreground">Call/Put Ratio</span>
+                      <span className="text-lg font-semibold">{analyticsData.callPutRatio.toFixed(2)}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Top Ticker</span>
-                      <span className="text-lg font-semibold">SPY</span>
+                      <span className="text-sm text-muted-foreground">Volume Spike</span>
+                      <span className="text-lg font-semibold">+{analyticsData.volumeSpike}%</span>
                     </div>
                   </div>
                 </CardContent>
@@ -532,15 +535,17 @@ export function ProFeatures() {
                   <div className="space-y-4">
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Total Value</span>
-                      <span className="text-2xl font-bold">$156.7K</span>
+                      <span className="text-2xl font-bold">{formatCurrency(analyticsData.portfolioValue, 'USD')}</span>
                     </div>
                     <div className="flex items-center justify-between">
-                      <span className="text-sm text-muted-foreground">Gain/Loss</span>
-                      <span className="text-lg font-semibold text-green-500">+$12.4K</span>
+                      <span className="text-sm text-muted-foreground">Total Return</span>
+                      <span className={`text-lg font-semibold ${analyticsData.totalReturn >= 0 ? 'text-green-500' : 'text-red-500'}`}>
+                        {analyticsData.totalReturn >= 0 ? '+' : ''}{analyticsData.totalReturn.toFixed(1)}%
+                      </span>
                     </div>
                     <div className="flex items-center justify-between">
                       <span className="text-sm text-muted-foreground">Sharpe Ratio</span>
-                      <span className="text-lg font-semibold">1.89</span>
+                      <span className="text-lg font-semibold">{analyticsData.sharpeRatio.toFixed(2)}</span>
                     </div>
                   </div>
                 </CardContent>

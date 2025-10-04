@@ -7,51 +7,56 @@ import { Check, Zap, Loader2 } from "lucide-react"
 import { toast } from "sonner"
 import { useAuth } from "@/contexts/AuthContext"
 import { paymentService } from "@/lib/payment-service"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
-const plans = [
-  {
-    name: "Free",
-    price: "₹0",
-    period: "forever",
-    description: "Perfect for getting started",
-    features: [
-      "Unlimited watchlist items",
-      "Real-time price alerts",
-      "Email notifications",
-      "Basic options flow",
-      "Earnings summaries",
-      "Community support"
-    ],
-    cta: "Get Started",
-    variant: "outline" as const,
-    popular: false
-  },
-  {
-    name: "Pro",
-    price: "₹999",
-    period: "month",
-    description: "For serious traders",
-    features: [
-      "Everything in Free",
-      "Advanced options flow",
-      "AI-powered insights",
-      "Insider trading alerts",
-      "Portfolio analytics",
-      "Custom webhooks",
-      "Team collaboration",
-      "Advanced analytics",
-      "White-label options",
-      "Priority support"
-    ],
-    cta: "Start Pro Trial",
-    variant: "gradient" as const,
-    popular: true
-  }
-]
+// Pricing will be generated dynamically based on currency
 
 export function Pricing() {
   const { user } = useAuth()
+  const { formatCurrency } = useCurrency()
   const [loading, setLoading] = useState(false)
+
+  // Generate pricing dynamically based on selected currency
+  const plans = [
+    {
+      name: "Free",
+      price: formatCurrency(0),
+      period: "forever",
+      description: "Perfect for getting started",
+      features: [
+        "Unlimited watchlist items",
+        "Real-time price alerts",
+        "Email notifications",
+        "Basic options flow",
+        "Earnings summaries",
+        "Community support"
+      ],
+      cta: "Get Started",
+      variant: "outline" as const,
+      popular: false
+    },
+    {
+      name: "Pro",
+      price: formatCurrency(12, 'USD'), // $12 USD converted to selected currency
+      period: "month",
+      description: "For serious traders",
+      features: [
+        "Everything in Free",
+        "Advanced options flow",
+        "AI-powered insights",
+        "Insider trading alerts",
+        "Portfolio analytics",
+        "Custom webhooks",
+        "Team collaboration",
+        "Advanced analytics",
+        "White-label options",
+        "Priority support"
+      ],
+      cta: "Start Pro Trial",
+      variant: "gradient" as const,
+      popular: true
+    }
+  ]
 
   const handleGetStarted = () => {
     if (user) {

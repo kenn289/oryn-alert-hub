@@ -24,8 +24,11 @@ import { MarketStatus } from "@/components/MarketStatus"
 import { useFeatures } from "@/hooks/use-features"
 import { subscriptionService } from "@/lib/subscription-service"
 import { PortfolioTracker } from "@/components/PortfolioTracker"
+import { AlertManager } from "@/components/AlertManager"
+import { GlobalMarketStatus } from "@/components/GlobalMarketStatus"
 import { AlertService, Alert } from "@/lib/alert-service"
 import { ErrorHandler, handleAsyncError } from "@/lib/error-handler"
+import { useCurrency } from "@/contexts/CurrencyContext"
 import { LoadingStates } from "@/components/LoadingStates"
 import { ErrorFallback } from "@/components/ErrorFallback"
 import { NetworkStatus } from "@/components/NetworkStatus"
@@ -35,6 +38,7 @@ import { NetworkStatus } from "@/components/NetworkStatus"
 export default function DashboardPage() {
   const router = useRouter()
   const { user, signOut, loading } = useAuth()
+  const { formatCurrency } = useCurrency()
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [liveStats, setLiveStats] = useState({
@@ -384,9 +388,64 @@ export default function DashboardPage() {
   // Show loading state while data is being fetched
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-background p-4">
-        <div className="container mx-auto max-w-7xl">
-          <LoadingStates type="dashboard" message="Setting up your dashboard..." />
+      <div className="min-h-screen bg-background">
+        <div className="container mx-auto max-w-7xl p-4">
+          <div className="flex flex-col items-center justify-center min-h-[60vh] space-y-6">
+            <div className="text-center space-y-4">
+              <div className="mx-auto w-16 h-16 bg-primary/10 rounded-full flex items-center justify-center">
+                <RefreshCw className="w-8 h-8 text-primary animate-spin" />
+              </div>
+              <div>
+                <h2 className="text-2xl font-semibold text-foreground mb-2">
+                  Setting up your dashboard
+                </h2>
+                <p className="text-muted-foreground">
+                  Please wait while we fetch the latest data
+                </p>
+              </div>
+            </div>
+            
+            {/* Loading skeleton for dashboard */}
+            <div className="w-full max-w-4xl space-y-6">
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4">
+                {Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="bg-card border rounded-lg p-4 animate-pulse">
+                    <div className="flex items-center justify-between mb-3">
+                      <div className="h-4 w-20 bg-muted rounded"></div>
+                      <div className="h-4 w-4 bg-muted rounded"></div>
+                    </div>
+                    <div className="h-8 w-24 bg-muted rounded mb-2"></div>
+                    <div className="h-3 w-16 bg-muted rounded"></div>
+                  </div>
+                ))}
+              </div>
+              
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                {Array.from({ length: 2 }).map((_, i) => (
+                  <div key={i} className="bg-card border rounded-lg p-6 animate-pulse">
+                    <div className="h-6 w-32 bg-muted rounded mb-4"></div>
+                    <div className="space-y-3">
+                      {Array.from({ length: 3 }).map((_, j) => (
+                        <div key={j} className="flex items-center justify-between p-3 border rounded-lg">
+                          <div className="flex items-center space-x-3">
+                            <div className="h-8 w-8 bg-muted rounded"></div>
+                            <div>
+                              <div className="h-4 w-16 bg-muted rounded mb-1"></div>
+                              <div className="h-3 w-12 bg-muted rounded"></div>
+                            </div>
+                          </div>
+                          <div className="text-right">
+                            <div className="h-4 w-20 bg-muted rounded mb-1"></div>
+                            <div className="h-3 w-16 bg-muted rounded"></div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     )
@@ -628,6 +687,16 @@ export default function DashboardPage() {
         {/* Portfolio Tracker Section */}
         <div id="portfolio-tracker-section" className="mb-8">
           <PortfolioTracker />
+        </div>
+
+        {/* Alert Manager Section */}
+        <div id="alert-manager-section" className="mb-8">
+          <AlertManager />
+        </div>
+
+        {/* Global Market Status Section */}
+        <div id="market-status-section" className="mb-8">
+          <GlobalMarketStatus />
         </div>
 
         {/* Active Alerts and Options Flow - Below Welcome */}
@@ -901,7 +970,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <div className="font-medium">${item.price.toFixed(2)}</div>
+                          <div className="font-medium">{formatCurrency(item.price, 'USD')}</div>
                           <div className={`text-sm ${item.change >= 0 ? 'text-success' : 'text-destructive'}`}>
                             {item.change >= 0 ? '+' : ''}{item.change.toFixed(2)}%
                           </div>

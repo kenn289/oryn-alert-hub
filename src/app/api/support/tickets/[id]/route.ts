@@ -92,7 +92,7 @@ async function sendStatusUpdateEmail(ticket: any) {
             <p><strong>ID:</strong> ${ticket.id}</p>
             <p><strong>Subject:</strong> ${ticket.subject}</p>
             <p><strong>Status:</strong> ${ticket.status}</p>
-            <p><strong>Updated:</strong> ${new Date(ticket.updated_at).toLocaleString()}</p>
+            <p><strong>Updated:</strong> ${new Date(ticket.updated_at).toLocaleString('en-US', { timeZone: 'UTC' })}</p>
           </div>
           ${ticket.resolution ? `
             <div style="background: #fff; padding: 20px; border: 1px solid #ddd; border-radius: 8px;">

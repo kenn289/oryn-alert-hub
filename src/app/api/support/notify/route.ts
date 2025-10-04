@@ -88,7 +88,7 @@ function generateEmailTemplate(ticket: any, type: string) {
           </tr>
           <tr>
             <td style="padding: 8px 0; font-weight: bold;">Created:</td>
-            <td style="padding: 8px 0;">${new Date(ticket.created_at).toLocaleString()}</td>
+            <td style="padding: 8px 0;">${new Date(ticket.created_at).toLocaleString('en-US', { timeZone: 'UTC' })}</td>
           </tr>
         </table>
       </div>
@@ -139,3 +139,4 @@ function getStatusColor(status: string) {
     default: return '#9e9e9e'
   }
 }
+

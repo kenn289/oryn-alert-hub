@@ -219,32 +219,32 @@
   }
 
   .light {
-    --background: 210 40% 4%; /* #0B1220 - light mode base */
-    --foreground: 210 40% 4%;
+    --background: 0 0% 100%; /* Pure white background */
+    --foreground: 222 84% 4%; /* Dark text for better contrast */
     
-    --card: 210 40% 98%;
-    --card-foreground: 210 40% 4%;
+    --card: 0 0% 100%;
+    --card-foreground: 222 84% 4%;
     
-    --popover: 210 40% 98%;
-    --popover-foreground: 210 40% 4%;
+    --popover: 0 0% 100%;
+    --popover-foreground: 222 84% 4%;
     
     --primary: 180 100% 50%;
-    --primary-foreground: 210 40% 98%;
+    --primary-foreground: 0 0% 100%;
     
-    --secondary: 250 100% 70%;
-    --secondary-foreground: 210 40% 98%;
+    --secondary: 210 40% 96%; /* Light gray for secondary elements */
+    --secondary-foreground: 222 84% 4%;
     
-    --muted: 210 20% 60%;
-    --muted-foreground: 210 20% 40%;
+    --muted: 210 40% 96%; /* Light gray for muted elements */
+    --muted-foreground: 215 20% 65%; /* Better contrast for muted text */
     
     --accent: 180 100% 50%;
-    --accent-foreground: 210 40% 98%;
+    --accent-foreground: 0 0% 100%;
     
     --destructive: 0 84% 60%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive-foreground: 0 0% 100%;
     
-    --border: 210 40% 90%;
-    --input: 210 40% 90%;
+    --border: 214 32% 91%; /* Light border for better visibility */
+    --input: 214 32% 91%;
     --ring: 180 100% 50%;
   }
 }

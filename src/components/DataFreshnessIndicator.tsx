@@ -12,6 +12,7 @@ import {
   XCircle
 } from 'lucide-react'
 import { useState } from 'react'
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface DataFreshnessIndicatorProps {
   source: 'fresh' | 'cached' | 'fallback'
@@ -32,6 +33,7 @@ export function DataFreshnessIndicator({
   className = '',
   showDetails = false
 }: DataFreshnessIndicatorProps) {
+  const { selectedTimezone } = useCurrency()
   const [showFullDetails, setShowFullDetails] = useState(false)
 
   const getIndicatorConfig = () => {
@@ -102,7 +104,7 @@ export function DataFreshnessIndicator({
             </p>
             {showDetails && lastUpdated && (
               <p className="text-xs text-red-500 dark:text-red-400 mt-1">
-                Last updated: {new Date(lastUpdated).toLocaleString()}
+                Last updated: {new Date(lastUpdated).toLocaleString('en-US', { timeZone: selectedTimezone })}
               </p>
             )}
           </div>
@@ -147,7 +149,7 @@ export function DataFreshnessIndicator({
         <div className="text-xs text-muted-foreground">
           <p>{config.description}</p>
           {age && <p>Age: {age}</p>}
-          {lastUpdated && <p>Updated: {new Date(lastUpdated).toLocaleString()}</p>}
+          {lastUpdated && <p>Updated: {new Date(lastUpdated).toLocaleString('en-US', { timeZone: selectedTimezone })}</p>}
         </div>
       )}
       

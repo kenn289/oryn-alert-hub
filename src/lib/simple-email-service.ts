@@ -14,7 +14,7 @@ export class SimpleEmailService {
     console.log(`   Priority: ${ticket.priority.toUpperCase()}`)
     console.log(`   Status: ${ticket.status.toUpperCase()}`)
     console.log(`   User: ${ticket.user_email}`)
-    console.log(`   Created: ${new Date(ticket.created_at).toLocaleString()}`)
+    console.log(`   Created: ${new Date(ticket.created_at).toLocaleString('en-US', { timeZone: 'UTC' })}`)
     console.log('')
     console.log('📝 Description:')
     console.log(`   ${ticket.description}`)
@@ -45,3 +45,4 @@ export class SimpleEmailService {
 }
 
 export const simpleEmailService = new SimpleEmailService()
+

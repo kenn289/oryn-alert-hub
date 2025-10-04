@@ -1,305 +1,241 @@
-// Real-time Alert Service
-// Generates alerts based on actual market data and user watchlist
+"use client"
+
+import { toast } from 'sonner'
 
 export interface Alert {
   id: string
-  type: 'price_spike' | 'volume_spike' | 'earnings' | 'news_alert' | 'technical_breakout' | 'options_flow'
-  ticker: string
-  message: string
-  time: string
-  severity: 'low' | 'medium' | 'high'
-  data?: Record<string, unknown>
-}
-
-export interface AlertConfig {
-  priceChangeThreshold: number // % change to trigger price alert
-  volumeSpikeThreshold: number // % increase in volume to trigger volume alert
-  optionsFlowThreshold: number // Unusual options activity threshold
+  symbol: string
+  type: 'price_above' | 'price_below' | 'volume_spike' | 'earnings' | 'news'
+  condition: string
+  value: number
+  isActive: boolean
+  createdAt: string
+  triggeredAt?: string
 }
 
 export class AlertService {
-  private static alerts: Alert[] = []
-  private static config: AlertConfig = {
-    priceChangeThreshold: 3.0, // 3% price change
-    volumeSpikeThreshold: 150, // 150% volume increase
-    optionsFlowThreshold: 200 // 200% options volume increase
+  private static instance: AlertService
+  private alerts: Alert[] = []
+  private checkInterval: NodeJS.Timeout | null = null
+
+  static getInstance(): AlertService {
+    if (!AlertService.instance) {
+      AlertService.instance = new AlertService()
+    }
+    return AlertService.instance
   }
 
-  // Generate alerts based on real market data
-  static async generateAlerts(watchlist: string[]): Promise<Alert[]> {
-    if (!watchlist || watchlist.length === 0) {
-      return []
-    }
+  constructor() {
+    this.loadAlerts()
+    this.startMonitoring()
+  }
 
-    const newAlerts: Alert[] = []
-
+  private loadAlerts() {
     try {
-      // Check each ticker in watchlist for alerts
-      for (const ticker of watchlist) {
-        try {
-          // Fetch REAL-TIME data for the ticker
-          const stockData = await this.fetchStockData(ticker)
-
-          // Generate price alerts from REAL data
-          const priceAlert = this.checkPriceAlert(ticker, stockData)
-          if (priceAlert) newAlerts.push(priceAlert)
-
-          // Generate volume alerts from REAL data
-          const volumeAlert = this.checkVolumeAlert(ticker, stockData)
-          if (volumeAlert) newAlerts.push(volumeAlert)
-
-          // Generate options flow alerts
-          const optionsAlert = await this.checkOptionsFlowAlert(ticker)
-          if (optionsAlert) newAlerts.push(optionsAlert)
-
-        } catch (error) {
-          console.error(`Failed to generate REAL-TIME alerts for ${ticker}:`, error)
-          // Skip this ticker if API fails - don't show error alerts
-        }
+      const stored = localStorage.getItem('oryn_alerts')
+      if (stored) {
+        this.alerts = JSON.parse(stored)
       }
-
-      // Add new alerts to the list
-      this.alerts = [...newAlerts, ...this.alerts].slice(0, 20) // Keep last 20 alerts
-
-      return this.alerts
-
     } catch (error) {
-      console.error('Error generating alerts:', error)
-      // Return empty array instead of error alerts
-      return []
+      console.error('Failed to load alerts:', error)
+      this.alerts = []
     }
   }
 
-  // Fetch REAL-TIME stock data from Yahoo Finance via API
-  private static async fetchStockData(ticker: string): Promise<Record<string, unknown>> {
+  private saveAlerts() {
     try {
-      console.log(`📊 Fetching real-time data for ${ticker} to generate alerts...`)
-      
-      const response = await fetch(`/api/stock/multi/${ticker}`)
-      if (!response.ok) {
-        throw new Error(`API error: ${response.status}`)
-      }
-      
-      const data = await response.json()
-      
-      if (!data || !data.price) {
-        throw new Error('No price data available')
-      }
-      
-      console.log(`✅ Got real-time data for ${ticker}: $${data.price} (${data.changePercent.toFixed(2)}%)`)
-      return data
+      localStorage.setItem('oryn_alerts', JSON.stringify(this.alerts))
     } catch (error) {
-      console.error(`❌ Failed to fetch real-time data for ${ticker}:`, error)
-      throw error
+      console.error('Failed to save alerts:', error)
     }
   }
 
-  // Fallback data for development/testing
-  private static getFallbackData(ticker: string): Record<string, unknown> {
-    const fallbackData: Record<string, Record<string, unknown>> = {
-      'GOOGL': {
-        price: 152.50,
-        changePercent: 2.01,
-        volume: 2500000,
-        avgVolume: 2000000
-      },
-      'AAPL': {
-        price: 182.50,
-        changePercent: 1.67,
-        volume: 5000000,
-        avgVolume: 4000000
-      },
-      'TSLA': {
-        price: 245.30,
-        changePercent: -1.2,
-        volume: 8000000,
-        avgVolume: 6000000
-      },
-      'MSFT': {
-        price: 420.15,
-        changePercent: 0.8,
-        volume: 3000000,
-        avgVolume: 2500000
-      },
-      'AMZN': {
-        price: 185.75,
-        changePercent: 1.5,
-        volume: 4000000,
-        avgVolume: 3500000
-      }
+  createAlert(alert: Omit<Alert, 'id' | 'createdAt' | 'isActive'>): Alert {
+    const newAlert: Alert = {
+      ...alert,
+      id: `alert_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
+      createdAt: new Date().toISOString(),
+      isActive: true
     }
-    
-    return fallbackData[ticker] || {
-      price: 100.00,
-      changePercent: 0.5,
-      volume: 1000000,
-      avgVolume: 1000000
-    }
+
+    this.alerts.push(newAlert)
+    this.saveAlerts()
+    toast.success(`Alert created for ${alert.symbol}`)
+    return newAlert
   }
 
-  // Sample alerts for demonstration
-  private static getSampleAlerts(): Alert[] {
-    return [
-      {
-        id: 'sample_price_1',
-        type: 'price_spike',
-        ticker: 'GOOGL',
-        message: 'GOOGL price surged 2.01% to $152.50',
-        time: this.getTimeAgo(new Date(Date.now() - 2 * 60 * 1000)), // 2 minutes ago
-        severity: 'medium',
-        data: { changePercent: 2.01, currentPrice: 152.50 }
-      },
-      {
-        id: 'sample_volume_1',
-        type: 'volume_spike',
-        ticker: 'AAPL',
-        message: 'AAPL unusual volume detected (125% of average)',
-        time: this.getTimeAgo(new Date(Date.now() - 5 * 60 * 1000)), // 5 minutes ago
-        severity: 'high',
-        data: { volume: 5000000, avgVolume: 4000000, volumeRatio: 125 }
-      },
-      {
-        id: 'sample_options_1',
-        type: 'options_flow',
-        ticker: 'TSLA',
-        message: 'TSLA unusual options activity detected',
-        time: this.getTimeAgo(new Date(Date.now() - 8 * 60 * 1000)), // 8 minutes ago
-        severity: 'high',
-        data: { callVolume: 15000, putVolume: 8000, ratio: 1.875 }
-      }
-    ]
-  }
-
-  // Check for price movement alerts
-  private static checkPriceAlert(ticker: string, stockData: Record<string, unknown>): Alert | null {
-    if (!stockData.changePercent) return null
-
-    const changePercent = Math.abs(stockData.changePercent as number)
-    if (changePercent < this.config.priceChangeThreshold) return null
-
-    const direction = (stockData.changePercent as number) > 0 ? 'surged' : 'dropped'
-    const severity = changePercent > 5 ? 'high' : changePercent > 3 ? 'medium' : 'low'
-
-    return {
-      id: `price_${ticker}_${Date.now()}`,
-      type: 'price_spike',
-      ticker,
-      message: `${ticker} price ${direction} ${changePercent.toFixed(1)}%`,
-      time: this.getTimeAgo(new Date()),
-      severity,
-      data: {
-        changePercent: stockData.changePercent as number,
-        currentPrice: stockData.price as number
-      }
-    }
-  }
-
-  // Check for volume spike alerts
-  private static checkVolumeAlert(ticker: string, stockData: Record<string, unknown>): Alert | null {
-    if (!stockData.volume || !stockData.avgVolume) return null
-
-    const volumeRatio = ((stockData.volume as number) / (stockData.avgVolume as number)) * 100
-    if (volumeRatio < this.config.volumeSpikeThreshold) return null
-
-    const severity = volumeRatio > 300 ? 'high' : volumeRatio > 200 ? 'medium' : 'low'
-
-    return {
-      id: `volume_${ticker}_${Date.now()}`,
-      type: 'volume_spike',
-      ticker,
-      message: `${ticker} unusual volume detected (${volumeRatio.toFixed(0)}% of average)`,
-      time: this.getTimeAgo(new Date()),
-      severity,
-      data: {
-        volume: stockData.volume as number,
-        avgVolume: stockData.avgVolume as number,
-        volumeRatio
-      }
-    }
-  }
-
-  // Check for options flow alerts
-  private static async checkOptionsFlowAlert(ticker: string): Promise<Alert | null> {
-    try {
-      // TODO: Integrate with real options data API
-      // For now, skip options flow alerts until real API is available
-      return null
-    } catch (error) {
-      console.warn(`Failed to check options flow for ${ticker}:`, error)
-      return null
-    }
-  }
-
-  // Get time ago string
-  private static getTimeAgo(date: Date): string {
-    const now = new Date()
-    const diffMs = now.getTime() - date.getTime()
-    const diffMins = Math.floor(diffMs / (1000 * 60))
-    const diffHours = Math.floor(diffMs / (1000 * 60 * 60))
-
-    if (diffMins < 1) return 'Just now'
-    if (diffMins < 60) return `${diffMins} minute${diffMins > 1 ? 's' : ''} ago`
-    if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`
-    return date.toLocaleDateString()
-  }
-
-  // Get current alerts
-  static getAlerts(): Alert[] {
+  getAlerts(): Alert[] {
     return this.alerts
   }
 
-  // Clear old alerts (older than 24 hours)
-  static clearOldAlerts(): void {
-    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000)
-    this.alerts = this.alerts.filter(alert => {
-      // Parse time string to get actual date
-      const alertTime = this.parseTimeString(alert.time)
-      return alertTime > oneDayAgo
+  getActiveAlerts(): Alert[] {
+    return this.alerts.filter(alert => alert.isActive)
+  }
+
+  updateAlert(id: string, updates: Partial<Alert>): boolean {
+    const index = this.alerts.findIndex(alert => alert.id === id)
+    if (index !== -1) {
+      this.alerts[index] = { ...this.alerts[index], ...updates }
+      this.saveAlerts()
+      return true
+    }
+    return false
+  }
+
+  deleteAlert(id: string): boolean {
+    const index = this.alerts.findIndex(alert => alert.id === id)
+    if (index !== -1) {
+      this.alerts.splice(index, 1)
+      this.saveAlerts()
+      toast.success('Alert deleted')
+      return true
+    }
+    return false
+  }
+
+  toggleAlert(id: string): boolean {
+    const alert = this.alerts.find(alert => alert.id === id)
+    if (alert) {
+      alert.isActive = !alert.isActive
+      this.saveAlerts()
+      toast.success(`Alert ${alert.isActive ? 'enabled' : 'disabled'}`)
+      return true
+    }
+    return false
+  }
+
+  private startMonitoring() {
+    // Check alerts every 30 seconds
+    this.checkInterval = setInterval(() => {
+      this.checkAlerts()
+    }, 30000)
+  }
+
+  private async checkAlerts() {
+    const activeAlerts = this.getActiveAlerts()
+    if (activeAlerts.length === 0) return
+
+    try {
+      // Check each active alert
+      for (const alert of activeAlerts) {
+        await this.checkAlert(alert)
+      }
+    } catch (error) {
+      console.error('Error checking alerts:', error)
+    }
+  }
+
+  private async checkAlert(alert: Alert) {
+    try {
+      // Fetch current stock data
+      const response = await fetch(`/api/stock/multi/${alert.symbol}`)
+      if (!response.ok) return
+
+      const stockData = await response.json()
+      if (!stockData || !stockData.price) return
+
+      const currentPrice = stockData.price
+      let shouldTrigger = false
+
+      // Check alert conditions
+      switch (alert.type) {
+        case 'price_above':
+          shouldTrigger = currentPrice >= alert.value
+          break
+        case 'price_below':
+          shouldTrigger = currentPrice <= alert.value
+          break
+        case 'volume_spike':
+          // This would require volume data from the API
+          shouldTrigger = false // Placeholder
+          break
+        case 'earnings':
+          // This would require earnings calendar data
+          shouldTrigger = false // Placeholder
+          break
+        case 'news':
+          // This would require news data
+          shouldTrigger = false // Placeholder
+          break
+      }
+
+      if (shouldTrigger && !alert.triggeredAt) {
+        this.triggerAlert(alert, currentPrice)
+      }
+    } catch (error) {
+      console.error(`Error checking alert for ${alert.symbol}:`, error)
+    }
+  }
+
+  private triggerAlert(alert: Alert, currentPrice: number, timezone?: string) {
+    alert.triggeredAt = new Date().toISOString()
+    alert.isActive = false
+    this.saveAlerts()
+
+    // Show notification
+    const message = `${alert.symbol} ${alert.condition}: $${currentPrice.toFixed(2)}`
+    toast.success(message, {
+      duration: 10000,
+      description: `Alert triggered at ${new Date().toLocaleTimeString('en-US', { 
+        timeZone: timezone || Intl.DateTimeFormat().resolvedOptions().timeZone 
+      })}`
     })
+
+    // You could also send to a notification service here
+    console.log(`Alert triggered: ${alert.symbol} - ${message}`)
   }
 
-  // Parse time string to Date object
-  private static parseTimeString(timeStr: string): Date {
-    const now = new Date()
-    
-    if (timeStr === 'Just now') return now
-    
-    const minsMatch = timeStr.match(/(\d+) minute/)
-    if (minsMatch) {
-      return new Date(now.getTime() - parseInt(minsMatch[1]) * 60 * 1000)
+  stopMonitoring() {
+    if (this.checkInterval) {
+      clearInterval(this.checkInterval)
+      this.checkInterval = null
     }
-    
-    const hoursMatch = timeStr.match(/(\d+) hour/)
-    if (hoursMatch) {
-      return new Date(now.getTime() - parseInt(hoursMatch[1]) * 60 * 60 * 1000)
-    }
-    
-    return now
-  }
-
-  // Update alert configuration
-  static updateConfig(newConfig: Partial<AlertConfig>): void {
-    this.config = { ...this.config, ...newConfig }
   }
 
   // Get alert statistics
-  static getAlertStats(): {
-    total: number
-    byType: Record<string, number>
-    bySeverity: Record<string, number>
-  } {
-    const byType: Record<string, number> = {}
-    const bySeverity: Record<string, number> = {}
-
-    this.alerts.forEach(alert => {
-      byType[alert.type] = (byType[alert.type] || 0) + 1
-      bySeverity[alert.severity] = (bySeverity[alert.severity] || 0) + 1
-    })
+  getStats() {
+    const total = this.alerts.length
+    const active = this.alerts.filter(a => a.isActive).length
+    const triggered = this.alerts.filter(a => a.triggeredAt).length
+    const pending = active
 
     return {
-      total: this.alerts.length,
-      byType,
-      bySeverity
+      total,
+      active,
+      triggered,
+      pending
+    }
+  }
+
+  // Generate alerts based on watchlist (static method)
+  static async generateAlerts(tickers: string[]): Promise<Alert[]> {
+    try {
+      // This is a placeholder implementation
+      // In a real app, this would analyze market data and generate alerts
+      const alerts: Alert[] = []
+      
+      for (const ticker of tickers) {
+        // Generate sample alerts for demonstration
+        if (Math.random() > 0.7) { // 30% chance of generating an alert
+          alerts.push({
+            id: `alert_${Date.now()}_${ticker}`,
+            symbol: ticker,
+            type: Math.random() > 0.5 ? 'price_above' : 'price_below',
+            condition: Math.random() > 0.5 ? 'rose above' : 'fell below',
+            value: Math.random() * 200 + 50,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            triggeredAt: undefined
+          })
+        }
+      }
+      
+      return alerts
+    } catch (error) {
+      console.error('Error generating alerts:', error)
+      return []
     }
   }
 }
+
+export const alertService = AlertService.getInstance()

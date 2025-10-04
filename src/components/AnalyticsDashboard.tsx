@@ -22,6 +22,8 @@ import {
   RefreshCw
 } from "lucide-react"
 import { toast } from "sonner"
+import { localizationService } from "@/lib/localization-service"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface PortfolioItem {
   totalValue?: number
@@ -77,6 +79,7 @@ interface AnalyticsData {
 }
 
 export function AnalyticsDashboard() {
+  const { formatCurrency } = useCurrency()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
@@ -238,7 +241,7 @@ export function AnalyticsDashboard() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">${data.portfolio.totalValue.toLocaleString()}</div>
+            <div className="text-2xl font-bold">{formatCurrency(data.portfolio.totalValue, 'USD')}</div>
             <div className="flex items-center gap-1 text-sm">
               {data.portfolio.dayChange >= 0 ? (
                 <ArrowUpRight className="h-3 w-3 text-green-500" />
@@ -246,7 +249,7 @@ export function AnalyticsDashboard() {
                 <ArrowDownRight className="h-3 w-3 text-red-500" />
               )}
               <span className={data.portfolio.dayChange >= 0 ? 'text-green-500' : 'text-red-500'}>
-                {data.portfolio.dayChange >= 0 ? '+' : ''}${data.portfolio.dayChange.toFixed(2)} ({data.portfolio.dayChangePercent.toFixed(2)}%)
+                {data.portfolio.dayChange >= 0 ? '+' : ''}{formatCurrency(data.portfolio.dayChange, 'USD')} ({data.portfolio.dayChangePercent.toFixed(2)}%)
               </span>
             </div>
           </CardContent>
@@ -326,7 +329,7 @@ export function AnalyticsDashboard() {
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-green-500">
-                +${data.watchlist.topGainer.change.toFixed(2)}
+                +{formatCurrency(data.watchlist.topGainer.change, 'USD')}
               </div>
               <div className="text-sm text-muted-foreground">
                 {data.watchlist.topGainer.changePercent.toFixed(2)}% today
@@ -341,7 +344,7 @@ export function AnalyticsDashboard() {
                 </Badge>
               </div>
               <div className="text-2xl font-bold text-red-500">
-                ${data.watchlist.topLoser.change.toFixed(2)}
+                {formatCurrency(data.watchlist.topLoser.change, 'USD')}
               </div>
               <div className="text-sm text-muted-foreground">
                 {data.watchlist.topLoser.changePercent.toFixed(2)}% today

@@ -4,6 +4,7 @@ import { useState, useEffect } from "react"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Clock, TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
+import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface MarketStatus {
   isOpen: boolean
@@ -14,6 +15,7 @@ interface MarketStatus {
 }
 
 export function MarketStatus() {
+  const { selectedTimezone } = useCurrency()
   const [marketStatus, setMarketStatus] = useState<MarketStatus>({
     isOpen: false,
     status: 'closed'
@@ -25,8 +27,9 @@ export function MarketStatus() {
       const now = new Date()
       setCurrentTime(now)
       
-      // Get current time in EST (market timezone)
-      const estTime = new Date(now.toLocaleString("en-US", {timeZone: "America/New_York"}))
+      // Get current time in market timezone (EST for US markets)
+      const marketTimezone = "America/New_York" // US market timezone
+      const estTime = new Date(now.toLocaleString("en-US", {timeZone: marketTimezone}))
       const dayOfWeek = estTime.getDay() // 0 = Sunday, 6 = Saturday
       const hours = estTime.getHours()
       const minutes = estTime.getMinutes()
@@ -201,12 +204,31 @@ export function MarketStatus() {
             <div className="text-muted-foreground">
               After Hours: 4:00 PM - 8:00 PM EST
             </div>
+            {selectedTimezone && selectedTimezone !== 'America/New_York' && (
+              <div className="text-muted-foreground mt-2 p-2 bg-muted/50 rounded">
+                <div className="text-sm font-medium">In your timezone ({selectedTimezone}):</div>
+                <div className="text-sm">Regular: 7:00 PM - 1:30 AM (next day)</div>
+                <div className="text-sm">Pre-Market: 1:30 PM - 7:00 PM</div>
+                <div className="text-sm">After Hours: 1:30 AM - 5:30 AM (next day)</div>
+              </div>
+            )}
           </div>
           
           <div className="space-y-2">
             <div className="font-medium">Current Time</div>
             <div className="text-muted-foreground">
-              <div className="font-medium text-primary">EST (Market Time):</div>
+              <div className="font-medium text-primary">Your Time:</div>
+              {currentTime.toLocaleString("en-US", {
+                timeZone: selectedTimezone,
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit',
+                second: '2-digit'
+              })}
+              <div className="font-medium text-primary mt-2">EST (Market Time):</div>
               {currentTime.toLocaleString("en-US", {
                 timeZone: "America/New_York",
                 weekday: 'long',
@@ -235,14 +257,14 @@ export function MarketStatus() {
               <div className="text-muted-foreground">
                 <div className="font-medium text-primary">Next Open:</div>
                 <div>EST: {new Date(marketStatus.nextOpen).toLocaleString("en-US", { timeZone: "America/New_York" })}</div>
-                <div>Your Time: {new Date(marketStatus.nextOpen).toLocaleString("en-US", { timeZoneName: 'short' })}</div>
+                <div>Your Time: {new Date(marketStatus.nextOpen).toLocaleString("en-US", { timeZone: selectedTimezone })}</div>
               </div>
             )}
             {marketStatus.nextClose && (
               <div className="text-muted-foreground">
                 <div className="font-medium text-primary">Closes:</div>
                 <div>EST: {new Date(marketStatus.nextClose).toLocaleString("en-US", { timeZone: "America/New_York" })}</div>
-                <div>Your Time: {new Date(marketStatus.nextClose).toLocaleString("en-US", { timeZoneName: 'short' })}</div>
+                <div>Your Time: {new Date(marketStatus.nextClose).toLocaleString("en-US", { timeZone: selectedTimezone })}</div>
               </div>
             )}
           </div>
