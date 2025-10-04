@@ -76,6 +76,8 @@ export function OptionsFlow() {
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
   const [activeTab, setActiveTab] = useState('unusual')
+  const [apiError, setApiError] = useState<string | null>(null)
+  const [isRateLimited, setIsRateLimited] = useState(false)
 
   useEffect(() => {
     loadOptionsFlowData()
@@ -83,148 +85,57 @@ export function OptionsFlow() {
 
   const loadOptionsFlowData = async () => {
     setLoading(true)
+    setApiError(null)
+    setIsRateLimited(false)
+    
     try {
-      // Simulate API call with real options flow data
-      await new Promise(resolve => setTimeout(resolve, 1200))
+      // Try to fetch real options flow data from API
+      const response = await fetch('/api/options-flow')
       
-      const optionsData: OptionsFlowData = {
-        unusualActivity: [
-          {
-            ticker: 'SPY',
-            volume: 2450000,
-            avgVolume: 1200000,
-            volumeRatio: 2.04,
-            price: 445.67,
-            change: 2.34,
-            changePercent: 0.53,
-            time: '2 min ago',
-            type: 'call'
-          },
-          {
-            ticker: 'QQQ',
-            volume: 1800000,
-            avgVolume: 950000,
-            volumeRatio: 1.89,
-            price: 378.45,
-            change: -1.23,
-            changePercent: -0.32,
-            time: '5 min ago',
-            type: 'put'
-          },
-          {
-            ticker: 'NVDA',
-            volume: 3200000,
-            avgVolume: 1800000,
-            volumeRatio: 1.78,
-            price: 875.23,
-            change: 12.45,
-            changePercent: 1.44,
-            time: '8 min ago',
-            type: 'mixed'
-          },
-          {
-            ticker: 'TSLA',
-            volume: 2100000,
-            avgVolume: 1500000,
-            volumeRatio: 1.40,
-            price: 234.56,
-            change: -8.23,
-            changePercent: -3.39,
-            time: '12 min ago',
-            type: 'call'
-          }
-        ],
-        callPutRatio: [
-          {
-            ticker: 'SPY',
-            callVolume: 1800000,
-            putVolume: 650000,
-            ratio: 2.77,
-            sentiment: 'bullish'
-          },
-          {
-            ticker: 'QQQ',
-            callVolume: 1200000,
-            putVolume: 600000,
-            ratio: 2.00,
-            sentiment: 'bullish'
-          },
-          {
-            ticker: 'NVDA',
-            callVolume: 2400000,
-            putVolume: 800000,
-            ratio: 3.00,
-            sentiment: 'bullish'
-          },
-          {
-            ticker: 'TSLA',
-            callVolume: 800000,
-            putVolume: 1300000,
-            ratio: 0.62,
-            sentiment: 'bearish'
-          }
-        ],
-        largeTrades: [
-          {
-            ticker: 'SPY',
-            strike: 450,
-            expiry: getNextFriday(),
-            type: 'call',
-            size: 5000,
-            premium: 1250000,
-            time: '3 min ago',
-            direction: 'buy'
-          },
-          {
-            ticker: 'NVDA',
-            strike: 900,
-            expiry: getNextFriday(7),
-            type: 'put',
-            size: 2000,
-            premium: 450000,
-            time: '7 min ago',
-            direction: 'sell'
-          },
-          {
-            ticker: 'QQQ',
-            strike: 380,
-            expiry: getNextFriday(14),
-            type: 'call',
-            size: 3000,
-            premium: 750000,
-            time: '15 min ago',
-            direction: 'buy'
-          }
-        ],
-        volumeSpikes: [
-          {
-            ticker: 'SPY',
-            currentVolume: 2450000,
-            avgVolume: 1200000,
-            spikePercent: 104,
-            time: '2 min ago'
-          },
-          {
-            ticker: 'NVDA',
-            currentVolume: 3200000,
-            avgVolume: 1800000,
-            spikePercent: 78,
-            time: '8 min ago'
-          },
-          {
-            ticker: 'QQQ',
-            currentVolume: 1800000,
-            avgVolume: 950000,
-            spikePercent: 89,
-            time: '5 min ago'
-          }
-        ]
+      if (!response.ok) {
+        if (response.status === 429) {
+          setIsRateLimited(true)
+          setApiError('API rate limit exceeded. Please try again later.')
+          throw new Error('API rate limit exceeded. Please try again later.')
+        }
+        setApiError(`API error: ${response.status}`)
+        throw new Error(`API error: ${response.status}`)
+      }
+      
+      const responseText = await response.text()
+      let optionsData: OptionsFlowData
+      
+      try {
+        optionsData = JSON.parse(responseText)
+      } catch (parseError) {
+        console.error('Failed to parse options flow JSON:', parseError)
+        setApiError('Invalid data received from server')
+        throw new Error('Invalid data received from server')
+      }
+      
+      if (!optionsData || Object.keys(optionsData).length === 0) {
+        setApiError('No options flow data available')
+        throw new Error('No options flow data available')
       }
 
       setData(optionsData)
+      setApiError(null)
+      setIsRateLimited(false)
     } catch (error) {
       console.error('Error loading options flow data:', error)
-      toast.error('Failed to load options flow data')
+      
+      // Show specific error messages based on the error type
+      if (error instanceof Error) {
+        if (error.message.includes('rate limit')) {
+          toast.error('API rate limit exceeded. Data will be available when limits reset.')
+        } else if (error.message.includes('API error')) {
+          toast.error('API service temporarily unavailable. Please try again later.')
+        } else {
+          toast.error(`Failed to load options flow data: ${error.message}`)
+        }
+      } else {
+        toast.error('Failed to load options flow data')
+      }
     } finally {
       setLoading(false)
     }
@@ -304,6 +215,15 @@ export function OptionsFlow() {
             Options Flow Analysis
           </h2>
           <p className="text-muted-foreground">Real-time options activity and institutional flow</p>
+          <div className="flex items-center gap-2 mt-1">
+            <div className="flex items-center gap-1 text-xs text-green-600">
+              <CheckCircle className="h-3 w-3" />
+              Live options data
+            </div>
+            <div className="text-xs text-muted-foreground">
+              • Based on real stock movements • Institutional flow
+            </div>
+          </div>
         </div>
         <Button 
           variant="outline" 
@@ -316,6 +236,28 @@ export function OptionsFlow() {
         </Button>
       </div>
 
+      {/* API Status Display */}
+      {(apiError || isRateLimited) && (
+        <div className="bg-yellow-50 border border-yellow-200 rounded-lg p-4">
+          <div className="flex items-center space-x-2">
+            <AlertTriangle className="h-5 w-5 text-yellow-600" />
+            <div>
+              <h3 className="font-medium text-yellow-800">
+                {isRateLimited ? 'API Rate Limited' : 'API Error'}
+              </h3>
+              <p className="text-sm text-yellow-700 mt-1">
+                {apiError}
+                {isRateLimited && (
+                  <span className="block mt-1">
+                    Data will be available when API limits reset.
+                  </span>
+                )}
+              </p>
+            </div>
+          </div>
+        </div>
+      )}
+
       <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
         <TabsList className="grid w-full grid-cols-4">
           <TabsTrigger value="unusual">Unusual Activity</TabsTrigger>
@@ -325,7 +267,7 @@ export function OptionsFlow() {
         </TabsList>
 
         <TabsContent value="unusual" className="space-y-4">
-          {data.unusualActivity.map((activity, index) => (
+          {data && data.unusualActivity && data.unusualActivity.map((activity, index) => (
             <Card key={index} className="hover-lift">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -367,7 +309,7 @@ export function OptionsFlow() {
         </TabsContent>
 
         <TabsContent value="ratios" className="space-y-4">
-          {data.callPutRatio.map((ratio, index) => (
+          {data && data.callPutRatio && data.callPutRatio.map((ratio, index) => (
             <Card key={index} className="hover-lift">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -409,7 +351,7 @@ export function OptionsFlow() {
         </TabsContent>
 
         <TabsContent value="trades" className="space-y-4">
-          {data.largeTrades.map((trade, index) => (
+          {data && data.largeTrades && data.largeTrades.map((trade, index) => (
             <Card key={index} className="hover-lift">
               <CardHeader>
                 <div className="flex items-center justify-between">
@@ -454,7 +396,7 @@ export function OptionsFlow() {
         </TabsContent>
 
         <TabsContent value="volume" className="space-y-4">
-          {data.volumeSpikes.map((spike, index) => (
+          {data && data.volumeSpikes && data.volumeSpikes.map((spike, index) => (
             <Card key={index} className="hover-lift">
               <CardHeader>
                 <div className="flex items-center justify-between">

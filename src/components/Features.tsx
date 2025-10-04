@@ -37,7 +37,7 @@ const features = [
   {
     icon: Zap,
     title: "Multi-Channel Notifications",
-    description: "Discord, Telegram, email, and webhook integrations for seamless alert delivery.",
+    description: "Email, webhook, and API integrations for seamless alert delivery.",
     color: "text-secondary"
   }
 ]

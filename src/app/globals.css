@@ -2,25 +2,25 @@
 @tailwind components;
 @tailwind utilities;
 
-/* Custom animations for Pro features */
+/* Oryn Design System - Consistent Animations */
 @keyframes float {
   0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-10px); }
+  50% { transform: translateY(-8px); }
 }
 
 @keyframes pulse-glow {
   0%, 100% { 
-    box-shadow: 0 0 5px rgba(139, 92, 246, 0.3);
+    box-shadow: 0 0 8px rgba(0, 212, 170, 0.3);
   }
   50% { 
-    box-shadow: 0 0 20px rgba(139, 92, 246, 0.6);
+    box-shadow: 0 0 24px rgba(0, 212, 170, 0.6);
   }
 }
 
 @keyframes slide-in {
   from {
     opacity: 0;
-    transform: translateY(20px);
+    transform: translateY(24px);
   }
   to {
     opacity: 1;
@@ -46,88 +46,174 @@
   }
 }
 
+@keyframes gradient-shift {
+  0%, 100% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+}
+
+@keyframes bounce-subtle {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+@keyframes scale-in {
+  from {
+    opacity: 0;
+    transform: scale(0.95);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes slide-up {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* Oryn Design System - Utility Classes */
 .hover-lift {
-  transition: all 0.3s ease;
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .hover-lift:hover {
-  transform: translateY(-4px);
-  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1);
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
 }
 
 .animate-float {
-  animation: float 3s ease-in-out infinite;
+  animation: float 4s ease-in-out infinite;
 }
 
 .animate-pulse-glow {
-  animation: pulse-glow 2s ease-in-out infinite;
+  animation: pulse-glow 3s ease-in-out infinite;
 }
 
 .animate-slide-in {
-  animation: slide-in 0.5s ease-out;
+  animation: slide-in 0.6s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .animate-fade-in {
-  animation: fade-in 0.3s ease-out;
+  animation: fade-in 0.4s ease-out;
+}
+
+.animate-scale-in {
+  animation: scale-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-slide-up {
+  animation: slide-up 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.animate-bounce-subtle {
+  animation: bounce-subtle 2s ease-in-out infinite;
 }
 
 .shimmer {
-  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  background: linear-gradient(90deg, transparent, rgba(0, 212, 170, 0.2), transparent);
   background-size: 200px 100%;
-  animation: shimmer 1.5s infinite;
+  animation: shimmer 2s infinite;
 }
 
 .gradient-text {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00d4aa 0%, #00a8cc 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
   -webkit-background-clip: text;
   -webkit-text-fill-color: transparent;
   background-clip: text;
+  animation: gradient-shift 3s ease infinite;
 }
 
 .gradient-bg {
-  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  background: linear-gradient(135deg, #00d4aa 0%, #00a8cc 50%, #8b5cf6 100%);
+  background-size: 200% 200%;
+  animation: gradient-shift 6s ease infinite;
 }
 
 .glass-effect {
-  background: rgba(255, 255, 255, 0.1);
-  backdrop-filter: blur(10px);
-  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: rgba(255, 255, 255, 0.08);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+}
+
+.glass-effect-dark {
+  background: rgba(0, 0, 0, 0.2);
+  backdrop-filter: blur(16px);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.card-hover {
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.card-hover:hover {
+  transform: translateY(-4px);
+  box-shadow: 0 12px 28px rgba(0, 212, 170, 0.15);
+}
+
+.micro-interaction {
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.micro-interaction:hover {
+  transform: scale(1.02);
+}
+
+.micro-interaction:active {
+  transform: scale(0.98);
 }
 
 @layer base {
   :root {
-    /* Modern vibrant design system */
-    --background: 222 84% 5%; /* #0A0E1A - deep navy */
-    --foreground: 210 40% 95%; /* #F1F5F9 - bright white */
+    /* Oryn Design System - Consistent Color Palette */
+    --background: 222 84% 4%; /* #0A0E1A - deep navy */
+    --foreground: 210 40% 98%; /* #F8FAFC - bright white */
     
-    --card: 222 84% 8%; /* #0F1419 - dark cards */
-    --card-foreground: 210 40% 95%;
+    --card: 222 84% 6%; /* #0F1419 - dark cards */
+    --card-foreground: 210 40% 98%;
     
-    --popover: 222 84% 8%;
-    --popover-foreground: 210 40% 95%;
+    --popover: 222 84% 6%;
+    --popover-foreground: 210 40% 98%;
     
-    --primary: 262 83% 58%; /* #8B5CF6 - vibrant purple */
-    --primary-foreground: 210 40% 98%;
+    --primary: 180 100% 50%; /* #00d4aa - Oryn teal */
+    --primary-foreground: 222 84% 4%;
     
-    --secondary: 280 100% 70%; /* #C084FC - bright purple */
-    --secondary-foreground: 222 84% 5%;
+    --secondary: 200 100% 60%; /* #00a8cc - Oryn blue */
+    --secondary-foreground: 222 84% 4%;
     
-    --muted: 215 25% 27%; /* #475569 - muted text */
-    --muted-foreground: 215 20% 65%;
+    --muted: 215 25% 25%; /* #475569 - muted text */
+    --muted-foreground: 215 20% 70%;
     
-    --accent: 142 76% 36%; /* #10B981 - emerald green */
-    --accent-foreground: 210 40% 98%;
+    --accent: 180 100% 50%; /* #00d4aa - Oryn teal accent */
+    --accent-foreground: 222 84% 4%;
     
     --destructive: 0 84% 60%; /* #EF4444 - red */
     --destructive-foreground: 210 40% 98%;
     
-    --success: 142 76% 36%; /* #10B981 */
-    --danger: 0 84% 60%; /* #EF4444 */
-    --warning: 38 92% 50%; /* #F59E0B */
+    --success: 142 76% 36%; /* #10B981 - success green */
+    --danger: 0 84% 60%; /* #EF4444 - danger red */
+    --warning: 38 92% 50%; /* #F59E0B - warning amber */
     
-    --border: 215 25% 20%; /* #334155 */
-    --input: 215 25% 20%;
-    --ring: 262 83% 58%;
+    --border: 215 25% 18%; /* #1E293B - subtle borders */
+    --input: 215 25% 18%;
+    --ring: 180 100% 50%;
     
     --radius: 0.75rem;
   }
@@ -171,6 +257,84 @@
   body {
     @apply bg-background text-foreground;
     font-feature-settings: "rlig" 1, "calt" 1;
+    background: linear-gradient(135deg, #0A0E1A 0%, #0F1419 50%, #1A1A1A 100%);
+    background-attachment: fixed;
+    min-height: 100vh;
+  }
+  
+  /* Consistent page background for all pages */
+  .page-background {
+    position: relative;
+    min-height: 100vh;
+    background: linear-gradient(135deg, #0A0E1A 0%, #0F1419 50%, #1A1A1A 100%);
+    background-attachment: fixed;
+  }
+  
+  .page-background::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: linear-gradient(to_right,#00d4aa08_1px,transparent_1px),linear-gradient(to_bottom,#00d4aa08_1px,transparent_1px);
+    background-size: 4rem 4rem;
+    pointer-events: none;
+  }
+  
+  .page-background::after {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: radial-gradient(circle at 20% 20%, rgba(0, 212, 170, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 80% 80%, rgba(0, 168, 204, 0.1) 0%, transparent 50%),
+                radial-gradient(circle at 40% 60%, rgba(139, 92, 246, 0.05) 0%, transparent 50%);
+    pointer-events: none;
+  }
+  
+  /* Floating elements for all pages */
+  .page-background .floating-element-1 {
+    position: absolute;
+    top: 10%;
+    left: 10%;
+    width: 120px;
+    height: 120px;
+    background: rgba(0, 212, 170, 0.1);
+    border-radius: 50%;
+    filter: blur(40px);
+    animation: float 6s ease-in-out infinite;
+    pointer-events: none;
+  }
+  
+  .page-background .floating-element-2 {
+    position: absolute;
+    top: 60%;
+    right: 15%;
+    width: 80px;
+    height: 80px;
+    background: rgba(0, 168, 204, 0.1);
+    border-radius: 50%;
+    filter: blur(30px);
+    animation: float 8s ease-in-out infinite;
+    animation-delay: 2s;
+    pointer-events: none;
+  }
+  
+  .page-background .floating-element-3 {
+    position: absolute;
+    top: 30%;
+    right: 30%;
+    width: 60px;
+    height: 60px;
+    background: rgba(139, 92, 246, 0.08);
+    border-radius: 50%;
+    filter: blur(25px);
+    animation: float 10s ease-in-out infinite;
+    animation-delay: 4s;
+    pointer-events: none;
   }
   
   /* Custom scrollbar */

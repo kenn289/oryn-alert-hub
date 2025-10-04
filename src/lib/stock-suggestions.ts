@@ -178,58 +178,27 @@ export class StockSuggestionsService {
 
   static async getStockWithPrice(symbol: string): Promise<StockSuggestion | null> {
     try {
-      // This would typically fetch from a real API
-      // For now, we'll use mock data based on the symbol
+      // Fetch real-time data from our API
+      const response = await fetch(`/api/stock/multi/${symbol}`)
+      if (!response.ok) {
+        console.error(`Failed to fetch real-time data for ${symbol}`)
+        return null
+      }
+
+      const stockData = await response.json()
       const stock = POPULAR_STOCKS.find(s => s.symbol === symbol)
+      
       if (!stock) return null
 
-      // Mock price data - in real app, this would come from API
-      const mockPrices: Record<string, number> = {
-        'AAPL': 175.43,
-        'MSFT': 378.85,
-        'GOOGL': 140.11,
-        'AMZN': 180.50,
-        'NVDA': 920.70,
-        'TSLA': 250.30,
-        'META': 320.15,
-        'NFLX': 450.20,
-        'JPM': 180.25,
-        'BAC': 35.40,
-        'WFC': 45.60,
-        'GS': 420.80,
-        'V': 280.90,
-        'MA': 450.30,
-        'JNJ': 160.75,
-        'PFE': 28.40,
-        'UNH': 520.60,
-        'KO': 60.25,
-        'PEP': 170.80,
-        'WMT': 160.40,
-        'PG': 155.90,
-        'XOM': 110.25,
-        'CVX': 150.80,
-        'BA': 220.40,
-        'CAT': 350.60,
-        'GE': 120.30,
-        'HON': 210.75,
-        'MMM': 95.40,
-        'SPY': 450.20,
-        'QQQ': 380.60,
-        'VTI': 240.30,
-        'VOO': 420.80
-      }
-
-      const currentPrice = mockPrices[symbol] || 150.00
-      
       return {
         ...stock,
-        price: currentPrice,
-        avgPrice: currentPrice, // Suggest current price as average price
-        change: (Math.random() - 0.5) * 10, // Mock change
-        changePercent: (Math.random() - 0.5) * 5 // Mock change percent
+        price: stockData.price,
+        avgPrice: stockData.price, // Use current price as average
+        change: stockData.change,
+        changePercent: stockData.changePercent
       }
     } catch (error) {
-      console.error('Error fetching stock price:', error)
+      console.error('Error fetching real-time stock price:', error)
       return null
     }
   }

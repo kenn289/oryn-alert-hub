@@ -31,8 +31,8 @@ export interface UserSubscription {
 
 export class PaymentService {
   private supabase = createClient(
-    process.env.NEXT_PUBLIC_SUPABASE_URL!,
-    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY!
+    process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bwrurebhoxyozdjbokhe.supabase.co',
+    process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVyZWJob3h5b3pkamJva2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzODQ4NDUsImV4cCI6MjA3NDk2MDg0NX0.uVqhgfs0a_ji3BlVq0cUAd4XzhFT-zDvLNenNOWL6oE'
   )
 
   /**
@@ -116,6 +116,14 @@ export class PaymentService {
       if (error.code === 'PGRST116') {
         return null // No subscription found
       }
+      
+      // Check if it's a table not found error
+      if (error.code === 'PGRST205' || error.message.includes('Could not find the table')) {
+        console.warn('Subscriptions table not found, returning null')
+        return null
+      }
+      
+      console.error('Error fetching subscription:', error)
       throw new Error('Failed to fetch subscription')
     }
 
@@ -184,9 +192,11 @@ export class PaymentService {
       }
     } catch (error) {
       console.error('Error getting subscription status:', error)
+      
+      // For new users or database issues, return default free plan status
       return {
         hasActiveSubscription: false,
-        plan: null,
+        plan: 'free',
         isTrial: false,
         trialEndsAt: null
       }

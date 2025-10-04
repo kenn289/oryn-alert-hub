@@ -20,6 +20,7 @@ import {
   Lightbulb
 } from "lucide-react"
 import { toast } from "sonner"
+import { DataFreshnessIndicator, RateLimitBanner } from "@/components/DataFreshnessIndicator"
 import { useAuth } from "@/contexts/AuthContext"
 import { subscriptionService } from "@/lib/subscription-service"
 import { stockDataService } from "@/lib/stock-data-service"
@@ -65,6 +66,12 @@ export function PortfolioTracker() {
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [loadingSuggestions, setLoadingSuggestions] = useState(false)
   const [userPlan, setUserPlan] = useState<{ name: string; maxWatchlistItems: number } | null>(null)
+  const [rateLimitWarning, setRateLimitWarning] = useState(false)
+  const [lastDataFetch, setLastDataFetch] = useState<{
+    source: 'fresh' | 'cached' | 'fallback'
+    rateLimited: boolean
+    age?: string
+  } | null>(null)
   const [aiAnalysis, setAiAnalysis] = useState({
     riskScore: 0,
     diversification: '',
@@ -79,6 +86,8 @@ export function PortfolioTracker() {
     shares: '',
     avgPrice: ''
   })
+  const [currentPrice, setCurrentPrice] = useState<number | null>(null)
+  const [loadingPrice, setLoadingPrice] = useState(false)
 
   useEffect(() => {
     if (user) {
@@ -94,6 +103,37 @@ export function PortfolioTracker() {
       setUserPlan(plan)
     } catch (error) {
       console.error('Error loading user plan:', error)
+    }
+  }
+
+  // Fetch current stock price when ticker changes
+  const fetchCurrentPrice = async (ticker: string) => {
+    if (!ticker || ticker.length < 1) {
+      setCurrentPrice(null)
+      return
+    }
+
+    setLoadingPrice(true)
+    try {
+      console.log(`📊 Fetching current price for ${ticker}...`)
+      const response = await fetch(`/api/stock/multi/${ticker}`)
+      
+      if (response.ok) {
+        const stockData = await response.json()
+        if (stockData && stockData.price) {
+          setCurrentPrice(stockData.price)
+          console.log(`✅ Current price for ${ticker}: $${stockData.price}`)
+        } else {
+          setCurrentPrice(null)
+        }
+      } else {
+        setCurrentPrice(null)
+      }
+    } catch (error) {
+      console.error(`Failed to fetch price for ${ticker}:`, error)
+      setCurrentPrice(null)
+    } finally {
+      setLoadingPrice(false)
     }
   }
 
@@ -126,8 +166,8 @@ export function PortfolioTracker() {
       totalGainLoss,
       totalGainLossPercent,
       totalInvested,
-      dayChange: totalGainLoss * 0.02, // Mock day change
-      dayChangePercent: 2.0
+      dayChange: 0, // Real-time calculation will be implemented
+      dayChangePercent: 0
     })
     
     // Generate AI analysis
@@ -228,25 +268,20 @@ export function PortfolioTracker() {
       const quote = await stockDataService.getStockQuote(ticker)
       return quote.price
     } catch (error) {
-      console.error('Error fetching stock price:', error)
-      // Fallback to mock price if API fails
-      const mockPrices: Record<string, number> = {
-        'AAPL': 175.43,
-        'MSFT': 378.85,
-        'GOOGL': 140.11,
-        'AMZN': 180.50,
-        'NVDA': 920.70,
-        'TSLA': 250.30,
-        'META': 320.15,
-        'NFLX': 450.20
-      }
-      
-      return mockPrices[ticker.toUpperCase()] || 150.00
+      console.error('Error fetching real-time stock price:', error)
+      throw error // Don't fallback to mock data
     }
   }
 
   const handleTickerChange = async (value: string) => {
     setNewItem({ ...newItem, ticker: value.toUpperCase() })
+    
+    // Fetch current price for the ticker
+    if (value.length >= 1) {
+      fetchCurrentPrice(value.toUpperCase())
+    } else {
+      setCurrentPrice(null)
+    }
     
     if (value.length > 0) {
       setLoadingSuggestions(true)
@@ -275,6 +310,8 @@ export function PortfolioTracker() {
       avgPrice: suggestion.avgPrice?.toString() || ''
     })
     setShowSuggestions(false)
+    // Fetch current price for the selected ticker
+    fetchCurrentPrice(suggestion.symbol)
   }
 
   const handleAddStock = async () => {
@@ -302,6 +339,8 @@ export function PortfolioTracker() {
       const currentPrice = await fetchStockPrice(newItem.ticker)
       const shares = parseFloat(newItem.shares)
       const avgPrice = parseFloat(newItem.avgPrice)
+      
+      // Note: Cache info is handled at the service level
       
       // Validate numeric inputs
       if (isNaN(shares) || isNaN(avgPrice) || shares <= 0 || avgPrice <= 0) {
@@ -340,7 +379,23 @@ export function PortfolioTracker() {
       toast.success(`${newItem.ticker} added to portfolio!`)
     } catch (error) {
       console.error('Error adding stock:', error)
-      toast.error('Failed to add stock to portfolio. Please try again.')
+      
+      // Handle specific error types
+      if (error instanceof Error) {
+        if (error.message.includes('not found')) {
+          toast.error('Stock symbol not found. Please check the ticker symbol.')
+        } else if (error.message.includes('API key')) {
+          toast.error('Service configuration issue. Please contact support.')
+        } else if (error.message.includes('rate limit')) {
+          toast.error('Too many requests. Please wait a moment and try again.')
+        } else if (error.message.includes('network') || error.message.includes('fetch')) {
+          toast.error('Network error. Please check your connection and try again.')
+        } else {
+          toast.error(`Failed to add stock: ${error.message}`)
+        }
+      } else {
+        toast.error('Failed to add stock to portfolio. Please try again.')
+      }
     } finally {
       setAddingStock(false)
     }
@@ -433,6 +488,34 @@ export function PortfolioTracker() {
           </Button>
         </div>
       </div>
+
+      {/* Rate Limit Warning */}
+      {rateLimitWarning && (
+        <RateLimitBanner 
+          onDismiss={() => setRateLimitWarning(false)}
+          onRetry={() => {
+            setRateLimitWarning(false)
+            // Trigger a refresh of portfolio data
+            window.location.reload()
+          }}
+        />
+      )}
+
+      {/* Data Freshness Indicator */}
+      {lastDataFetch && (
+        <div className="mb-4">
+          <DataFreshnessIndicator
+            source={lastDataFetch.source}
+            rateLimited={lastDataFetch.rateLimited}
+            age={lastDataFetch.age}
+            onRefresh={() => {
+              setLastDataFetch(null)
+              window.location.reload()
+            }}
+            showDetails={true}
+          />
+        </div>
+      )}
 
       {/* Portfolio Summary */}
       <div className="grid md:grid-cols-4 gap-4">
@@ -582,6 +665,29 @@ export function PortfolioTracker() {
                     ) : (
                       <div className="px-4 py-3 text-sm text-muted-foreground">
                         No stocks found matching &quot;{newItem.ticker}&quot;
+                      </div>
+                    )}
+                  </div>
+                )}
+                {/* Show current price */}
+                {newItem.ticker && (
+                  <div className="mt-2 p-3 bg-muted/50 rounded-lg">
+                    {loadingPrice ? (
+                      <div className="flex items-center gap-2 text-sm text-muted-foreground">
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                        Fetching current price...
+                      </div>
+                    ) : currentPrice ? (
+                      <div className="flex items-center gap-2 text-sm">
+                        <DollarSign className="h-4 w-4 text-green-600" />
+                        <span className="font-medium">Current Price: ${currentPrice.toFixed(2)}</span>
+                        <Badge variant="outline" className="text-xs">
+                          Live
+                        </Badge>
+                      </div>
+                    ) : (
+                      <div className="text-sm text-muted-foreground">
+                        Unable to fetch current price
                       </div>
                     )}
                   </div>

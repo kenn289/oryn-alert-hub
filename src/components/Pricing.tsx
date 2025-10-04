@@ -17,7 +17,7 @@ const plans = [
     features: [
       "Unlimited watchlist items",
       "Real-time price alerts",
-      "Discord notifications",
+      "Email notifications",
       "Basic options flow",
       "Earnings summaries",
       "Community support"

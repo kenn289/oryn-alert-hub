@@ -20,7 +20,6 @@ import {
   Activity,
   Palette,
   Headphones,
-  Eye,
   ArrowUpRight,
   ArrowDownRight,
   DollarSign,
@@ -30,7 +29,6 @@ import {
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 import { toast } from "sonner"
-import { ProFeatureDetail } from "./ProFeatureDetail"
 import { useAuth } from "@/contexts/AuthContext"
 import { stockDataService } from "@/lib/stock-data-service"
 
@@ -71,7 +69,6 @@ export function ProFeatures() {
   const [features, setFeatures] = useState<ProFeature[]>([])
   const [loading, setLoading] = useState(true)
   const [activeTab, setActiveTab] = useState('overview')
-  const [selectedFeature, setSelectedFeature] = useState<string | null>(null)
   const [portfolioData, setPortfolioData] = useState<unknown[]>([])
   const [watchlistData, setWatchlistData] = useState<unknown[]>([])
   const [analyticsData, setAnalyticsData] = useState({
@@ -100,40 +97,52 @@ export function ProFeatures() {
       // Load portfolio data from localStorage
       const portfolio = localStorage.getItem('oryn_portfolio')
       if (portfolio) {
-        const portfolioItems = JSON.parse(portfolio) as Array<{ shares: number; currentPrice: number; avgPrice: number }>
-        setPortfolioData(portfolioItems)
-        
-        // Calculate portfolio analytics
-        const totalValue = portfolioItems.reduce((sum: number, item) => sum + (item.shares * item.currentPrice), 0)
-        const totalInvested = portfolioItems.reduce((sum: number, item) => sum + (item.shares * item.avgPrice), 0)
-        const totalReturn = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : 0
-        
-        setAnalyticsData(prev => ({
-          ...prev,
-          portfolioValue: totalValue,
-          totalReturn: totalReturn,
-          sharpeRatio: 1.89, // Calculated from portfolio data
-          maxDrawdown: -8.2 // Calculated from portfolio data
-        }))
+        try {
+          const portfolioItems = JSON.parse(portfolio) as Array<{ shares: number; currentPrice: number; avgPrice: number }>
+          setPortfolioData(portfolioItems)
+          
+          // Calculate portfolio analytics
+          const totalValue = portfolioItems.reduce((sum: number, item) => sum + (item.shares * item.currentPrice), 0)
+          const totalInvested = portfolioItems.reduce((sum: number, item) => sum + (item.shares * item.avgPrice), 0)
+          const totalReturn = totalInvested > 0 ? ((totalValue - totalInvested) / totalInvested) * 100 : 0
+          
+          setAnalyticsData(prev => ({
+            ...prev,
+            portfolioValue: totalValue,
+            totalReturn: totalReturn,
+            sharpeRatio: 1.89, // Calculated from portfolio data
+            maxDrawdown: -8.2 // Calculated from portfolio data
+          }))
+        } catch (parseError) {
+          console.error('Failed to parse portfolio data:', parseError)
+          // Clear invalid data
+          localStorage.removeItem('oryn_portfolio')
+        }
       }
 
       // Load watchlist data from localStorage
       const watchlist = localStorage.getItem('oryn_watchlist')
       if (watchlist) {
-        const watchlistItems = JSON.parse(watchlist) as Array<{ changePercent: number }>
-        setWatchlistData(watchlistItems)
-        
-        // Calculate watchlist performance
-        const gainers = watchlistItems.filter((item) => item.changePercent > 0).length
-        const losers = watchlistItems.filter((item) => item.changePercent < 0).length
-        const unchanged = watchlistItems.filter((item) => item.changePercent === 0).length
-        
-        setAnalyticsData(prev => ({
-          ...prev,
-          watchlistGainers: gainers,
-          watchlistLosers: losers,
-          watchlistUnchanged: unchanged
-        }))
+        try {
+          const watchlistItems = JSON.parse(watchlist) as Array<{ changePercent: number }>
+          setWatchlistData(watchlistItems)
+          
+          // Calculate watchlist performance
+          const gainers = watchlistItems.filter((item) => item.changePercent > 0).length
+          const losers = watchlistItems.filter((item) => item.changePercent < 0).length
+          const unchanged = watchlistItems.filter((item) => item.changePercent === 0).length
+          
+          setAnalyticsData(prev => ({
+            ...prev,
+            watchlistGainers: gainers,
+            watchlistLosers: losers,
+            watchlistUnchanged: unchanged
+          }))
+        } catch (parseError) {
+          console.error('Failed to parse watchlist data:', parseError)
+          // Clear invalid data
+          localStorage.removeItem('oryn_watchlist')
+        }
       }
     } catch (error) {
       console.error('Error loading user data:', error)
@@ -402,91 +411,6 @@ export function ProFeatures() {
     }
   }
 
-  const handleViewDetails = (featureId: string) => {
-    // Navigate to specific sections or open detailed modals
-    switch (featureId) {
-      case 'advanced-options-flow':
-        // Scroll to Options Flow section on dashboard
-        const optionsFlowElement = document.getElementById('options-flow-section')
-        if (optionsFlowElement) {
-          optionsFlowElement.scrollIntoView({ behavior: 'smooth' })
-        } else {
-          // If not on dashboard, navigate to dashboard
-          window.location.href = '/dashboard#options-flow'
-        }
-        break
-      
-      case 'ai-insights':
-        // Scroll to AI Insights section
-        const aiInsightsElement = document.getElementById('ai-insights-section')
-        if (aiInsightsElement) {
-          aiInsightsElement.scrollIntoView({ behavior: 'smooth' })
-        } else {
-          window.location.href = '/dashboard#ai-insights'
-        }
-        break
-      
-      case 'insider-trading':
-        // Show insider trading details
-        toast.info('Insider Trading: Track SEC filings and insider activity in real-time')
-        break
-      
-      case 'portfolio-analytics':
-        // Scroll to Portfolio Tracker section
-        const portfolioElement = document.getElementById('portfolio-tracker-section')
-        if (portfolioElement) {
-          portfolioElement.scrollIntoView({ behavior: 'smooth' })
-        } else {
-          window.location.href = '/dashboard#portfolio'
-        }
-        break
-      
-      case 'custom-webhooks':
-        // Show webhook configuration
-        toast.info('Custom Webhooks: Configure real-time data delivery to your applications')
-        break
-      
-      case 'team-collaboration':
-        // Scroll to Team Collaboration section
-        const teamElement = document.getElementById('team-collaboration-section')
-        if (teamElement) {
-          teamElement.scrollIntoView({ behavior: 'smooth' })
-        } else {
-          window.location.href = '/dashboard#team-collaboration'
-        }
-        break
-      
-      case 'advanced-analytics':
-        // Scroll to Analytics Dashboard section
-        const analyticsElement = document.getElementById('analytics-dashboard-section')
-        if (analyticsElement) {
-          analyticsElement.scrollIntoView({ behavior: 'smooth' })
-        } else {
-          window.location.href = '/dashboard#analytics'
-        }
-        break
-      
-      case 'white-label':
-        // Show white label options
-        toast.info('White Label: Customize the platform with your branding and domain')
-        break
-      
-      case 'priority-support':
-        // Scroll to Priority Support section
-        const supportElement = document.getElementById('priority-support-section')
-        if (supportElement) {
-          supportElement.scrollIntoView({ behavior: 'smooth' })
-        } else {
-          window.location.href = '/dashboard#priority-support'
-        }
-        break
-      
-      default:
-        // Open detailed modal for other features
-        setSelectedFeature(featureId)
-        break
-    }
-  }
 
   if (loading) {
     return (
@@ -563,14 +487,6 @@ export function ProFeatures() {
                           </div>
                         </div>
                       )}
-                      <Button 
-                        size="sm" 
-                        className="w-full"
-                        onClick={() => handleViewDetails(feature.id)}
-                      >
-                        <Eye className="h-4 w-4 mr-2" />
-                        View Details
-                      </Button>
                     </div>
                   </CardContent>
                 </Card>
@@ -741,14 +657,6 @@ export function ProFeatures() {
           </TabsContent>
         </Tabs>
       </CardContent>
-      
-      {/* Feature Detail Modal */}
-      {selectedFeature && (
-        <ProFeatureDetail 
-          featureId={selectedFeature}
-          onClose={() => setSelectedFeature(null)}
-        />
-      )}
     </Card>
   )
 }

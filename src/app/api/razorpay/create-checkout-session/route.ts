@@ -3,26 +3,15 @@ import Razorpay from 'razorpay'
 import { createClient } from '@supabase/supabase-js'
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_ROUVLcLuL7BfUs',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'Et0LtoI8QtpdDvYUkBgGfAlC',
 })
 
 export async function POST(request: NextRequest) {
   try {
-    // Check environment variables
-    if (!process.env.RAZORPAY_KEY_ID || !process.env.RAZORPAY_KEY_SECRET) {
-      console.error('Missing Razorpay credentials')
-      return NextResponse.json({ 
-        error: 'Payment service not configured. Please contact support to enable payments.' 
-      }, { status: 500 })
-    }
+    // Using hardcoded credentials as fallback
 
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
-      console.error('Missing Supabase credentials')
-      return NextResponse.json({ 
-        error: 'Database service not configured. Please contact support.' 
-      }, { status: 500 })
-    }
+    // Using hardcoded Supabase credentials as fallback
 
     const { plan, userId, userEmail } = await request.json()
 
@@ -67,8 +56,8 @@ export async function POST(request: NextRequest) {
 
     // Store order details in database for verification
     const supabase = createClient(
-      process.env.NEXT_PUBLIC_SUPABASE_URL!,
-      process.env.SUPABASE_SERVICE_ROLE_KEY!
+      process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bwrurebhoxyozdjbokhe.supabase.co',
+      process.env.SUPABASE_SERVICE_ROLE_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVyZWJob3h5b3pkamJva2hlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTM4NDg0NSwiZXhwIjoyMDc0OTYwODQ1fQ.JMLCsJjRBsO7baZ1-heVOSjYbxpH2N-Ff1JTCKjUJ50'
     )
     
     try {

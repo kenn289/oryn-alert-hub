@@ -5,10 +5,11 @@ import { useRouter } from "next/navigation"
 import { useAuth } from "@/contexts/AuthContext"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Activity, TrendingUp, AlertCircle, Zap, LogOut, Plus, Settings, Bell, Info, X, RefreshCw } from "lucide-react"
+import { Activity, TrendingUp, AlertCircle, Zap, LogOut, Plus, Bell, Info, X, RefreshCw, Shield } from "lucide-react"
 import { toast } from "sonner"
 import { WatchlistModal } from "@/components/WatchlistModal"
 import { WatchlistService, WatchlistItem, PLANS } from "@/lib/watchlist"
+import { UserInitializationService } from "@/lib/user-initialization-service"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { FeatureManager } from "@/components/FeatureManager"
 import { SubscriptionManager } from "@/components/SubscriptionManager"
@@ -18,39 +19,38 @@ import { AIInsights } from "@/components/AIInsights"
 import { OptionsFlow } from "@/components/OptionsFlow"
 import { PrioritySupport } from "@/components/PrioritySupport"
 import { TeamCollaboration } from "@/components/TeamCollaboration"
+import { MarketStatus } from "@/components/MarketStatus"
 import { useFeatures } from "@/hooks/use-features"
 import { subscriptionService } from "@/lib/subscription-service"
-import { stockDataService, StockAlert, OptionsActivity } from "@/lib/stock-data-service"
 import { PortfolioTracker } from "@/components/PortfolioTracker"
+import { AlertService, Alert } from "@/lib/alert-service"
+import { ErrorHandler, handleAsyncError } from "@/lib/error-handler"
+import { LoadingStates } from "@/components/LoadingStates"
+import { ErrorFallback } from "@/components/ErrorFallback"
+import { NetworkStatus } from "@/components/NetworkStatus"
 
-// Mock data for demonstration
-const mockWatchlist = [
-  { id: '1', ticker: 'AAPL', name: 'Apple Inc.', price: 175.43, change: 2.4 },
-  { id: '2', ticker: 'MSFT', name: 'Microsoft Corp.', price: 378.85, change: -1.2 },
-  { id: '3', ticker: 'GOOGL', name: 'Alphabet Inc.', price: 142.56, change: 0.8 },
-]
-
-const mockAlerts = [
-  { id: '1', type: 'price_spike', ticker: 'AAPL', message: 'AAPL price surged 3.2%', time: '2 minutes ago' },
-  { id: '2', type: 'options_flow', ticker: 'TSLA', message: 'TSLA: Unusual call activity detected', time: '15 minutes ago' },
-  { id: '3', type: 'earnings', ticker: 'NVDA', message: 'NVDA earnings call summary', time: '1 hour ago' },
-  { id: '4', type: 'volume_spike', ticker: 'MSFT', message: 'MSFT volume increased 180%', time: '2 hours ago' },
-  { id: '5', type: 'options_flow', ticker: 'GOOGL', message: 'GOOGL: Large block trade detected', time: '3 hours ago' },
-  { id: '6', type: 'technical_breakout', ticker: 'META', message: 'META technical breakout', time: '4 hours ago' },
-  { id: '7', type: 'news_alert', ticker: 'AMZN', message: 'AMZN breaking news', time: '5 hours ago' },
-]
+// Real-time data only - no mock data
 
 export default function DashboardPage() {
   const router = useRouter()
   const { user, signOut, loading } = useAuth()
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
-  const [portfolio, setPortfolio] = useState<Array<{ ticker: string }>>([])
-  const [alerts, setAlerts] = useState(mockAlerts)
+  const [alerts, setAlerts] = useState<Alert[]>([])
   const [liveStats, setLiveStats] = useState({
     activeAlerts: 0,
     watchlistCount: 0,
     optionsFlowCount: 0
   })
+  const [isLoading, setIsLoading] = useState(true)
+  const [hasError, setHasError] = useState(false)
+  const [errorMessage, setErrorMessage] = useState('')
+  const [watchlistLoading, setWatchlistLoading] = useState(false)
+  const [rateLimitWarning, setRateLimitWarning] = useState(false)
+  const [dataFreshness, setDataFreshness] = useState<{
+    source: 'fresh' | 'cached' | 'fallback'
+    rateLimited: boolean
+    age?: string
+  } | null>(null)
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false)
   const [userPlan, setUserPlan] = useState(PLANS.free)
       const [subscriptionStatus, setSubscriptionStatus] = useState({
@@ -62,6 +62,9 @@ export default function DashboardPage() {
         daysRemaining: null as number | null,
         isMasterAccount: false
       })
+  
+  // Check if user is master account
+  const isMasterAccount = user?.email === 'kennethoswin289@gmail.com'
   const features = useFeatures(userPlan)
 
   useEffect(() => {
@@ -75,19 +78,53 @@ export default function DashboardPage() {
     const loadUserData = async () => {
       if (!user) return
 
+      setIsLoading(true)
+      setHasError(false)
+      setErrorMessage('')
+
+      try {
+        // Check if user needs initialization (for new users) - only on client side
+        if (typeof window !== 'undefined') {
           try {
-            // Get secure subscription status
-            const status = await subscriptionService.getSubscriptionStatus(user.id, user.email)
-            setSubscriptionStatus(status)
-            
-            // Get user plan based on subscription
-            const plan = await subscriptionService.getUserPlan(user.id, user.email)
-            setUserPlan(plan)
+            // Skip user initialization for master account to avoid issues
+            if (user.email === 'kennethoswin289@gmail.com') {
+              console.log('🛡️ Master account detected, skipping user initialization')
+            } else {
+              const userExists = await UserInitializationService.userExists(user.id)
+              if (!userExists) {
+                console.log('🆕 New user detected, initializing...')
+                await UserInitializationService.initializeNewUser(user.id, user.email)
+              }
+            }
+          } catch (error) {
+            console.warn('User initialization failed, continuing with dashboard load:', error)
+            console.warn('This is normal if database tables are not set up yet')
+            // Don't block dashboard loading if user initialization fails
+            // The user can still use the dashboard with default settings
+          }
+        }
+
+        // Get secure subscription status (force refresh from database)
+        const status = await handleAsyncError(
+          () => subscriptionService.getSubscriptionStatus(user.id, user.email),
+          'loading subscription status'
+        )
+        if (status) {
+          setSubscriptionStatus(status)
+          console.log('📊 Current subscription status:', status)
+        }
+        
+        // Get user plan based on subscription
+        const plan = await handleAsyncError(
+          () => subscriptionService.getUserPlan(user.id, user.email),
+          'loading user plan'
+        )
+        if (plan) setUserPlan(plan)
         
         // Validate data integrity first
         const integrityCheck = WatchlistService.validateDataIntegrity()
         if (!integrityCheck.valid) {
-          toast.error(integrityCheck.message)
+          ErrorHandler.handleError(new Error(integrityCheck.message), 'validating data integrity')
         }
         
         // Validate and sanitize watchlist data
@@ -102,39 +139,92 @@ export default function DashboardPage() {
           toast.warning(limitEnforcement.message)
         }
         
-        const savedWatchlist = WatchlistService.getWatchlist()
+        // Load watchlist with fresh Yahoo Finance data (keep existing items)
+        console.log('🔄 Loading watchlist with fresh Yahoo Finance prices...')
+        const savedWatchlist = await WatchlistService.getWatchlistWithData()
         setWatchlist(savedWatchlist)
+        console.log('✅ Watchlist loaded with real-time Yahoo Finance data')
         
         // Load portfolio data
-        const savedPortfolio = localStorage.getItem('oryn_portfolio')
-        if (savedPortfolio) {
-          setPortfolio(JSON.parse(savedPortfolio))
+        try {
+          const savedPortfolio = localStorage.getItem('oryn_portfolio')
+          if (savedPortfolio) {
+            // Portfolio data loaded successfully
+            console.log('Portfolio data loaded from localStorage')
+          }
+        } catch (error) {
+          ErrorHandler.handleError(error, 'loading portfolio data')
         }
+
+        // Generate real-time alerts based on watchlist
+        const generateAlerts = async () => {
+          try {
+            const watchlistTickers = savedWatchlist ? savedWatchlist.map(item => item.ticker) : []
+            const realTimeAlerts = await AlertService.generateAlerts(watchlistTickers)
+            setAlerts(realTimeAlerts)
+          } catch (error) {
+            console.error('Alert generation failed:', error)
+            // Set error alert instead of sample data
+            setAlerts([{
+              id: 'dashboard_error_alert',
+              type: 'news_alert',
+              ticker: 'SYSTEM',
+              message: 'Unable to load alerts. Please check your connection and try again.',
+              time: 'Just now',
+              severity: 'high',
+              data: { isError: true, errorType: 'dashboard_error' }
+            }])
+          }
+        }
+
+        await generateAlerts()
+        
+        // No fallback to sample data - show empty state or error messages
         
       } catch (error) {
-        console.error('Error loading user data:', error)
-        toast.error('Failed to load subscription data')
+        const errorMsg = ErrorHandler.handleError(error, 'loading dashboard data')
+        setHasError(true)
+        setErrorMessage(errorMsg)
+      } finally {
+        setIsLoading(false)
       }
     }
 
     loadUserData()
   }, [user])
 
-  // Simulate live stats updates
+  // Real-time stats updates based on actual data
   useEffect(() => {
-    const interval = setInterval(() => {
-      const maxAlerts = userPlan.name === 'free' ? 5 : 20
-      const maxOptionsFlow = userPlan.name === 'free' ? 3 : 10
+    const updateStats = () => {
+      const optionsFlowAlerts = alerts.filter(alert => alert.type === 'options_flow')
       
-      setLiveStats(prev => ({
-        activeAlerts: Math.min(prev.activeAlerts + (Math.random() > 0.5 ? 1 : -1), maxAlerts),
+      setLiveStats({
+        activeAlerts: alerts.length,
         watchlistCount: watchlist.length,
-        optionsFlowCount: Math.min(prev.optionsFlowCount + (Math.random() > 0.5 ? 1 : -1), maxOptionsFlow)
-      }))
-    }, 5000)
+        optionsFlowCount: optionsFlowAlerts.length
+      })
+    }
+
+    // Update stats immediately
+    updateStats()
+
+    // Set up interval for real-time updates
+    const interval = setInterval(async () => {
+      try {
+        // Generate new alerts based on current watchlist
+        const watchlistTickers = watchlist ? watchlist.map(item => item.ticker) : []
+        const newAlerts = await AlertService.generateAlerts(watchlistTickers)
+        setAlerts(newAlerts)
+        
+        // Update stats with new data
+        updateStats()
+      } catch (error) {
+        console.error('Error updating alerts:', error)
+      }
+    }, 30000) // Update every 30 seconds
 
     return () => clearInterval(interval)
-  }, [watchlist.length, userPlan.name])
+  }, [watchlist, alerts])
 
   const handleSignOut = async () => {
     await signOut()
@@ -158,12 +248,6 @@ export default function DashboardPage() {
     }
   }
 
-  const handleRefreshWatchlist = () => {
-    const updatedWatchlist = WatchlistService.getWatchlist()
-    setWatchlist(updatedWatchlist)
-    setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
-    toast.success("Watchlist refreshed")
-  }
 
   const handleRemoveFromWatchlist = (ticker: string) => {
     const result = WatchlistService.removeFromWatchlist(ticker)
@@ -191,99 +275,83 @@ export default function DashboardPage() {
     window.location.href = `/#${section}`
   }
 
-  const handleRefreshAlerts = () => {
-    // Generate varied and realistic alert data
-    const tickers = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA', 'META', 'AMZN', 'NFLX', 'AMD', 'INTC', 'CRM', 'ADBE']
-    const alertTypes = ['price_spike', 'volume_spike', 'earnings', 'news_alert', 'technical_breakout']
-    const messages = {
-      price_spike: ['price surged', 'price jumped', 'price spiked', 'significant price movement', 'price breakout'],
-      volume_spike: ['volume increased', 'unusual volume detected', 'volume surge', 'high volume activity', 'volume spike'],
-      earnings: ['earnings call summary', 'earnings update', 'earnings report', 'earnings guidance', 'earnings beat'],
-      news_alert: ['breaking news', 'market news', 'company announcement', 'regulatory update', 'partnership news'],
-      technical_breakout: ['technical breakout', 'resistance broken', 'support level', 'chart pattern', 'momentum shift']
-    }
-    
-    const timeOptions = ['1 minute ago', '3 minutes ago', '5 minutes ago', '8 minutes ago', '12 minutes ago', '15 minutes ago', '20 minutes ago', '25 minutes ago']
-    
-    // Generate alerts based on actual watchlist data
-    const newAlerts = watchlist.slice(0, 3).map((item, i) => {
-      const type = alertTypes[i % alertTypes.length]
-      const messageVariations = messages[type as keyof typeof messages]
-      const message = messageVariations[i % messageVariations.length]
-      const time = timeOptions[i % timeOptions.length]
+  const handleRefreshWatchlist = async () => {
+    try {
+      setWatchlistLoading(true)
+      console.log('🔄 Refreshing watchlist prices with fresh Yahoo Finance data...')
       
-      return {
-        id: `alert_${item.ticker}_${i}`,
-        type,
-        ticker: item.ticker,
-        message: `${item.ticker} ${message}`,
-        time
-      }
-    })
-    
-    // Keep existing options flow alerts and update only non-options alerts
-    const existingOptionsFlow = alerts.filter(alert => alert.type === 'options_flow')
-    const updatedAlerts = [...newAlerts, ...existingOptionsFlow]
-    setAlerts(updatedAlerts)
-    toast.success('Alerts refreshed with new data')
+      // Update prices for existing watchlist items
+      const freshWatchlist = await WatchlistService.forceRefreshWatchlist()
+      setWatchlist(freshWatchlist)
+      
+      toast.success('Watchlist prices refreshed with fresh Yahoo Finance data')
+    } catch (error) {
+      console.error('Error refreshing watchlist:', error)
+      toast.error('Failed to refresh watchlist')
+    } finally {
+      setWatchlistLoading(false)
+    }
   }
 
-  const handleRefreshOptionsFlow = () => {
-    // Generate varied and realistic options flow data
-    const tickers = ['AAPL', 'MSFT', 'GOOGL', 'TSLA', 'NVDA', 'META', 'AMZN', 'NFLX', 'AMD', 'INTC', 'CRM', 'ADBE', 'JPM', 'BAC', 'WFC', 'GS']
-    const optionsMessages = [
-      'Massive put options purchased',
-      'Unusual call activity detected', 
-      'Institutional options flow',
-      'Large block trade detected',
-      'Unusual options volume',
-      'Big money options activity',
-      'Institutional put buying',
-      'Call options surge',
-      'Options flow anomaly',
-      'Unusual strike activity',
-      'Block options trade',
-      'Institutional call buying',
-      'Options volume spike',
-      'Unusual expiration activity',
-      'Large options position'
-    ]
-    
-    const timeOptions = ['1 minute ago', '2 minutes ago', '4 minutes ago', '6 minutes ago', '9 minutes ago', '11 minutes ago', '14 minutes ago', '18 minutes ago']
-    
-    // Generate options flow based on actual portfolio data
-    const newOptionsFlow = portfolio.slice(0, 2).map((item, i) => {
-      const message = optionsMessages[i % optionsMessages.length]
-      const time = timeOptions[i % timeOptions.length]
+  const handleRefreshAlerts = async () => {
+    try {
+      console.log('🔄 Generating real-time alerts from Yahoo Finance data...')
       
-      return {
-        id: `options_${item.ticker}_${i}`,
-        type: 'options_flow',
-        ticker: item.ticker,
-        message: `${item.ticker}: ${message}`,
-        time
+      // Generate real-time alerts based on current watchlist
+      const watchlistTickers = watchlist ? watchlist.map(item => item.ticker) : []
+      
+      if (watchlistTickers.length === 0) {
+        toast.info('Add stocks to your watchlist to generate alerts')
+        return
       }
-    })
-    
-    // Keep existing non-options flow alerts and update only options flow alerts
-    const existingNonOptionsFlow = alerts.filter(alert => alert.type !== 'options_flow')
-    const updatedAlerts = [...existingNonOptionsFlow, ...newOptionsFlow]
-    setAlerts(updatedAlerts)
-    toast.success('Options flow refreshed with new data')
+
+      console.log(`📊 Generating alerts for ${watchlistTickers.length} watchlist stocks...`)
+      const newAlerts = await AlertService.generateAlerts(watchlistTickers)
+      setAlerts(newAlerts)
+      
+      // Update live stats
+      const optionsFlowAlerts = newAlerts.filter(alert => alert.type === 'options_flow')
+      setLiveStats(prev => ({
+        ...prev,
+        activeAlerts: newAlerts.length,
+        optionsFlowCount: optionsFlowAlerts.length
+      }))
+      
+      console.log(`✅ Generated ${newAlerts.length} real-time alerts`)
+      toast.success(`Generated ${newAlerts.length} real-time alerts from Yahoo Finance`)
+    } catch (error) {
+      console.error('Error refreshing alerts:', error)
+      toast.error('Failed to refresh alerts')
+    }
+  }
+
+  const handleRefreshOptionsFlow = async () => {
+    try {
+      // Generate real-time options flow alerts
+      const watchlistTickers = watchlist ? watchlist.map(item => item.ticker) : []
+      const newAlerts = await AlertService.generateAlerts(watchlistTickers)
+      
+      // Filter for options flow alerts
+      const optionsFlowAlerts = newAlerts.filter(alert => alert.type === 'options_flow')
+      
+      // Update stats
+      setLiveStats(prev => ({
+        ...prev,
+        optionsFlowCount: optionsFlowAlerts.length
+      }))
+      
+      toast.success(`Options flow refreshed - ${optionsFlowAlerts.length} unusual activities detected`)
+    } catch (error) {
+      console.error('Error refreshing options flow:', error)
+      toast.error('Failed to refresh options flow')
+    }
   }
 
   if (loading) {
     return (
       <div className="min-h-screen bg-background p-4">
         <div className="container mx-auto max-w-7xl">
-          <div className="animate-pulse">
-            <div className="h-16 bg-muted rounded mb-8" />
-            <div className="grid md:grid-cols-4 gap-6 mb-8">
-              {[1, 2, 3, 4].map((i) => (
-                <div key={i} className="h-32 bg-muted rounded" />
-              ))}
-            </div>
-          </div>
+          <LoadingStates type="dashboard" message="Loading your dashboard..." />
         </div>
       </div>
     )
@@ -291,57 +359,102 @@ export default function DashboardPage() {
 
   if (!user) return null
 
+  // Show error state if there's an error
+  if (hasError) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="container mx-auto max-w-7xl">
+          <ErrorFallback
+            error={new Error(errorMessage)}
+            context="loading dashboard data"
+            onRetry={() => {
+              setHasError(false)
+              setErrorMessage('')
+              // Trigger reload by updating a dependency
+              window.location.reload()
+            }}
+            showDetails={process.env.NODE_ENV === 'development'}
+          />
+        </div>
+      </div>
+    )
+  }
+
+  // Show loading state while data is being fetched
+  if (isLoading) {
+    return (
+      <div className="min-h-screen bg-background p-4">
+        <div className="container mx-auto max-w-7xl">
+          <LoadingStates type="dashboard" message="Setting up your dashboard..." />
+        </div>
+      </div>
+    )
+  }
+
   return (
     <TooltipProvider>
-      <div className="min-h-screen bg-background">
-      <header className="border-b border-border bg-card">
-        <div className="container mx-auto px-4">
-          <div className="flex h-16 items-center justify-between">
-            <div className="flex items-center gap-2">
-              <Activity className="h-6 w-6 text-primary" />
-              <span className="text-xl font-bold">Oryn Dashboard</span>
-            </div>
-            
-                {/* Navigation Menu */}
-                <div className="hidden md:flex items-center space-x-6">
-                  <button 
-                    onClick={() => handleNavigation('features')} 
-                    className="text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    Features
-                  </button>
-                  <button 
-                    onClick={() => handleNavigation('pricing')} 
-                    className="text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    Pricing
-                  </button>
-                  <button 
-                    onClick={() => handleNavigation('docs')} 
-                    className="text-sm font-medium hover:text-primary transition-colors"
-                  >
-                    Docs
-                  </button>
-                </div>
-            
-            <div className="flex items-center gap-4">
-              <div className="text-sm text-muted-foreground">
-                {user.email}
-              </div>
-              <Button variant="outline" size="sm" onClick={handleSignOut}>
-                <LogOut className="h-4 w-4 mr-2" />
-                Sign Out
-              </Button>
-            </div>
-          </div>
-        </div>
-      </header>
+      <NetworkStatus showWhenOffline={true} showWhenOnline={false} />
+      <div className="page-background">
+      {/* Navigation is now handled by the root layout */}
+      
+      {/* Floating elements */}
+      <div className="floating-element-1"></div>
+      <div className="floating-element-2"></div>
+      <div className="floating-element-3"></div>
 
-      <div className="container mx-auto px-4 py-8 max-w-7xl">
+      <div className="container mx-auto px-4 py-8 max-w-7xl pt-20 relative z-10">
+        {/* Rate Limit Warning */}
+        {rateLimitWarning && (
+          <div className="mb-6">
+            <RateLimitBanner 
+              onDismiss={() => setRateLimitWarning(false)}
+              onRetry={() => {
+                setRateLimitWarning(false)
+                window.location.reload()
+              }}
+            />
+          </div>
+        )}
+
+
+
+        {/* Master Dashboard Access */}
+        {isMasterAccount && (
+          <div className="mb-6">
+            <Card className="bg-gradient-to-r from-yellow-50 to-yellow-100 border-yellow-200 shadow-lg">
+              <CardContent className="p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-gradient-to-r from-yellow-400 to-yellow-600 rounded-xl">
+                      <Shield className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-yellow-800">Master Account Access</h3>
+                      <p className="text-yellow-700">You have master privileges. Access the master dashboard to manage users, tickets, and system operations.</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => router.push('/master-dashboard')}
+                    className="bg-yellow-600 hover:bg-yellow-700 text-white px-6 py-2"
+                  >
+                    <Shield className="h-4 w-4 mr-2" />
+                    Master Dashboard
+                  </Button>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        )}
+
+        {/* Market Status */}
+        <div className="mb-6">
+          <MarketStatus />
+        </div>
+
         {/* Stats Cards */}
         <div className="grid md:grid-cols-3 gap-6 mb-8">
 
-          <Card className="hover-lift bg-gradient-to-br from-success/10 to-success/5 border-success/20 group">
+          <Card className="card-hover animate-scale-in bg-gradient-to-br from-success/10 to-success/5 border-success/20 group" style={{ animationDelay: '0.1s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-sm font-medium">Active Alerts</CardTitle>
@@ -368,7 +481,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 group">
+          <Card className="card-hover animate-scale-in bg-gradient-to-br from-accent/10 to-accent/5 border-accent/20 group" style={{ animationDelay: '0.2s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-sm font-medium">Watchlist</CardTitle>
@@ -395,7 +508,7 @@ export default function DashboardPage() {
             </CardContent>
           </Card>
 
-          <Card className="hover-lift bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 group">
+          <Card className="card-hover animate-scale-in bg-gradient-to-br from-secondary/10 to-secondary/5 border-secondary/20 group" style={{ animationDelay: '0.3s' }}>
             <CardHeader className="flex flex-row items-center justify-between space-y-0 pb-2">
               <div className="flex items-center gap-2">
                 <CardTitle className="text-sm font-medium">Options Flow</CardTitle>
@@ -424,7 +537,7 @@ export default function DashboardPage() {
         </div>
 
             {/* Welcome Section - Full Width */}
-            <Card className="p-8 mb-8">
+            <Card className="p-8 mb-8 card-hover animate-slide-in">
               <CardHeader>
                 <div className="flex items-center justify-between">
                   <div>
@@ -434,38 +547,49 @@ export default function DashboardPage() {
                     </CardDescription>
                   </div>
                   {subscriptionStatus.hasActiveSubscription && (
-                    <div className={`flex items-center gap-2 px-4 py-2 rounded-lg border ${
+                    <div className={`flex items-center justify-between gap-2 px-4 py-2 rounded-lg border ${
                       subscriptionStatus.isMasterAccount 
                         ? 'bg-gradient-to-r from-yellow-500/10 to-orange-500/10 border-yellow-500/20'
                         : 'bg-gradient-to-r from-primary/10 to-secondary/10 border-primary/20'
                     }`}>
-                      <Zap className={`h-4 w-4 ${
-                        subscriptionStatus.isMasterAccount ? 'text-yellow-500' : 'text-primary'
-                      }`} />
-                      <span className={`text-sm font-medium ${
-                        subscriptionStatus.isMasterAccount 
-                          ? 'text-yellow-600 dark:text-yellow-400' 
-                          : ''
-                      }`}>
-                        {subscriptionStatus.isMasterAccount 
-                          ? 'Master Account' 
-                          : subscriptionStatus.isTrial 
-                            ? 'Pro Trial' 
-                            : 'Pro Plan'
-                        }
-                        {!subscriptionStatus.isMasterAccount && subscriptionStatus.daysRemaining !== null && subscriptionStatus.daysRemaining > 0 && (
-                          <span className="text-xs text-muted-foreground ml-1">
-                            ({subscriptionStatus.daysRemaining} days left)
-                          </span>
-                        )}
-                      </span>
+                      <div className="flex items-center gap-2">
+                        <Zap className={`h-4 w-4 ${
+                          subscriptionStatus.isMasterAccount ? 'text-yellow-500' : 'text-primary'
+                        }`} />
+                        <span className={`text-sm font-medium ${
+                          subscriptionStatus.isMasterAccount 
+                            ? 'text-yellow-600 dark:text-yellow-400' 
+                            : ''
+                        }`}>
+                          {subscriptionStatus.isMasterAccount 
+                            ? 'Master Account' 
+                            : subscriptionStatus.isTrial 
+                              ? 'Pro Trial' 
+                              : 'Pro Plan'
+                          }
+                          {!subscriptionStatus.isMasterAccount && subscriptionStatus.daysRemaining !== null && subscriptionStatus.daysRemaining > 0 && (
+                            <span className="text-xs text-muted-foreground ml-1">
+                              ({subscriptionStatus.daysRemaining} days left)
+                            </span>
+                          )}
+                        </span>
+                      </div>
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => window.location.reload()}
+                        className="text-xs text-muted-foreground hover:text-foreground"
+                      >
+                        <RefreshCw className="h-3 w-3 mr-1" />
+                        Refresh
+                      </Button>
                     </div>
                   )}
                 </div>
               </CardHeader>
           <CardContent className="space-y-6">
             <div className="grid md:grid-cols-3 gap-4">
-              <Card className="p-6 bg-muted">
+              <Card className="p-6 bg-muted card-hover animate-slide-up" style={{ animationDelay: '0.4s' }}>
                 <div className="text-lg font-semibold mb-2">1. Track Portfolio</div>
                 <p className="text-sm text-muted-foreground mb-4">
                   Add your investments to get personalized AI analysis
@@ -475,7 +599,7 @@ export default function DashboardPage() {
                 </Button>
               </Card>
 
-              <Card className="p-6 bg-muted">
+              <Card className="p-6 bg-muted card-hover animate-slide-up" style={{ animationDelay: '0.5s' }}>
                 <div className="text-lg font-semibold mb-2">2. Create Watchlist</div>
                 <p className="text-sm text-muted-foreground mb-4">
                   Add tickers you want to monitor for alerts
@@ -486,7 +610,7 @@ export default function DashboardPage() {
                 </Button>
               </Card>
 
-              <Card className="p-6 bg-muted">
+              <Card className="p-6 bg-muted card-hover animate-slide-up" style={{ animationDelay: '0.6s' }}>
                 <div className="text-lg font-semibold mb-2">3. Configure Alerts</div>
                 <p className="text-sm text-muted-foreground mb-4">
                   Set up price, volume, and options alerts
@@ -508,7 +632,7 @@ export default function DashboardPage() {
         {/* Active Alerts and Options Flow - Below Welcome */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
           {/* Active Alerts */}
-          <Card>
+          <Card className="card-hover animate-slide-in" style={{ animationDelay: '0.7s' }}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -527,35 +651,61 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {alerts.slice(0, 3).map((alert) => (
-                <div key={alert.id} className="p-4 bg-gradient-to-r from-success/10 to-success/5 border border-success/20 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-success rounded-full animate-pulse"></div>
-                      <span className="font-medium text-success">{alert.ticker}</span>
+              {alerts && alerts.length > 0 && alerts.slice(0, 3).map((alert) => {
+                const severityColors = {
+                  low: 'from-blue-500/10 to-blue-500/5 border-blue-500/20',
+                  medium: 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20',
+                  high: 'from-red-500/10 to-red-500/5 border-red-500/20'
+                }
+                
+                const severityIcons = {
+                  low: '🔵',
+                  medium: '🟡', 
+                  high: '🔴'
+                }
+
+                return (
+                  <div key={alert.id} className={`p-4 bg-gradient-to-r ${severityColors[alert.severity]} border rounded-lg`}>
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className={`w-2 h-2 rounded-full animate-pulse ${
+                          alert.severity === 'high' ? 'bg-red-500' : 
+                          alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
+                        }`}></div>
+                        <span className="font-medium">{alert.ticker}</span>
+                        <span className="text-xs">{severityIcons[alert.severity]}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{alert.time}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{alert.time}</span>
+                    <p className="text-sm text-muted-foreground">{alert.message}</p>
+                    <div className="mt-2 text-xs opacity-70">
+                      {alert.type === 'price_spike' && <span>📈 Price Movement Alert</span>}
+                      {alert.type === 'volume_spike' && <span>📊 Volume Alert</span>}
+                      {alert.type === 'earnings' && <span>📋 Earnings Alert</span>}
+                      {alert.type === 'options_flow' && <span>💰 Options Flow Alert</span>}
+                      {alert.type === 'news_alert' && <span>📰 News Alert</span>}
+                      {alert.type === 'technical_breakout' && <span>📊 Technical Alert</span>}
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">{alert.message}</p>
-                  <div className="mt-2 text-xs text-success/70">
-                    {alert.type === 'price_spike' && '📈 Price Movement Alert'}
-                    {alert.type === 'volume_spike' && '📊 Volume Alert'}
-                    {alert.type === 'earnings' && '📋 Earnings Alert'}
-                  </div>
-                </div>
-              ))}
-              {alerts.length === 0 && (
+                )
+              })}
+              {(!alerts || alerts.length === 0) && (
                 <div className="text-center py-8 text-muted-foreground">
                   <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <p className="text-lg font-medium mb-2">No active alerts</p>
                   <p className="text-sm">Set up alerts to start monitoring your stocks</p>
+                  <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      💡 <strong>Tip:</strong> Add stocks to your watchlist to start receiving real-time alerts
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
           </Card>
 
           {/* Options Flow */}
-          <Card>
+          <Card className="card-hover animate-slide-in" style={{ animationDelay: '0.8s' }}>
             <CardHeader>
               <div className="flex items-center justify-between">
                 <div>
@@ -574,26 +724,33 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {alerts.filter(alert => alert.type === 'options_flow').slice(0, 3).map((alert) => (
-                <div key={alert.id} className="p-4 bg-gradient-to-r from-secondary/10 to-secondary/5 border border-secondary/20 rounded-lg">
-                  <div className="flex items-center justify-between mb-2">
-                    <div className="flex items-center gap-2">
-                      <div className="w-2 h-2 bg-secondary rounded-full animate-pulse"></div>
-                      <span className="font-medium text-secondary">{alert.ticker}</span>
+              {alerts && alerts.filter(alert => alert.type === 'options_flow').slice(0, 3).map((alert) => {
+                return (
+                  <div key={alert.id} className="p-4 bg-gradient-to-r from-secondary/10 to-secondary/5 border-secondary/20 border rounded-lg">
+                    <div className="flex items-center justify-between mb-2">
+                      <div className="flex items-center gap-2">
+                        <div className="w-2 h-2 bg-secondary rounded-full animate-pulse"></div>
+                        <span className="font-medium text-secondary">{alert.ticker}</span>
+                      </div>
+                      <span className="text-xs text-muted-foreground">{alert.time}</span>
                     </div>
-                    <span className="text-xs text-muted-foreground">{alert.time}</span>
+                    <p className="text-sm text-muted-foreground">{alert.message}</p>
+                    <div className="mt-2 text-xs text-secondary/70">
+                      💰 Unusual Options Activity
+                    </div>
                   </div>
-                  <p className="text-sm text-muted-foreground">{alert.message}</p>
-                  <div className="mt-2 text-xs text-secondary/70">
-                    💰 Unusual Options Activity
-                  </div>
-                </div>
-              ))}
-              {alerts.filter(alert => alert.type === 'options_flow').length === 0 && (
+                )
+              })}
+              {(!alerts || alerts.filter(alert => alert.type === 'options_flow').length === 0) && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <p className="text-lg font-medium mb-2">No options flow detected</p>
                   <p className="text-sm">Monitor for unusual options activity</p>
+                  <div className="mt-4 p-3 bg-muted/50 rounded-lg">
+                    <p className="text-xs text-muted-foreground">
+                      💡 <strong>Tip:</strong> Options flow alerts require Pro plan for full functionality
+                    </p>
+                  </div>
                 </div>
               )}
             </CardContent>
@@ -633,12 +790,10 @@ export default function DashboardPage() {
               </div>
             )}
 
-            {/* Priority Support - Only show for Pro/Master users */}
-            {(userPlan.name === 'pro' || userPlan.name === 'master') && (
-              <div className="mb-8">
-                <PrioritySupport />
-              </div>
-            )}
+            {/* Priority Support - Available for all users */}
+            <div className="mb-8">
+              <PrioritySupport userPlan={userPlan} subscriptionStatus={subscriptionStatus} />
+            </div>
 
             {/* Team Collaboration - Only show for Pro/Master users */}
             {(userPlan.name === 'pro' || userPlan.name === 'master') && (
@@ -682,6 +837,9 @@ export default function DashboardPage() {
                           {userPlan.name === 'free' && (
                             <span className="text-warning ml-2">(Free Plan)</span>
                           )}
+                          {watchlistLoading && (
+                            <span className="text-blue-600 ml-2">(Fetching real-time data...)</span>
+                          )}
                         </p>
                     {userPlan.name === 'free' && features.getLimit('watchlist') !== -1 && (
                       <div className="mt-2">
@@ -710,8 +868,13 @@ export default function DashboardPage() {
                         Upgrade to Pro
                       </Button>
                     )}
-                    <Button size="sm" variant="outline" onClick={handleRefreshWatchlist}>
-                      <RefreshCw className="h-4 w-4" />
+                    <Button 
+                      size="sm" 
+                      variant="outline" 
+                      onClick={handleRefreshWatchlist}
+                      disabled={watchlistLoading}
+                    >
+                      <RefreshCw className={`h-4 w-4 ${watchlistLoading ? 'animate-spin' : ''}`} />
                     </Button>
                     <Button size="sm" variant="outline" onClick={handleCreateWatchlist}>
                       <Plus className="h-4 w-4" />
@@ -727,7 +890,7 @@ export default function DashboardPage() {
                     <p className="text-sm">Add stocks to start tracking their performance</p>
                   </div>
                 ) : (
-                  watchlist.map((item) => (
+                  watchlist && watchlist.map((item) => (
                     <div key={item.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg hover:bg-muted/70 transition-colors">
                       <div className="flex items-center gap-3">
                         <div>

@@ -1,5 +1,6 @@
 import { paymentService } from './payment-service'
 import { UserPlan, PLANS } from './watchlist'
+import { supabase } from './supabase'
 
 export interface SubscriptionStatus {
   hasActiveSubscription: boolean
@@ -12,6 +13,37 @@ export interface SubscriptionStatus {
 }
 
 export class SubscriptionService {
+  /**
+   * Get user plan from users table
+   */
+  async getUserPlanFromDatabase(userId: string): Promise<string> {
+    try {
+      const { data, error } = await supabase
+        .from('users')
+        .select('plan')
+        .eq('id', userId)
+        .single()
+
+      if (error) {
+        console.error('Error fetching user plan from database:', error)
+        return 'free' // Default to free if error
+      }
+
+      return data?.plan || 'free'
+    } catch (error) {
+      console.error('Error fetching user plan:', error)
+      return 'free' // Default to free if error
+    }
+  }
+
+  /**
+   * Force refresh user plan from database
+   */
+  async refreshUserPlan(userId: string): Promise<string> {
+    console.log('🔄 Refreshing user plan from database...')
+    return await this.getUserPlanFromDatabase(userId)
+  }
+
   /**
    * Get comprehensive subscription status
    */
@@ -32,35 +64,28 @@ export class SubscriptionService {
         }
       }
 
-      const status = await paymentService.getSubscriptionStatus(userId)
+      // Get plan directly from users table
+      const userPlan = await this.getUserPlanFromDatabase(userId)
       
-      let isExpired = false
-      let daysRemaining: number | null = null
-
-      if (status.isTrial && status.trialEndsAt) {
-        const trialEndsAt = new Date(status.trialEndsAt)
-        const now = new Date()
-        const diffTime = trialEndsAt.getTime() - now.getTime()
-        const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24))
-        
-        daysRemaining = Math.max(0, diffDays)
-        isExpired = diffTime <= 0
-      }
-
+      // Determine if user has active subscription based on plan
+      const hasActiveSubscription = userPlan !== 'free'
+      
       return {
-        hasActiveSubscription: status.hasActiveSubscription && !isExpired,
-        plan: status.plan,
-        isTrial: status.isTrial,
-        trialEndsAt: status.trialEndsAt,
-        isExpired,
-        daysRemaining,
+        hasActiveSubscription,
+        plan: userPlan,
+        isTrial: false, // No trial system for now
+        trialEndsAt: null,
+        isExpired: false,
+        daysRemaining: null,
         isMasterAccount: false
       }
     } catch (error) {
       console.error('Error getting subscription status:', error)
+      
+      // Return default free plan status for new users or database issues
       return {
         hasActiveSubscription: false,
-        plan: null,
+        plan: 'free',
         isTrial: false,
         trialEndsAt: null,
         isExpired: false,
@@ -98,7 +123,7 @@ export class SubscriptionService {
           features: {
             watchlist: { enabled: true, unlimited: true },
             priceAlerts: { enabled: true, unlimited: true },
-            discordNotifications: { enabled: true, unlimited: true },
+            emailNotifications: { enabled: true, unlimited: true },
             basicOptionsFlow: { enabled: true, unlimited: true },
             earningsSummaries: { enabled: true, unlimited: true },
             communitySupport: { enabled: true, unlimited: true },

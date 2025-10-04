@@ -1,4 +1,5 @@
 // import { toast } from "sonner"
+import { multiApiStockService } from './multi-api-stock-service'
 
 export interface WatchlistItem {
   id: string
@@ -28,7 +29,7 @@ export interface UserPlan {
     // Free features
     watchlist: FeatureAccess
     priceAlerts: FeatureAccess
-    discordNotifications: FeatureAccess
+    emailNotifications: FeatureAccess
     basicOptionsFlow: FeatureAccess
     earningsSummaries: FeatureAccess
     communitySupport: FeatureAccess
@@ -58,7 +59,7 @@ export const PLANS: Record<string, UserPlan> = {
     features: {
       watchlist: { enabled: true, max: 15, description: 'Up to 15 watchlist items' },
       priceAlerts: { enabled: true, max: 5, description: 'Up to 5 real-time price alerts' },
-      discordNotifications: { enabled: true, description: 'Discord notifications' },
+      emailNotifications: { enabled: true, description: 'Email notifications' },
       basicOptionsFlow: { enabled: true, max: 3, description: 'Basic options flow (up to 3)' },
       earningsSummaries: { enabled: true, description: 'Earnings summaries' },
       communitySupport: { enabled: true, description: 'Community support' },
@@ -84,7 +85,33 @@ export const PLANS: Record<string, UserPlan> = {
     features: {
       watchlist: { enabled: true, unlimited: true, description: 'Unlimited watchlist items' },
       priceAlerts: { enabled: true, unlimited: true, description: 'Unlimited real-time price alerts' },
-      discordNotifications: { enabled: true, description: 'Discord notifications' },
+      emailNotifications: { enabled: true, description: 'Email notifications' },
+      basicOptionsFlow: { enabled: true, unlimited: true, description: 'Unlimited basic options flow' },
+      earningsSummaries: { enabled: true, description: 'Earnings summaries' },
+      communitySupport: { enabled: true, description: 'Community support' },
+      advancedOptionsFlow: { enabled: true, unlimited: true, description: 'Advanced options flow' },
+      aiInsights: { enabled: true, description: 'AI-powered insights' },
+      insiderTrading: { enabled: true, description: 'Insider trading alerts' },
+      portfolioAnalytics: { enabled: true, unlimited: true, description: 'Portfolio analytics' },
+      customWebhooks: { enabled: true, unlimited: true, description: 'Custom webhooks' },
+      teamCollaboration: { enabled: true, unlimited: true, description: 'Team collaboration' },
+      advancedAnalytics: { enabled: true, description: 'Advanced analytics' },
+      whiteLabel: { enabled: true, description: 'White-label options' },
+      prioritySupport: { enabled: true, description: 'Priority support' }
+    }
+  },
+  master: {
+    name: 'master',
+    maxWatchlistItems: -1, // unlimited
+    maxAlerts: -1, // unlimited
+    maxOptionsFlow: -1, // unlimited
+    maxPortfolioAnalytics: -1, // unlimited
+    maxCustomWebhooks: -1, // unlimited
+    maxTeamMembers: -1, // unlimited
+    features: {
+      watchlist: { enabled: true, unlimited: true, description: 'Unlimited watchlist items' },
+      priceAlerts: { enabled: true, unlimited: true, description: 'Unlimited real-time price alerts' },
+      emailNotifications: { enabled: true, description: 'Email notifications' },
       basicOptionsFlow: { enabled: true, unlimited: true, description: 'Unlimited basic options flow' },
       earningsSummaries: { enabled: true, description: 'Earnings summaries' },
       communitySupport: { enabled: true, description: 'Community support' },
@@ -103,22 +130,25 @@ export const PLANS: Record<string, UserPlan> = {
 
 // Feature access control utilities
 export const hasFeatureAccess = (userPlan: UserPlan, feature: keyof UserPlan['features']): boolean => {
-  return userPlan.features[feature].enabled
+  const featureConfig = userPlan.features[feature]
+  return featureConfig ? featureConfig.enabled : false
 }
 
 export const getFeatureLimit = (userPlan: UserPlan, feature: keyof UserPlan['features']): number => {
   const featureConfig = userPlan.features[feature]
-  if (!featureConfig.enabled) return 0
+  if (!featureConfig || !featureConfig.enabled) return 0
   if (featureConfig.unlimited) return -1
   return featureConfig.max || 0
 }
 
 export const isFeatureUnlimited = (userPlan: UserPlan, feature: keyof UserPlan['features']): boolean => {
-  return userPlan.features[feature].enabled && userPlan.features[feature].unlimited === true
+  const featureConfig = userPlan.features[feature]
+  return featureConfig ? (featureConfig.enabled && featureConfig.unlimited === true) : false
 }
 
 export const getFeatureDescription = (userPlan: UserPlan, feature: keyof UserPlan['features']): string => {
-  return userPlan.features[feature].description || ''
+  const featureConfig = userPlan.features[feature]
+  return featureConfig ? (featureConfig.description || '') : ''
 }
 
 export const checkFeatureAccess = (userPlan: UserPlan, feature: keyof UserPlan['features'], currentUsage: number = 0): { 
@@ -273,8 +303,8 @@ export class WatchlistService {
       id: Date.now().toString() + Math.random().toString(36).substr(2, 9), // More unique ID
       ticker: cleanTicker,
       name: (name && name.trim()) ? name.trim().substring(0, 100) : `${cleanTicker} Inc.`, // Limit name length
-      price: Math.random() * 500 + 50,
-      change: (Math.random() - 0.5) * 10,
+      price: 0, // Will be fetched from API
+      change: 0, // Will be fetched from API
       addedAt: new Date().toISOString()
     }
 
@@ -427,5 +457,154 @@ export class WatchlistService {
     const checksum = this.generateChecksum(jsonData)
     localStorage.setItem(this.STORAGE_KEY, jsonData)
     localStorage.setItem(this.CHECKSUM_KEY, checksum)
+  }
+
+  // Fetch real stock data for watchlist items
+  static async fetchWatchlistData(): Promise<WatchlistItem[]> {
+    const watchlist = this.getWatchlist()
+    const updatedItems: WatchlistItem[] = []
+
+    console.log(`🔄 Fetching REAL-TIME Yahoo Finance data for ${watchlist.length} watchlist items...`)
+
+    // If no items in watchlist, return empty array
+    if (watchlist.length === 0) {
+      console.log('📝 No items in watchlist, returning empty array')
+      return []
+    }
+
+    for (const item of watchlist) {
+      try {
+        console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
+        
+        // Use our API route to fetch data (handles CORS and server-side requests)
+        const response = await fetch(`/api/stock/multi/${item.ticker}`)
+        
+        if (!response.ok) {
+          throw new Error(`API HTTP error: ${response.status}`)
+        }
+        
+        const stockData = await response.json()
+        
+        if (!stockData || !stockData.price) {
+          throw new Error('No price data available')
+        }
+        
+        const realTimeData = {
+          symbol: stockData.symbol,
+          name: stockData.name || item.name,
+          price: stockData.price,
+          change: stockData.change,
+          changePercent: stockData.changePercent,
+          volume: stockData.volume || 0,
+          source: stockData.source || 'yahoo_finance'
+        }
+        
+        console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
+        
+        updatedItems.push({
+          ...item,
+          name: realTimeData.name,
+          price: realTimeData.price,
+          change: realTimeData.change,
+          changePercent: realTimeData.changePercent
+        })
+      } catch (error) {
+        console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
+        // Keep the item with existing data if API fails
+        updatedItems.push(item)
+      }
+    }
+
+    // Update localStorage with fresh data
+    if (updatedItems.length > 0) {
+      this.saveWithChecksum(updatedItems)
+      console.log(`💾 Updated watchlist with REAL-TIME data for ${updatedItems.length} items`)
+    }
+
+    return updatedItems
+  }
+
+  // Get watchlist with real-time data
+  static async getWatchlistWithData(): Promise<WatchlistItem[]> {
+    try {
+      return await this.fetchWatchlistData()
+    } catch (error) {
+      console.error('Error fetching watchlist data:', error)
+      // Return cached data if API fails
+      return this.getWatchlist()
+    }
+  }
+
+  // Force refresh watchlist with real-time data (bypass cache)
+  static async forceRefreshWatchlist(): Promise<WatchlistItem[]> {
+    console.log('🔄 Force refreshing watchlist with real-time Yahoo Finance data...')
+    
+    // Get existing watchlist items
+    const watchlist = this.getWatchlist()
+    const updatedItems: WatchlistItem[] = []
+
+    // If no items in watchlist, return empty array
+    if (watchlist.length === 0) {
+      console.log('📝 No items in watchlist, returning empty array')
+      return []
+    }
+
+    for (const item of watchlist) {
+      try {
+        console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
+        
+        // Use our API route to fetch data (handles CORS and server-side requests)
+        const response = await fetch(`/api/stock/multi/${item.ticker}`)
+        
+        if (!response.ok) {
+          throw new Error(`API HTTP error: ${response.status}`)
+        }
+        
+        const stockData = await response.json()
+        
+        if (!stockData || !stockData.price) {
+          throw new Error('No price data available')
+        }
+        
+        const realTimeData = {
+          symbol: stockData.symbol,
+          name: stockData.name || item.name,
+          price: stockData.price,
+          change: stockData.change,
+          changePercent: stockData.changePercent,
+          volume: stockData.volume || 0,
+          source: stockData.source || 'yahoo_finance'
+        }
+        
+        console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
+        
+        updatedItems.push({
+          ...item,
+          name: realTimeData.name,
+          price: realTimeData.price,
+          change: realTimeData.change,
+          changePercent: realTimeData.changePercent
+        })
+      } catch (error) {
+        console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
+        // Keep the item with existing data if API fails
+        updatedItems.push(item)
+      }
+    }
+
+    // Update localStorage with fresh data
+    if (updatedItems.length > 0) {
+      this.saveWithChecksum(updatedItems)
+      console.log(`💾 Updated watchlist with REAL-TIME data for ${updatedItems.length} items`)
+    }
+
+    return updatedItems
+  }
+
+  // Clear only price cache, keep watchlist items
+  static clearPriceCache(): void {
+    console.log('🗑️ Clearing price cache but keeping watchlist items...')
+    // Don't clear the watchlist items, just force fresh price updates
+    console.log('✅ Price cache cleared - will fetch fresh prices for existing items')
   }
 }

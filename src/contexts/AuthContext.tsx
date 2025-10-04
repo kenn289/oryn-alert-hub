@@ -3,6 +3,7 @@
 import { createContext, useContext, useEffect, useState } from "react"
 import { User, Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
+import { UserInitializationService } from "@/lib/user-initialization-service"
 
 interface AuthContextType {
   user: User | null
@@ -33,16 +34,69 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   useEffect(() => {
     const { data: { subscription } } = supabase.auth.onAuthStateChange(
-      (event, session) => {
+      async (event, session) => {
         setSession(session)
         setUser(session?.user ?? null)
+        
+        // Handle new user initialization (non-blocking) - only on client side
+        if (event === 'SIGNED_IN' && session?.user && typeof window !== 'undefined') {
+          // Skip user initialization for master account to avoid issues
+          if (session.user.email === 'kennethoswin289@gmail.com') {
+            console.log('🛡️ Master account detected, skipping user initialization')
+          } else {
+            // Don't await this - let it run in background
+            UserInitializationService.userExists(session.user.id)
+              .then(async (userExists) => {
+                if (!userExists) {
+                  console.log('🆕 New user detected, initializing...')
+                  await UserInitializationService.initializeNewUser(
+                    session.user.id, 
+                    session.user.email || ''
+                  )
+                } else {
+                  // Update last login for existing users
+                  await UserInitializationService.updateLastLogin(session.user.id)
+                }
+              })
+              .catch(error => {
+                console.error('Error handling user initialization:', error)
+              })
+          }
+        }
+        
         setLoading(false)
       }
     )
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(async ({ data: { session } }) => {
       setSession(session)
       setUser(session?.user ?? null)
+      
+      // Handle existing session - only on client side
+      if (session?.user && typeof window !== 'undefined') {
+        try {
+          // Skip user initialization for master account to avoid issues
+          if (session.user.email === 'kennethoswin289@gmail.com') {
+            console.log('🛡️ Master account detected, skipping user initialization')
+          } else {
+            const userExists = await UserInitializationService.userExists(session.user.id)
+            
+            if (!userExists) {
+              console.log('🆕 Existing session with new user, initializing...')
+              await UserInitializationService.initializeNewUser(
+                session.user.id, 
+                session.user.email || ''
+              )
+            } else {
+              // Update last login for existing users
+              await UserInitializationService.updateLastLogin(session.user.id)
+            }
+          }
+        } catch (error) {
+          console.error('Error handling session initialization:', error)
+        }
+      }
+      
       setLoading(false)
     })
 
@@ -50,7 +104,15 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   const signOut = async () => {
+    // Clear all sessions and local storage
     await supabase.auth.signOut()
+    
+    // Clear any cached data
+    localStorage.clear()
+    sessionStorage.clear()
+    
+    // Force reload to clear any remaining state
+    window.location.reload()
   }
 
   return (

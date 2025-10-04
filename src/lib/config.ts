@@ -9,24 +9,13 @@ export const config = {
       (process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || process.env.SUPABASE_ANON_KEY)
     ),
   },
-  discord: {
-    clientId: process.env.NEXT_PUBLIC_DISCORD_CLIENT_ID || process.env.DISCORD_CLIENT_ID,
-    clientSecret: process.env.DISCORD_CLIENT_SECRET,
-    botToken: process.env.DISCORD_BOT_TOKEN,
-    publicKey: process.env.DISCORD_PUBLIC_KEY,
-    isAvailable: Boolean(
-      process.env.DISCORD_CLIENT_ID &&
-      process.env.DISCORD_CLIENT_SECRET &&
-      process.env.DISCORD_BOT_TOKEN &&
-      process.env.DISCORD_PUBLIC_KEY
-    ),
-  },
+  // Discord removed - not needed
   razorpay: {
     keyId: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID,
     keySecret: process.env.RAZORPAY_KEY_SECRET,
     webhookSecret: process.env.RAZORPAY_WEBHOOK_SECRET,
     isAvailable: Boolean(
-      process.env.RAZORPAY_KEY_ID &&
+      (process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || process.env.RAZORPAY_KEY_ID) &&
       process.env.RAZORPAY_KEY_SECRET
     ),
   },
@@ -68,11 +57,9 @@ export const serviceMessages = {
     : 'Payment unavailable - Please contact support',
   stockData: config.stockData.isAvailable 
     ? 'Stock data available' 
-    : 'Stock data unavailable - Demo mode',
-  discord: config.discord.isAvailable 
-    ? 'Discord integration available' 
-    : 'Discord integration unavailable - Setup required',
+    : 'Stock data unavailable - API key required',
+  // Discord removed - not needed
   database: config.supabase.isAvailable 
     ? 'Database available' 
-    : 'Database unavailable - Demo mode',
+    : 'Database unavailable - Configuration required',
 }

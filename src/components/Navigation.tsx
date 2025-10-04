@@ -2,20 +2,52 @@
 
 import { useState, useEffect } from "react"
 import Link from "next/link"
+import { usePathname } from "next/navigation"
 import { Button } from "@/components/ui/button"
-import { Menu, X, Activity, LogOut } from "lucide-react"
+import { Menu, X, LogOut, BarChart3, Brain, Zap, Users, Headphones, Shield } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useAuth } from "@/contexts/AuthContext"
+import { OrynLogo } from "@/components/OrynLogo"
+import { NotificationCenter } from "@/components/NotificationCenter"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)
   const [mounted, setMounted] = useState(false)
+  const [userPlan, setUserPlan] = useState('free')
+  const pathname = usePathname()
   const { theme, setTheme } = useTheme()
   const { user, signOut } = useAuth()
 
   useEffect(() => {
     setMounted(true)
   }, [])
+
+  // Check user plan when user changes
+  useEffect(() => {
+    if (user) {
+      // Check if user is master account first
+      if (user.email === 'kennethoswin289@gmail.com') {
+        setUserPlan('master')
+        return
+      }
+      
+      const checkUserPlan = async () => {
+        try {
+          const response = await fetch('/api/subscription/status')
+          if (response.ok) {
+            const data = await response.json()
+            setUserPlan(data.plan || 'free')
+          }
+        } catch (error) {
+          console.error('Error checking user plan:', error)
+          setUserPlan('free')
+        }
+      }
+      checkUserPlan()
+    } else {
+      setUserPlan('free')
+    }
+  }, [user])
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -48,7 +80,7 @@ export function Navigation() {
         <div className="container mx-auto px-4">
           <div className="flex items-center justify-between h-16">
             <Link href="/" className="flex items-center space-x-2">
-              <Activity className="h-8 w-8 text-primary" />
+              <OrynLogo size={32} className="h-8 w-8" />
               <span className="text-xl font-bold gradient-text">Oryn</span>
             </Link>
             <div className="hidden md:flex items-center space-x-8">
@@ -81,35 +113,60 @@ export function Navigation() {
   }
 
   return (
-    <nav className="fixed top-0 w-full z-50 bg-background/80 backdrop-blur-md border-b border-border">
+    <nav className="fixed top-0 w-full z-50 glass-effect border-b border-border">
       <div className="container mx-auto px-4">
         <div className="flex items-center justify-between h-16">
           {/* Logo */}
           <Link href="/" className="flex items-center space-x-2">
-            <Activity className="h-8 w-8 text-primary" />
+            <OrynLogo size={32} className="h-8 w-8" />
             <span className="text-xl font-bold gradient-text">Oryn</span>
           </Link>
 
           {/* Desktop Navigation */}
-          <div className="hidden md:flex items-center space-x-8">
-            <button 
-              onClick={() => handleNavigation('features')} 
-              className="text-sm font-medium hover:text-primary transition-colors"
+          <div className="hidden md:flex items-center space-x-6">
+            {/* Always show these */}
+            <Link 
+              href="/"
+              className={`text-sm font-medium hover:text-primary transition-colors micro-interaction ${
+                pathname === '/' ? 'text-primary' : ''
+              }`}
             >
-              Features
-            </button>
-            <button 
-              onClick={() => handleNavigation('pricing')} 
-              className="text-sm font-medium hover:text-primary transition-colors"
-            >
-              Pricing
-            </button>
-            <button 
-              onClick={() => handleNavigation('docs')} 
-              className="text-sm font-medium hover:text-primary transition-colors"
+              Home
+            </Link>
+            <Link 
+              href="/docs"
+              className={`text-sm font-medium hover:text-primary transition-colors micro-interaction ${
+                pathname === '/docs' ? 'text-primary' : ''
+              }`}
             >
               Docs
-            </button>
+            </Link>
+            
+            {/* Show for authenticated users */}
+            {user && (
+              <>
+                <Link 
+                  href="/dashboard"
+                  className={`text-sm font-medium hover:text-primary transition-colors ${
+                    pathname === '/dashboard' ? 'text-primary' : ''
+                  }`}
+                >
+                  Dashboard
+                </Link>
+                {userPlan === 'master' && (
+                  <Link 
+                    href="/master-dashboard"
+                    className={`text-sm font-medium hover:text-primary transition-colors ${
+                      pathname === '/master-dashboard' ? 'text-primary' : ''
+                    }`}
+                  >
+                    <Shield className="h-4 w-4 inline mr-1" />
+                    Master
+                  </Link>
+                )}
+                
+              </>
+            )}
           </div>
 
           {/* Desktop Actions */}
@@ -124,11 +181,7 @@ export function Navigation() {
             </Button>
             {user ? (
               <>
-                <Link href="/dashboard">
-                  <Button variant="ghost" size="sm">
-                    Dashboard
-                  </Button>
-                </Link>
+                <NotificationCenter />
                 <Button variant="ghost" size="sm" onClick={handleSignOut}>
                   <LogOut className="h-4 w-4 mr-2" />
                   Sign Out
@@ -165,24 +218,55 @@ export function Navigation() {
         {isOpen && (
           <div className="md:hidden py-4 border-t border-border">
             <div className="flex flex-col space-y-4">
-              <button 
-                onClick={() => handleNavigation('features')} 
-                className="text-sm font-medium hover:text-primary transition-colors text-left"
+              {/* Always show these */}
+              <Link 
+                href="/"
+                className={`text-sm font-medium hover:text-primary transition-colors text-left ${
+                  pathname === '/' ? 'text-primary' : ''
+                }`}
+                onClick={() => setIsOpen(false)}
               >
-                Features
-              </button>
-              <button 
-                onClick={() => handleNavigation('pricing')} 
-                className="text-sm font-medium hover:text-primary transition-colors text-left"
-              >
-                Pricing
-              </button>
-              <button 
-                onClick={() => handleNavigation('docs')} 
-                className="text-sm font-medium hover:text-primary transition-colors text-left"
+                Home
+              </Link>
+              <Link 
+                href="/docs"
+                className={`text-sm font-medium hover:text-primary transition-colors text-left ${
+                  pathname === '/docs' ? 'text-primary' : ''
+                }`}
+                onClick={() => setIsOpen(false)}
               >
                 Docs
-              </button>
+              </Link>
+              
+              {/* Show for authenticated users */}
+              {user && (
+                <>
+                  <Link 
+                    href="/dashboard"
+                    className={`text-sm font-medium hover:text-primary transition-colors text-left ${
+                      pathname === '/dashboard' ? 'text-primary' : ''
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    Dashboard
+                  </Link>
+                  
+                  
+                  {/* Master dashboard - only show for master accounts */}
+                  {userPlan === 'master' && (
+                    <Link 
+                      href="/master-dashboard"
+                      className={`text-sm font-medium hover:text-primary transition-colors text-left ${
+                        pathname === '/master-dashboard' ? 'text-primary' : ''
+                      }`}
+                      onClick={() => setIsOpen(false)}
+                    >
+                      <Shield className="h-4 w-4 inline mr-2" />
+                      Master Dashboard
+                    </Link>
+                  )}
+                </>
+              )}
               <div className="flex items-center space-x-4 pt-4">
                 <Button
                   variant="ghost"
@@ -194,11 +278,6 @@ export function Navigation() {
                 </Button>
                 {user ? (
                   <>
-                    <Link href="/dashboard" className="flex-1">
-                      <Button variant="ghost" size="sm" className="w-full">
-                        Dashboard
-                      </Button>
-                    </Link>
                     <Button variant="ghost" size="sm" onClick={handleSignOut} className="flex-1">
                       <LogOut className="h-4 w-4 mr-2" />
                       Sign Out

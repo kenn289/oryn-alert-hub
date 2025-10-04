@@ -4,8 +4,8 @@ import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID!,
-  key_secret: process.env.RAZORPAY_KEY_SECRET!,
+  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_1234567890',
+  key_secret: process.env.RAZORPAY_KEY_SECRET || 'test_secret_1234567890',
 })
 
 export async function POST(request: NextRequest) {

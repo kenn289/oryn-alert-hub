@@ -27,7 +27,7 @@ interface FeatureManagerProps {
 const featureIcons: Record<string, React.ComponentType<{ className?: string }>> = {
   watchlist: Activity,
   priceAlerts: Zap,
-  discordNotifications: Activity,
+  emailNotifications: Activity,
   basicOptionsFlow: TrendingUp,
   earningsSummaries: BarChart3,
   communitySupport: Users,
@@ -46,7 +46,7 @@ const featureCategories = {
   free: [
     'watchlist',
     'priceAlerts', 
-    'discordNotifications',
+    'emailNotifications',
     'basicOptionsFlow',
     'earningsSummaries',
     'communitySupport'

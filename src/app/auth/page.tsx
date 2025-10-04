@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Card } from "@/components/ui/card"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Activity, Loader2 } from "lucide-react"
 import { toast } from "sonner"
@@ -14,16 +14,17 @@ import { supabase } from "@/lib/supabase"
 
 export default function AuthPage() {
   const router = useRouter()
-  const { user } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const [loading, setLoading] = useState(false)
   const [email, setEmail] = useState("")
   const [password, setPassword] = useState("")
 
   useEffect(() => {
-    if (user) {
+    if (user && !authLoading) {
+      console.log('🔄 User authenticated, redirecting to dashboard...')
       router.push("/dashboard")
     }
-  }, [user, router])
+  }, [user, authLoading, router])
 
   const handleSignUp = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -47,7 +48,7 @@ export default function AuthPage() {
       } else {
         toast.success("Account created! You can now sign in.")
       }
-        } catch (error: unknown) {
+        } catch {
       toast.error("Failed to create account")
     } finally {
       setLoading(false)
@@ -68,9 +69,9 @@ export default function AuthPage() {
         toast.error(error.message)
       } else {
         toast.success("Welcome back!")
-        router.push("/dashboard")
+        // Redirection will be handled by useEffect
       }
-        } catch (error: unknown) {
+        } catch {
       toast.error("Failed to sign in")
     } finally {
       setLoading(false)
@@ -78,9 +79,26 @@ export default function AuthPage() {
   }
 
 
+  // Show loading state while checking authentication
+  if (authLoading) {
+    return (
+      <div className="page-background flex items-center justify-center p-4">
+        <Card className="w-full max-w-md p-8 relative z-10 border-border bg-card">
+          <div className="text-center">
+            <Loader2 className="h-8 w-8 animate-spin mx-auto mb-4" />
+            <p>Checking authentication...</p>
+          </div>
+        </Card>
+      </div>
+    )
+  }
+
   return (
-    <div className="min-h-screen flex items-center justify-center bg-background p-4">
-      <div className="absolute inset-0 bg-[linear-gradient(to_right,#ffffff08_1px,transparent_1px),linear-gradient(to_bottom,#ffffff08_1px,transparent_1px)] bg-[size:4rem_4rem]" />
+    <div className="page-background flex items-center justify-center p-4">
+      {/* Floating elements */}
+      <div className="floating-element-1"></div>
+      <div className="floating-element-2"></div>
+      <div className="floating-element-3"></div>
       
       <Card className="w-full max-w-md p-8 relative z-10 border-border bg-card">
         <div className="flex items-center justify-center gap-2 mb-8">

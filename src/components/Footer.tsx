@@ -15,7 +15,7 @@ export function Footer() {
               <span className="text-xl font-bold gradient-text">Oryn</span>
             </Link>
             <p className="text-sm text-muted-foreground max-w-xs">
-              The smartest stock intelligence bot for Discord. 
+              The smartest stock intelligence platform. 
               Get real-time alerts, AI summaries, and market insights.
             </p>
             <div className="flex space-x-4">
@@ -43,11 +43,6 @@ export function Footer() {
               <li>
                 <Link href="#pricing" className="text-muted-foreground hover:text-primary transition-colors">
                   Pricing
-                </Link>
-              </li>
-              <li>
-                <Link href="/demo" className="text-muted-foreground hover:text-primary transition-colors">
-                  Demo
                 </Link>
               </li>
               <li>
@@ -113,13 +108,6 @@ export function Footer() {
           </div>
         </div>
 
-        <div className="border-t border-border mt-12 pt-8">
-          <div className="flex flex-col md:flex-row justify-between items-center space-y-4 md:space-y-0">
-            <p className="text-sm text-muted-foreground">
-              © 2024 Oryn. All rights reserved.
-            </p>
-          </div>
-        </div>
       </div>
     </footer>
   )
