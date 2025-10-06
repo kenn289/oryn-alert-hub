@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { User, Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { UserInitializationService } from "@/lib/user-initialization-service"
+import { DatabaseWatchlistService } from "@/lib/database-watchlist-service"
 
 interface AuthContextType {
   user: User | null
@@ -57,6 +58,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   // Update last login for existing users
                   await UserInitializationService.updateLastLogin(session.user.id)
                 }
+                // Perform server-authoritative watchlist sync
+                try {
+                  await DatabaseWatchlistService.syncLocalToDatabase(session.user.id)
+                  await DatabaseWatchlistService.syncDatabaseToLocal(session.user.id)
+                } catch (syncError) {
+                  console.error('Error syncing watchlist on sign-in:', syncError)
+                }
               })
               .catch(error => {
                 console.error('Error handling user initialization:', error)
@@ -91,6 +99,13 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               // Update last login for existing users
               await UserInitializationService.updateLastLogin(session.user.id)
             }
+          }
+          // Ensure watchlist sync for existing session as well
+          try {
+            await DatabaseWatchlistService.syncLocalToDatabase(session.user.id)
+            await DatabaseWatchlistService.syncDatabaseToLocal(session.user.id)
+          } catch (syncError) {
+            console.error('Error syncing watchlist for existing session:', syncError)
           }
         } catch (error) {
           console.error('Error handling session initialization:', error)

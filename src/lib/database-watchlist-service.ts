@@ -194,24 +194,26 @@ export class DatabaseWatchlistService {
       // Get localStorage watchlist
       const localWatchlist = JSON.parse(localStorage.getItem('oryn_watchlist') || '[]')
       
-      if (localWatchlist.length === 0) {
-        return
-      }
+      const localTickers = new Set(localWatchlist.map((i: any) => i.ticker))
 
-      console.log(`🔄 Syncing ${localWatchlist.length} items from localStorage to database...`)
-
-      // Get existing database watchlist
+      // One-time consolidation: if DB has multiple conflicting sets, keep union, then persist DB as source of truth
       const dbWatchlist = await this.getWatchlist(userId)
-      const existingTickers = new Set(dbWatchlist.map(item => item.ticker))
+      const dbTickers = new Set(dbWatchlist.map(i => i.ticker))
+      const union = new Set<string>([...localTickers, ...dbTickers])
 
-      // Add items that don't exist in database
-      for (const item of localWatchlist) {
-        if (!existingTickers.has(item.ticker)) {
-          await this.addToWatchlist(userId, item.ticker, item.name, item.market)
-        }
+      // Clear DB and insert union minimal set to ensure consistent baseline
+      await this.clearWatchlist(userId)
+      for (const ticker of union) {
+        const local = localWatchlist.find((i: any) => i.ticker === ticker)
+        const name = local?.name || ticker
+        const market = local?.market
+        await this.addToWatchlist(userId, ticker, name, market)
       }
 
-      console.log('✅ Watchlist sync completed')
+      // Update localStorage from DB to finalize consolidation
+      const fresh = await this.getWatchlist(userId)
+      localStorage.setItem('oryn_watchlist', JSON.stringify(fresh))
+      console.log(`✅ Watchlist consolidation complete. ${fresh.length} items unified.`)
     } catch (error) {
       console.error('Error syncing watchlist:', error)
     }

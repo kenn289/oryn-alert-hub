@@ -9,6 +9,7 @@ import { Activity, TrendingUp, AlertCircle, Zap, LogOut, Plus, Bell, Info, X, Re
 import { toast } from "sonner"
 import { WatchlistModal } from "@/components/WatchlistModal"
 import { WatchlistService, WatchlistItem, PLANS } from "@/lib/watchlist"
+import { DatabaseWatchlistService } from "@/lib/database-watchlist-service"
 import { UserInitializationService } from "@/lib/user-initialization-service"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { FeatureManager } from "@/components/FeatureManager"
@@ -130,25 +131,15 @@ export default function DashboardPage() {
         )
         if (plan) setUserPlan(plan)
         
-        // Validate data integrity first
-        const integrityCheck = WatchlistService.validateDataIntegrity()
-        if (!integrityCheck.valid) {
-          ErrorHandler.handleError(new Error(integrityCheck.message), 'validating data integrity')
+        // Server-authoritative sync for watchlist
+        try {
+          await DatabaseWatchlistService.syncLocalToDatabase(user.id)
+          await DatabaseWatchlistService.syncDatabaseToLocal(user.id)
+        } catch (e) {
+          console.warn('Watchlist sync failed, continuing with local data:', e)
         }
-        
-        // Validate and sanitize watchlist data
-        const validation = WatchlistService.validateWatchlistData()
-        if (!validation.valid) {
-          toast.warning(validation.message)
-        }
-        
-        // Enforce limits on existing data
-        const limitEnforcement = WatchlistService.enforceLimits()
-        if (limitEnforcement.removed > 0) {
-          toast.warning(limitEnforcement.message)
-        }
-        
-        // Load watchlist with fresh Yahoo Finance data (keep existing items)
+
+        // Load watchlist
         console.log('🔄 Loading watchlist with fresh Yahoo Finance prices...')
         const savedWatchlist = await WatchlistService.getWatchlistWithData()
         setWatchlist(savedWatchlist)
@@ -250,15 +241,33 @@ export default function DashboardPage() {
     setIsWatchlistModalOpen(true)
   }
 
-  const handleAddToWatchlist = (ticker: string, market?: string) => {
-    const result = WatchlistService.addToWatchlist(ticker, "", market)
-    if (result.success) {
-      const updatedWatchlist = WatchlistService.getWatchlist()
-      setWatchlist(updatedWatchlist)
-      setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
-      toast.success(result.message)
-    } else {
-      toast.error(result.message)
+  const handleAddToWatchlist = async (ticker: string, market?: string) => {
+    try {
+      if (user) {
+        // Persist to DB immediately
+        const token = (await supabase.auth.getSession()).data.session?.access_token
+        if (token) {
+          const resp = await fetch('/api/watchlist', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json', Authorization: `Bearer ${token}` },
+            body: JSON.stringify({ ticker, name: ticker, market })
+          })
+          if (!resp.ok) throw new Error('Server add failed')
+        }
+      }
+    } catch (e) {
+      // Non-blocking: still add locally as fallback
+      console.warn('Server add failed, falling back to local:', e)
+    } finally {
+      const result = WatchlistService.addToWatchlist(ticker, "", market)
+      if (result.success) {
+        const updatedWatchlist = WatchlistService.getWatchlist()
+        setWatchlist(updatedWatchlist)
+        setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
+        toast.success(result.message)
+      } else {
+        toast.error(result.message)
+      }
     }
   }
 
@@ -281,15 +290,30 @@ export default function DashboardPage() {
   }
 
 
-  const handleRemoveFromWatchlist = (ticker: string) => {
-    const result = WatchlistService.removeFromWatchlist(ticker)
-    if (result.success) {
-      const updatedWatchlist = WatchlistService.getWatchlist()
-      setWatchlist(updatedWatchlist)
-      setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
-      toast.success(result.message)
-    } else {
-      toast.error(result.message)
+  const handleRemoveFromWatchlist = async (ticker: string) => {
+    try {
+      if (user) {
+        const token = (await supabase.auth.getSession()).data.session?.access_token
+        if (token) {
+          const resp = await fetch(`/api/watchlist?ticker=${encodeURIComponent(ticker)}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` }
+          })
+          if (!resp.ok) throw new Error('Server remove failed')
+        }
+      }
+    } catch (e) {
+      console.warn('Server remove failed, continuing locally:', e)
+    } finally {
+      const result = WatchlistService.removeFromWatchlist(ticker)
+      if (result.success) {
+        const updatedWatchlist = WatchlistService.getWatchlist()
+        setWatchlist(updatedWatchlist)
+        setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
+        toast.success(result.message)
+      } else {
+        toast.error(result.message)
+      }
     }
   }
 

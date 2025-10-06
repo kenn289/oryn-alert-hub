@@ -17,8 +17,9 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'Invalid token' }, { status: 401 })
     }
 
+    // Always return server-authoritative watchlist; do not merge here
     const watchlist = await DatabaseWatchlistService.getWatchlist(user.id)
-    return NextResponse.json({ watchlist })
+    return NextResponse.json({ watchlist, count: watchlist.length })
   } catch (error) {
     console.error('Error fetching watchlist:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })

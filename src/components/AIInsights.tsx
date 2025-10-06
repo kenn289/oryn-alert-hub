@@ -34,6 +34,7 @@ import { toast } from "sonner"
 import { multiApiStockService } from "@/lib/multi-api-stock-service"
 import { localizationService } from "@/lib/localization-service"
 import { useCurrency } from "@/contexts/CurrencyContext"
+import { useAuth } from "@/contexts/AuthContext"
 import { RealAIAnalysisService, RealAIPrediction } from "@/lib/real-ai-analysis-service"
 
 interface AIInsight {
@@ -57,6 +58,7 @@ type AIPrediction = RealAIPrediction
 
 export function AIInsights() {
   const { formatCurrency } = useCurrency()
+  const { user, session } = useAuth()
   const [insights, setInsights] = useState<AIInsight[]>([])
   const [predictions, setPredictions] = useState<AIPrediction[]>([])
   const [loading, setLoading] = useState(true)
@@ -66,7 +68,8 @@ export function AIInsights() {
 
   useEffect(() => {
     loadAIInsights()
-  }, [])
+    // Re-run when user/session changes to pick server watchlist
+  }, [user?.id, session?.access_token])
 
   // Auto-play carousel
   useEffect(() => {
@@ -92,9 +95,24 @@ export function AIInsights() {
     try {
       console.log('🤖 Loading real AI insights with transparent market data...')
       
-      // Get user's watchlist from localStorage
-      const watchlist = JSON.parse(localStorage.getItem('oryn_watchlist') || '[]')
-      const symbols = watchlist.length > 0 ? watchlist.map((item: any) => item.ticker) : ['NVDA', 'AAPL', 'TSLA']
+      // Get user's watchlist from server if signed in; fallback to localStorage
+      let symbols: string[] = []
+      if (user && session?.access_token) {
+        try {
+          const resp = await fetch('/api/watchlist', {
+            headers: { Authorization: `Bearer ${session.access_token}` }
+          })
+          if (resp.ok) {
+            const data = await resp.json()
+            const serverWatchlist = (data?.watchlist || []) as Array<{ ticker: string }>
+            symbols = serverWatchlist.map((w) => w.ticker)
+          }
+        } catch {}
+      }
+      if (symbols.length === 0) {
+        const watchlist = JSON.parse(localStorage.getItem('oryn_watchlist') || '[]')
+        symbols = watchlist.length > 0 ? watchlist.map((item: any) => item.ticker) : ['NVDA', 'AAPL', 'TSLA']
+      }
       
       console.log(`📊 Analyzing ${symbols.length} stocks: ${symbols.join(', ')}`)
       
