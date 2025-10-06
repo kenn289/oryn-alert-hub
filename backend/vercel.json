@@ -5,7 +5,7 @@
   "installCommand": "npm install",
   "devCommand": "npm run dev",
   "functions": {
-    "dist/server-simple.js": {
+    "api/server-simple.js": {
       "memory": 1024,
       "maxDuration": 60
     }
@@ -13,11 +13,11 @@
   "routes": [
     {
       "src": "/api/(.*)",
-      "dest": "dist/server-simple.js"
+      "dest": "/api/server-simple.js"
     },
     {
       "src": "/(.*)",
-      "dest": "dist/server-simple.js"
+      "dest": "/api/server-simple.js"
     }
   ],
   "env": {
