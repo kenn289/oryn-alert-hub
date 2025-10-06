@@ -322,6 +322,7 @@ export class WatchlistService {
   private static STORAGE_KEY = 'oryn_watchlist'
   private static USER_PLAN_KEY = 'oryn_user_plan'
   private static CHECKSUM_KEY = 'oryn_watchlist_checksum'
+  private static LAST_MODIFIED_KEY = 'oryn_watchlist_last_modified'
 
   static getUserPlan(): UserPlan {
     const stored = localStorage.getItem(this.USER_PLAN_KEY)
@@ -442,6 +443,8 @@ export class WatchlistService {
 
   static clearWatchlist() {
     localStorage.removeItem(this.STORAGE_KEY)
+    // mark modification
+    try { localStorage.setItem(this.LAST_MODIFIED_KEY, Date.now().toString()) } catch {}
   }
 
   // Enforce limits on existing watchlist (call this on app load)
@@ -562,6 +565,8 @@ export class WatchlistService {
     const checksum = this.generateChecksum(jsonData)
     localStorage.setItem(this.STORAGE_KEY, jsonData)
     localStorage.setItem(this.CHECKSUM_KEY, checksum)
+    // mark modification time for unified sync
+    try { localStorage.setItem(this.LAST_MODIFIED_KEY, Date.now().toString()) } catch {}
   }
 
   // Fetch real stock data for watchlist items

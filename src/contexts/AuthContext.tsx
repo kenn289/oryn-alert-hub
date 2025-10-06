@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { User, Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { UserInitializationService } from "@/lib/user-initialization-service"
+import { UnifiedSyncService } from "@/lib/unified-sync-service"
 
 interface AuthContextType {
   user: User | null
@@ -57,6 +58,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   // Update last login for existing users
                   await UserInitializationService.updateLastLogin(session.user.id)
                 }
+                // Unified sync after user initialization
+                try {
+                  console.log('🔄 Running unified data sync (watchlist + portfolio)')
+                  await UnifiedSyncService.unifyAll(session.user.id)
+                  console.log('✅ Unified data sync complete')
+                } catch (syncError) {
+                  console.error('Unified sync error:', syncError)
+                }
               })
               .catch(error => {
                 console.error('Error handling user initialization:', error)
@@ -91,6 +100,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               // Update last login for existing users
               await UserInitializationService.updateLastLogin(session.user.id)
             }
+          }
+          // Always run unified sync on session restore
+          try {
+            console.log('🔄 Running unified data sync on session restore')
+            await UnifiedSyncService.unifyAll(session.user.id)
+            console.log('✅ Unified data sync complete')
+          } catch (syncError) {
+            console.error('Unified sync error:', syncError)
           }
         } catch (error) {
           console.error('Error handling session initialization:', error)

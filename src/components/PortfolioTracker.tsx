@@ -30,6 +30,7 @@ import { GlobalStockSelector } from "@/components/GlobalStockSelector"
 import { localizationService } from "@/lib/localization-service"
 import { currencyConversionService } from "@/lib/currency-conversion-service"
 import { useCurrency } from "@/contexts/CurrencyContext"
+import { DatabasePortfolioService } from "@/lib/database-portfolio-service"
 
 interface PortfolioItem {
   id: string
@@ -204,13 +205,13 @@ export function PortfolioTracker() {
   const loadPortfolio = async () => {
     setLoading(true)
     try {
-      // Load from localStorage for now (in real app, this would be from API)
-      const stored = localStorage.getItem('oryn_portfolio')
-      if (stored) {
-        const portfolioData = JSON.parse(stored)
-        setPortfolio(portfolioData)
-        calculateSummary(portfolioData)
-      }
+      if (!user) return
+      // Load from database and mirror to local for offline
+      const dbItems = await DatabasePortfolioService.getPortfolio(user.id)
+      localStorage.setItem('oryn_portfolio', JSON.stringify(dbItems))
+      localStorage.setItem('oryn_portfolio_last_modified', Date.now().toString())
+      setPortfolio(dbItems)
+      calculateSummary(dbItems)
     } catch (error) {
       console.error('Error loading portfolio:', error)
       toast.error('Failed to load portfolio')
@@ -457,28 +458,26 @@ export function PortfolioTracker() {
       const gainLoss = totalValue - (shares * avgPrice)
       const gainLossPercent = (gainLoss / (shares * avgPrice)) * 100
 
-      const newPortfolioItem: PortfolioItem = {
-        id: `portfolio_${Math.floor(Math.random() * 1000000)}`,
+      // Persist to database (upsert), then reload
+      const result = await DatabasePortfolioService.upsertPortfolioItem({
+        userId: user!.id,
         ticker: newItem.ticker.toUpperCase(),
         name: newItem.name || newItem.ticker.toUpperCase(),
         shares,
-        avgPrice: avgPrice, // Store in USD
-        currentPrice: fetchedCurrentPrice, // Already in USD
-        totalValue, // Already in USD
-        gainLoss, // Already in USD
-        gainLossPercent,
-        addedAt: new Date().toISOString(),
+        avgPrice,
+        currentPrice: fetchedCurrentPrice,
         market: newItem.market,
-        currency: 'USD', // Always store in USD
-        exchange: newItem.market === 'IN' ? 'NSE' : newItem.market === 'US' ? 'NASDAQ' : 'Unknown'
+        currency: 'USD',
+        exchange: newItem.market === 'IN' ? 'NSE' : newItem.market === 'US' ? 'NASDAQ' : 'Unknown',
+      })
+      if (!result.success) {
+        toast.error(result.message)
+        return
       }
-
-      const updatedPortfolio = [...portfolio, newPortfolioItem]
-      setPortfolio(updatedPortfolio)
-      calculateSummary(updatedPortfolio)
-      
-      // Save to localStorage
-      localStorage.setItem('oryn_portfolio', JSON.stringify(updatedPortfolio))
+      await DatabasePortfolioService.syncDatabaseToLocal(user!.id)
+      const refreshed = await DatabasePortfolioService.getPortfolio(user!.id)
+      setPortfolio(refreshed)
+      calculateSummary(refreshed)
       
       // Reset form and close modal
       setNewItem({ ticker: '', name: '', shares: '', avgPrice: '' })
@@ -509,12 +508,24 @@ export function PortfolioTracker() {
     }
   }
 
-  const handleRemoveStock = (id: string) => {
-    const updatedPortfolio = portfolio.filter(item => item.id !== id)
-    setPortfolio(updatedPortfolio)
-    calculateSummary(updatedPortfolio)
-    localStorage.setItem('oryn_portfolio', JSON.stringify(updatedPortfolio))
-    toast.success('Stock removed from portfolio')
+  const handleRemoveStock = async (id: string) => {
+    try {
+      // Find ticker by id to delete from DB using ticker
+      const item = portfolio.find(p => p.id === id)
+      if (!item) return
+      const res = await DatabasePortfolioService.removeFromPortfolio(user!.id, item.ticker)
+      if (!res.success) {
+        toast.error(res.message)
+        return
+      }
+      await DatabasePortfolioService.syncDatabaseToLocal(user!.id)
+      const refreshed = await DatabasePortfolioService.getPortfolio(user!.id)
+      setPortfolio(refreshed)
+      calculateSummary(refreshed)
+      toast.success('Stock removed from portfolio')
+    } catch (e) {
+      toast.error('Failed to remove stock')
+    }
   }
 
   const handleRefreshPrices = async () => {
@@ -539,7 +550,9 @@ export function PortfolioTracker() {
       
       setPortfolio(updatedPortfolio)
       calculateSummary(updatedPortfolio)
-      localStorage.setItem('oryn_portfolio', JSON.stringify(updatedPortfolio))
+      // Persist current prices to DB for unified state
+      await DatabasePortfolioService.updateCurrentPrices(user!.id, updatedPortfolio.map(i => ({ ticker: i.ticker, currentPrice: i.currentPrice })))
+      await DatabasePortfolioService.syncDatabaseToLocal(user!.id)
       toast.success('Portfolio prices updated!')
     } catch (error) {
       console.error('Error refreshing prices:', error)
