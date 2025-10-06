@@ -1,6 +1,6 @@
 {
   "name": "oryn-backend",
-  "version": "1.0.0",
+  "version": "1.0.1",
   "description": "Production-ready backend for Oryn Alert Hub",
   "main": "dist/server-simple.js",
   "scripts": {
