@@ -87,7 +87,13 @@ export function GlobalStockSelector({
         const response = await fetch(`/api/stock/popular?market=${market}`)
         if (response.ok) {
           const data = await response.json()
-          stocks[market] = data.stocks
+          // Attach market and currency to ensure accurate selection downstream
+          const currencyMap: Record<string, string> = { US: 'USD', IN: 'INR', UK: 'GBP', JP: 'JPY' }
+          stocks[market] = (data.stocks || []).map((s: any) => ({
+            ...s,
+            market,
+            currency: currencyMap[market] || 'USD'
+          }))
         }
       }
       
@@ -102,10 +108,12 @@ export function GlobalStockSelector({
 
     setLoading(true)
     try {
-      const response = await fetch(`/api/stock/global-search?q=${encodeURIComponent(searchQuery)}&limit=20`)
+      const response = await fetch(`/api/stock/global-search?q=${encodeURIComponent(searchQuery)}&limit=20&market=${encodeURIComponent(selectedMarket)}`)
       if (response.ok) {
         const data = await response.json()
-        setSearchResults(data.results)
+        // Attach market to results to drive correct data routing later
+        const withMarket = data.results.map((r: any) => ({ ...r, market: r.market || selectedMarket }))
+        setSearchResults(withMarket)
       } else {
         toast.error('Search failed')
       }

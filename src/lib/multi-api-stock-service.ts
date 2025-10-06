@@ -17,6 +17,7 @@ export interface StockQuote {
   pe: number
   timestamp: string
   source: 'iex_cloud' | 'polygon' | 'yahoo'
+  currency?: string
   _cacheInfo?: {
     source: 'fresh' | 'cached' | 'fallback'
     age?: string
@@ -80,9 +81,10 @@ class MultiApiStockService {
     ].filter(api => api.enabled)
   }
 
-  async getStockQuote(symbol: string): Promise<StockQuote> {
+  async getStockQuote(symbol: string, market?: string): Promise<StockQuote> {
     const normalizedSymbol = symbol.toUpperCase().trim()
-    const cacheKey = `stock_${normalizedSymbol}`
+    const normalizedMarket = market?.toUpperCase().trim()
+    const cacheKey = `stock_${normalizedSymbol}_${normalizedMarket || 'US'}`
     
     // Check cache first
     const cached = this.cache.get(cacheKey)
@@ -100,7 +102,9 @@ class MultiApiStockService {
     }
 
     // Try APIs in priority order
-    const sortedApis = this.apis.sort((a, b) => a.priority - b.priority)
+    const sortedApis = this.apis
+      .filter(api => this.isApiSupportedForMarket(api.name, normalizedMarket))
+      .sort((a, b) => a.priority - b.priority)
     
     for (const api of sortedApis) {
       if (this.isRateLimited(api.name)) {
@@ -109,7 +113,7 @@ class MultiApiStockService {
       }
 
       try {
-        const response = await this.fetchFromApi(api, normalizedSymbol)
+        const response = await this.fetchFromApi(api, normalizedSymbol, normalizedMarket)
         if (response.success && response.data) {
           // Cache the successful response
           this.cache.set(cacheKey, {
@@ -130,7 +134,7 @@ class MultiApiStockService {
     throw new Error(`All stock data APIs failed for symbol: ${normalizedSymbol}`)
   }
 
-  private async fetchFromApi(api: ApiConfig, symbol: string): Promise<ApiResponse> {
+  private async fetchFromApi(api: ApiConfig, symbol: string, market?: string): Promise<ApiResponse> {
     try {
       let url: string
       let response: Response
@@ -138,19 +142,28 @@ class MultiApiStockService {
       switch (api.name) {
 
         case 'iex_cloud':
+          // IEX Cloud primarily supports US symbols
+          if (market && market !== 'US') {
+            return { success: false, error: 'Unsupported market for IEX', source: api.name }
+          }
           url = `${api.baseUrl}/stock/${symbol}/quote?token=${api.apiKey}`
           response = await fetch(url)
           return this.parseIexCloudResponse(response, symbol, api.name)
 
         case 'polygon':
+          // Polygon primarily supports US symbols
+          if (market && market !== 'US') {
+            return { success: false, error: 'Unsupported market for Polygon', source: api.name }
+          }
           url = `${api.baseUrl}/aggs/ticker/${symbol}/prev?apikey=${api.apiKey}`
           response = await fetch(url)
           return this.parsePolygonResponse(response, symbol, api.name)
 
         case 'yahoo':
-          url = `${api.baseUrl}/${symbol}`
+          const yahooSymbol = this.getYahooSymbolForMarket(symbol, market)
+          url = `${api.baseUrl}/${yahooSymbol}`
           response = await fetch(url)
-          return this.parseYahooResponse(response, symbol, api.name)
+          return this.parseYahooResponse(response, yahooSymbol, api.name)
 
         default:
           throw new Error(`Unknown API: ${api.name}`)
@@ -202,7 +215,8 @@ class MultiApiStockService {
         marketCap: data.marketCap,
         pe: data.peRatio,
         timestamp: new Date().toISOString(),
-        source: source as 'iex_cloud' | 'polygon' | 'yahoo'
+        source: source as 'iex_cloud' | 'polygon' | 'yahoo',
+        currency: 'USD'
       },
       source
     }
@@ -254,7 +268,8 @@ class MultiApiStockService {
         marketCap: result.c * result.v * 0.1,
         pe: 20,
         timestamp: new Date().toISOString(),
-        source: source as 'iex_cloud' | 'polygon' | 'yahoo'
+        source: source as 'iex_cloud' | 'polygon' | 'yahoo',
+        currency: 'USD'
       },
       source
     }
@@ -299,7 +314,8 @@ class MultiApiStockService {
         marketCap: meta.marketCap,
         pe: meta.trailingPE,
         timestamp: new Date().toISOString(),
-        source: source as 'iex_cloud' | 'polygon' | 'yahoo'
+        source: source as 'iex_cloud' | 'polygon' | 'yahoo',
+        currency: meta.currency
       },
       source
     }
@@ -350,6 +366,36 @@ class MultiApiStockService {
       'JNJ': 'Johnson & Johnson'
     }
     return stockNames[symbol] || `${symbol} Inc.`
+  }
+
+  private isApiSupportedForMarket(apiName: string, market?: string): boolean {
+    if (!market || market === 'US') return true
+    // Only Yahoo has broad international coverage without paid keys
+    return apiName === 'yahoo'
+  }
+
+  private getYahooSymbolForMarket(symbol: string, market?: string): string {
+    if (!market || market === 'US') return symbol
+
+    const suffixMap: Record<string, string> = {
+      IN: '.NS', // Default to NSE; could enhance to .BO for BSE
+      GB: '.L',
+      UK: '.L', // handle 'UK' alias
+      JP: '.T',
+      AU: '.AX',
+      CA: '.TO',
+      DE: '.DE',
+      FR: '.PA'
+    }
+
+    const suffix = suffixMap[market] || ''
+    // If it's an Indian BSE numeric code, use .BO
+    if (market === 'IN' && /^\d+$/.test(symbol)) {
+      return `${symbol}.BO`
+    }
+    // If symbol already has a dot suffix, keep as is
+    if (symbol.includes('.')) return symbol
+    return `${symbol}${suffix}`
   }
 
   private formatAge(timestamp: number): string {

@@ -44,6 +44,8 @@ async function searchGlobalStocks(query: string, market?: string) {
 }
 
 async function searchInMarket(query: string, market: string) {
+  // Normalize common aliases
+  if (market === 'UK') market = 'GB'
   const results: any[] = []
   
   switch (market) {

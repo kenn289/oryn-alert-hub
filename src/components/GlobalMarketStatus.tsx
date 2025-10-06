@@ -317,6 +317,8 @@ export function GlobalMarketStatus({ selectedMarket = 'US', onMarketChange }: Gl
           </div>
         </CardContent>
       </Card>
+
+      {/* Stock selection handled by parent via onMarketChange */}
     </div>
   )
 }
