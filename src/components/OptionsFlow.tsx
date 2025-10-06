@@ -22,6 +22,7 @@ import {
   BarChart3
 } from "lucide-react"
 import { toast } from "sonner"
+import { WatchlistService } from "@/lib/watchlist"
 
 interface OptionsFlowData {
   unusualActivity: {
@@ -89,8 +90,13 @@ export function OptionsFlow() {
     setIsRateLimited(false)
     
     try {
+      // Prefer watchlist tickers for relevance
+      const watchlist = WatchlistService.getWatchlist()
+      const tickersParam = watchlist && watchlist.length > 0
+        ? `?tickers=${encodeURIComponent(watchlist.map(w => w.ticker).join(','))}`
+        : ''
       // Try to fetch real options flow data from API
-      const response = await fetch('/api/options-flow')
+      const response = await fetch(`/api/options-flow${tickersParam}`)
       
       if (!response.ok) {
         if (response.status === 429) {

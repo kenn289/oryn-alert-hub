@@ -20,8 +20,17 @@ export async function GET(request: NextRequest) {
   try {
     console.log('📊 Generating real-time options flow data...')
     
-    // Get popular tickers for options flow analysis
-    const popularTickers = ['AAPL', 'TSLA', 'NVDA', 'SPY', 'QQQ', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NFLX']
+    // Parse tickers from query if provided (comma-separated)
+    const { searchParams } = new URL(request.url)
+    const tickersParam = searchParams.get('tickers')
+    const parsedTickers = tickersParam
+      ? tickersParam.split(',').map(t => t.trim().toUpperCase()).filter(Boolean)
+      : []
+
+    // Fallback to popular tickers when none provided
+    const popularTickers = parsedTickers.length > 0
+      ? parsedTickers
+      : ['AAPL', 'TSLA', 'NVDA', 'SPY', 'QQQ', 'MSFT', 'GOOGL', 'AMZN', 'META', 'NFLX']
     
     const optionsFlowData = {
       unusualActivity: [],

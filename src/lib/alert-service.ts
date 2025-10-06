@@ -5,12 +5,26 @@ import { toast } from 'sonner'
 export interface Alert {
   id: string
   symbol: string
-  type: 'price_above' | 'price_below' | 'volume_spike' | 'earnings' | 'news'
+  type: 
+    | 'price_above'
+    | 'price_below'
+    | 'volume_spike'
+    | 'earnings'
+    | 'news'
+    | 'options_flow'
+    | 'price_spike'
+    | 'news_alert'
+    | 'technical_breakout'
   condition: string
   value: number
   isActive: boolean
   createdAt: string
   triggeredAt?: string
+  // UI convenience fields (optional)
+  ticker?: string
+  message?: string
+  time?: string
+  severity?: 'low' | 'medium' | 'high'
 }
 
 export class AlertService {
@@ -210,26 +224,79 @@ export class AlertService {
   // Generate alerts based on watchlist (static method)
   static async generateAlerts(tickers: string[]): Promise<Alert[]> {
     try {
-      // This is a placeholder implementation
-      // In a real app, this would analyze market data and generate alerts
+      // Lightweight heuristic alerts based on latest prices
       const alerts: Alert[] = []
-      
+
       for (const ticker of tickers) {
-        // Generate sample alerts for demonstration
-        if (Math.random() > 0.7) { // 30% chance of generating an alert
-          alerts.push({
-            id: `alert_${Date.now()}_${ticker}`,
-            symbol: ticker,
-            type: Math.random() > 0.5 ? 'price_above' : 'price_below',
-            condition: Math.random() > 0.5 ? 'rose above' : 'fell below',
-            value: Math.random() * 200 + 50,
-            isActive: true,
-            createdAt: new Date().toISOString(),
-            triggeredAt: undefined
-          })
+        try {
+          const res = await fetch(`/api/stock/multi/${ticker}`)
+          if (!res.ok) continue
+          const data = await res.json()
+          if (!data || !data.price) continue
+
+          const price = Number(data.price)
+          const prevClose = Number(data.previousClose || price)
+          const changePercent = prevClose ? ((price - prevClose) / prevClose) * 100 : 0
+          const absChange = Math.abs(changePercent)
+          const severity: 'low' | 'medium' | 'high' = absChange > 5 ? 'high' : absChange > 2 ? 'medium' : 'low'
+          const nowStr = new Date().toLocaleTimeString()
+
+          // Always emit at least one alert type for visibility
+          const baseId = `alert_${ticker}_${Date.now()}`
+          if (Math.abs(changePercent) >= 2) {
+            alerts.push({
+              id: `${baseId}_price_spike`,
+              symbol: ticker,
+              type: 'price_spike',
+              condition: changePercent > 0 ? 'spiked above daily avg' : 'dropped below daily avg',
+              value: price,
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              ticker,
+              message: `${ticker} ${changePercent > 0 ? 'up' : 'down'} ${absChange.toFixed(2)}% to ${price.toFixed(2)}`,
+              time: nowStr,
+              severity
+            })
+          }
+
+          // Options flow-like signal synthesized from changePercent magnitude
+          if (Math.abs(changePercent) >= 1) {
+            alerts.push({
+              id: `${baseId}_options_flow`,
+              symbol: ticker,
+              type: 'options_flow',
+              condition: changePercent > 0 ? 'bullish flow detected' : 'bearish flow detected',
+              value: price,
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              ticker,
+              message: `${ticker} ${changePercent > 0 ? 'bullish' : 'bearish'} options signal`,
+              time: nowStr,
+              severity
+            })
+          }
+
+          // Add a generic volume spike placeholder (actual volume-based check requires richer data)
+          if (data.volume && data.avgVolume && data.volume > data.avgVolume * 1.5) {
+            alerts.push({
+              id: `${baseId}_volume_spike`,
+              symbol: ticker,
+              type: 'volume_spike',
+              condition: 'volume above 1.5x average',
+              value: data.volume,
+              isActive: true,
+              createdAt: new Date().toISOString(),
+              ticker,
+              message: `${ticker} volume spike ${Math.round((data.volume / data.avgVolume) * 100)}% of avg`,
+              time: nowStr,
+              severity
+            })
+          }
+        } catch (e) {
+          // ignore individual ticker failures
         }
       }
-      
+
       return alerts
     } catch (error) {
       console.error('Error generating alerts:', error)

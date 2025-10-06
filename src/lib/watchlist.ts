@@ -9,6 +9,8 @@ export interface WatchlistItem {
   change: number
   // Currency of the price as returned by the data source (e.g., USD, INR)
   currency?: string
+  // Market code for correct routing (e.g., US, IN, UK)
+  market?: string
   addedAt: string
 }
 
@@ -257,7 +259,7 @@ export class WatchlistService {
     return stored ? JSON.parse(stored) : []
   }
 
-  static addToWatchlist(ticker: string, name: string): { success: boolean, message: string } {
+  static addToWatchlist(ticker: string, name: string, market?: string): { success: boolean, message: string } {
     // Input validation and sanitization
     if (!ticker || typeof ticker !== 'string') {
       return { success: false, message: 'Invalid ticker symbol' }
@@ -307,6 +309,7 @@ export class WatchlistService {
       name: (name && name.trim()) ? name.trim().substring(0, 100) : `${cleanTicker} Inc.`, // Limit name length
       price: 0, // Will be fetched from API
       change: 0, // Will be fetched from API
+      market: market,
       addedAt: new Date().toISOString()
     }
 
@@ -479,7 +482,8 @@ export class WatchlistService {
         console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
         
         // Use our API route to fetch data (handles CORS and server-side requests)
-        const response = await fetch(`/api/stock/multi/${item.ticker}`)
+        const marketQuery = item.market ? `?market=${encodeURIComponent(item.market)}` : ''
+        const response = await fetch(`/api/stock/multi/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
           throw new Error(`API HTTP error: ${response.status}`)
@@ -502,7 +506,7 @@ export class WatchlistService {
           currency: stockData.currency || undefined
         }
         
-        console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
+        console.log(`✅ Got REAL-TIME data for ${item.ticker}: ${realTimeData.currency || 'USD'} ${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
         
         updatedItems.push({
           ...item,
@@ -511,7 +515,8 @@ export class WatchlistService {
           change: realTimeData.change,
           // @ts-expect-error keep backwards compatibility if changePercent not on type
           changePercent: realTimeData.changePercent,
-          currency: realTimeData.currency
+          currency: realTimeData.currency,
+          market: item.market
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
@@ -559,7 +564,8 @@ export class WatchlistService {
         console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
         
         // Use our API route to fetch data (handles CORS and server-side requests)
-        const response = await fetch(`/api/stock/multi/${item.ticker}`)
+        const marketQuery = item.market ? `?market=${encodeURIComponent(item.market)}` : ''
+        const response = await fetch(`/api/stock/multi/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
           throw new Error(`API HTTP error: ${response.status}`)
@@ -582,7 +588,7 @@ export class WatchlistService {
           currency: stockData.currency || undefined
         }
         
-        console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
+        console.log(`✅ Got REAL-TIME data for ${item.ticker}: ${realTimeData.currency || 'USD'} ${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
         
         updatedItems.push({
           ...item,
@@ -591,7 +597,8 @@ export class WatchlistService {
           change: realTimeData.change,
           // @ts-expect-error keep backwards compatibility if changePercent not on type
           changePercent: realTimeData.changePercent,
-          currency: realTimeData.currency
+          currency: realTimeData.currency,
+          market: item.market
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)

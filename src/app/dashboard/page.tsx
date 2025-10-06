@@ -20,12 +20,14 @@ import { OptionsFlow } from "@/components/OptionsFlow"
 import { PrioritySupport } from "@/components/PrioritySupport"
 import { TeamCollaboration } from "@/components/TeamCollaboration"
 import { RateLimitBanner } from "@/components/RateLimitBanner"
-import { MarketStatus } from "@/components/MarketStatus"
+// Removed MarketStatus in favor of GlobalMarketStatus at top
 import { useFeatures } from "@/hooks/use-features"
 import { subscriptionService } from "@/lib/subscription-service"
 import { PortfolioTracker } from "@/components/PortfolioTracker"
 import { AlertManager } from "@/components/AlertManager"
 import { GlobalMarketStatus } from "@/components/GlobalMarketStatus"
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from "@/components/ui/dialog"
+import { GlobalStockSelector } from "@/components/GlobalStockSelector"
 import { AlertService, Alert } from "@/lib/alert-service"
 import { ErrorHandler, handleAsyncError } from "@/lib/error-handler"
 import { useCurrency } from "@/contexts/CurrencyContext"
@@ -57,6 +59,8 @@ export default function DashboardPage() {
     age?: string
   } | null>(null)
   const [isWatchlistModalOpen, setIsWatchlistModalOpen] = useState(false)
+  const [isMarketSelectorOpen, setIsMarketSelectorOpen] = useState(false)
+  const [selectedMarket, setSelectedMarket] = useState<'US' | 'IN' | 'UK' | 'JP' | 'AU' | 'CA' | 'DE' | 'FR'>('US')
   const [userPlan, setUserPlan] = useState(PLANS.free)
       const [subscriptionStatus, setSubscriptionStatus] = useState({
         hasActiveSubscription: false,
@@ -162,22 +166,27 @@ export default function DashboardPage() {
         }
 
         // Generate real-time alerts based on watchlist
-        const generateAlerts = async () => {
+      const generateAlerts = async () => {
           try {
             const watchlistTickers = savedWatchlist ? savedWatchlist.map(item => item.ticker) : []
-            const realTimeAlerts = await AlertService.generateAlerts(watchlistTickers)
+          const realTimeAlerts = await AlertService.generateAlerts(watchlistTickers)
             setAlerts(realTimeAlerts)
           } catch (error) {
             console.error('Alert generation failed:', error)
             // Set error alert instead of sample data
             setAlerts([{
               id: 'dashboard_error_alert',
-              type: 'news_alert',
-              ticker: 'SYSTEM',
-              message: 'Unable to load alerts. Please check your connection and try again.',
-              time: 'Just now',
-              severity: 'high',
-              data: { isError: true, errorType: 'dashboard_error' }
+            type: 'news_alert',
+            symbol: 'SYSTEM',
+            condition: 'error',
+            value: 0,
+            isActive: true,
+            createdAt: new Date().toISOString(),
+            ticker: 'SYSTEM',
+            message: 'Unable to load alerts. Please check your connection and try again.',
+            time: 'Just now',
+            severity: 'high' as any,
+            data: { isError: true, errorType: 'dashboard_error' }
             }])
           }
         }
@@ -241,8 +250,26 @@ export default function DashboardPage() {
     setIsWatchlistModalOpen(true)
   }
 
-  const handleAddToWatchlist = (ticker: string) => {
-    const result = WatchlistService.addToWatchlist(ticker, "")
+  const handleAddToWatchlist = (ticker: string, market?: string) => {
+    const result = WatchlistService.addToWatchlist(ticker, "", market)
+    if (result.success) {
+      const updatedWatchlist = WatchlistService.getWatchlist()
+      setWatchlist(updatedWatchlist)
+      setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
+      toast.success(result.message)
+    } else {
+      toast.error(result.message)
+    }
+  }
+
+  const handleOpenMarketSelector = (market: string) => {
+    setSelectedMarket((market as any) || 'US')
+    setIsMarketSelectorOpen(true)
+  }
+
+  const handleGlobalStockSelect = (stock: any) => {
+    // Ensure market-aware addition; stock.market is expected from selector
+    const result = WatchlistService.addToWatchlist(stock.symbol, stock.name, stock.market)
     if (result.success) {
       const updatedWatchlist = WatchlistService.getWatchlist()
       setWatchlist(updatedWatchlist)
@@ -506,9 +533,12 @@ export default function DashboardPage() {
           </div>
         )}
 
-        {/* Market Status */}
+        {/* Global Market Overview at Top */}
         <div className="mb-6">
-          <MarketStatus />
+          <GlobalMarketStatus 
+            selectedMarket={selectedMarket}
+            onMarketChange={handleOpenMarketSelector}
+          />
         </div>
 
         {/* Stats Cards */}
@@ -694,10 +724,7 @@ export default function DashboardPage() {
           <AlertManager />
         </div>
 
-        {/* Global Market Status Section */}
-        <div id="market-status-section" className="mb-8">
-          <GlobalMarketStatus />
-        </div>
+        {/* Removed duplicate GlobalMarketStatus below; it's now at top */}
 
         {/* Active Alerts and Options Flow - Below Welcome */}
         <div className="grid lg:grid-cols-2 gap-6 mb-8">
@@ -970,7 +997,7 @@ export default function DashboardPage() {
                       </div>
                       <div className="flex items-center gap-4">
                         <div className="text-right">
-                          <div className="font-medium">{formatCurrency(item.price, 'USD')}</div>
+                          <div className="font-medium">{formatCurrency(item.price, item.currency || 'USD')}</div>
                           <div className={`text-sm ${item.change >= 0 ? 'text-success' : 'text-destructive'}`}>
                             {item.change >= 0 ? '+' : ''}{item.change.toFixed(2)}%
                           </div>
@@ -997,8 +1024,25 @@ export default function DashboardPage() {
       <WatchlistModal
         isOpen={isWatchlistModalOpen}
         onClose={() => setIsWatchlistModalOpen(false)}
-        onAdd={handleAddToWatchlist}
+        onAdd={(ticker) => handleAddToWatchlist(ticker, selectedMarket)}
       />
+
+      {/* Market-aware Global Stock Selector Dialog */}
+      <Dialog open={isMarketSelectorOpen} onOpenChange={setIsMarketSelectorOpen}>
+        <DialogContent className="max-w-4xl">
+          <DialogHeader>
+            <DialogTitle>Select stocks from {selectedMarket}</DialogTitle>
+          </DialogHeader>
+          <GlobalStockSelector 
+            selectedMarket={selectedMarket}
+            onMarketChange={(m) => setSelectedMarket(m as any)}
+            onStockSelect={(stock) => {
+              handleGlobalStockSelect(stock)
+              setIsMarketSelectorOpen(false)
+            }}
+          />
+        </DialogContent>
+      </Dialog>
       </div>
     </TooltipProvider>
   )
