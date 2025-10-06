@@ -41,9 +41,10 @@ export function GlobalMarketStatus({ selectedMarket = 'US', onMarketChange }: Gl
     const isIndia = timezone === 'Asia/Kolkata' || timezone === 'Asia/Calcutta' || timezone === 'IST'
     setIsIndianUser(isIndia)
     
-    // Set default market for Indian users
+    // Prefer IN market locally for Indian users, but do NOT auto-open selector
     if (isIndia && selectedMarket === 'US') {
-      onMarketChange?.('IN')
+      setCurrentMarket('IN')
+      // Intentionally do not call onMarketChange here to avoid opening any dialog automatically
     }
   }
 

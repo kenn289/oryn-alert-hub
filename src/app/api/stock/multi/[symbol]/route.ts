@@ -19,7 +19,15 @@ export async function GET(
 
     const quote = await multiApiStockService.getStockQuote(symbol, market)
     
-    return NextResponse.json(quote)
+    // Ensure extremely high precision for price fields
+    const precise = {
+      ...quote,
+      price: Number(quote.price.toPrecision(12)),
+      change: Number(quote.change.toPrecision(12)),
+      changePercent: Number(quote.changePercent.toPrecision(12))
+    }
+
+    return NextResponse.json(precise)
   } catch (error) {
     console.error(`Error fetching multi-API quote for ${symbol}:`, error)
     
