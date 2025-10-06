@@ -19,6 +19,5 @@
   ],
   "env": {
     "NODE_ENV": "production"
-  },
-  "framework": "nodejs"
+  }
 }
