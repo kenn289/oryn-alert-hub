@@ -6,7 +6,7 @@
   "scripts": {
     "start": "node dist/server-simple.js",
     "dev": "nodemon src/server-simple.ts",
-    "build": "tsc -p tsconfig-simple.json && copy dist\\server-simple.js api\\server-simple.js",
+    "build": "npx tsc -p tsconfig-simple.json && node copy-server.js",
     "test": "jest",
     "lint": "eslint src/**/*.ts"
   },
