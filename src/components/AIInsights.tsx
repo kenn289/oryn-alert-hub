@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Progress } from "../components/ui/progress"
 import { 
   Brain, 
   TrendingUp, 
@@ -31,12 +31,12 @@ import {
   Brain as AIBrain
 } from "lucide-react"
 import { toast } from "sonner"
-import { multiApiStockService } from "@/lib/multi-api-stock-service"
-import { localizationService } from "@/lib/localization-service"
-import { useCurrency } from "@/contexts/CurrencyContext"
-import { useAuth } from "@/contexts/AuthContext"
-import { RealAIAnalysisService, RealAIPrediction } from "@/lib/real-ai-analysis-service"
-import { DatabaseWatchlistService } from "@/lib/database-watchlist-service"
+import { multiApiStockService } from "../lib/multi-api-stock-service"
+import { localizationService } from "../lib/localization-service"
+import { useCurrency } from "../contexts/CurrencyContext"
+import { useAuth } from "../contexts/AuthContext"
+import { RealAIAnalysisService, RealAIPrediction } from "../lib/real-ai-analysis-service"
+import { DatabaseWatchlistService } from "../lib/database-watchlist-service"
 
 interface AIInsight {
   id: string

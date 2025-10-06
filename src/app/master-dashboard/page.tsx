@@ -1,13 +1,13 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { Input } from '../../components/ui/input'
+import { Textarea } from '../../components/ui/textarea'
+import { Label } from '../../components/ui/label'
 import { 
   Users, 
   MessageSquare, 
@@ -30,10 +30,10 @@ import {
   Mail as MailIcon
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/contexts/AuthContext'
-import { realtimeSupportService } from '@/lib/realtime-support-service'
-import { RealtimeStatus } from '@/components/RealtimeStatus'
-import { realtimeNotificationService } from '@/lib/realtime-notifications'
+import { useAuth } from '../../contexts/AuthContext'
+import { realtimeSupportService } from '../../lib/realtime-support-service'
+import { RealtimeStatus } from '../../components/RealtimeStatus'
+import { realtimeNotificationService } from '../../lib/realtime-notifications'
 
 interface User {
   id: string

@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
-import { Input } from '@/components/ui/input'
-import { Textarea } from '@/components/ui/textarea'
-import { Label } from '@/components/ui/label'
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../../components/ui/card'
+import { Button } from '../../components/ui/button'
+import { Badge } from '../../components/ui/badge'
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '../../components/ui/tabs'
+import { Input } from '../../components/ui/input'
+import { Textarea } from '../../components/ui/textarea'
+import { Label } from '../../components/ui/label'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../../components/ui/select'
 import { 
   Users, 
   Ticket, 
@@ -27,9 +27,9 @@ import {
   BarChart3
 } from 'lucide-react'
 import { toast } from 'sonner'
-import { useAuth } from '@/contexts/AuthContext'
-import { realtimeSupportService } from '@/lib/realtime-support-service'
-import { NotificationGenerator } from '@/lib/notification-generator'
+import { useAuth } from '../../contexts/AuthContext'
+import { realtimeSupportService } from '../../lib/realtime-support-service'
+import { NotificationGenerator } from '../../lib/notification-generator'
 
 interface User {
   id: string

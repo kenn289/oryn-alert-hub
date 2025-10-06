@@ -1,7 +1,7 @@
 "use client"
 
 import { useMemo } from "react"
-import { UserPlan, checkFeatureAccess, hasFeatureAccess, getFeatureLimit, isFeatureUnlimited } from "@/lib/watchlist"
+import { UserPlan, checkFeatureAccess, hasFeatureAccess, getFeatureLimit, isFeatureUnlimited } from "../lib/watchlist"
 
 export function useFeatures(userPlan: UserPlan) {
   const features = useMemo(() => {

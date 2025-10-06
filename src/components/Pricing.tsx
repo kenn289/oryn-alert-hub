@@ -1,13 +1,13 @@
 "use client"
 
 import { useState } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
 import { Check, Zap, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "@/contexts/AuthContext"
-import { paymentService } from "@/lib/payment-service"
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { useAuth } from "../contexts/AuthContext"
+import { paymentService } from "../lib/payment-service"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 // Pricing will be generated dynamically based on currency
 

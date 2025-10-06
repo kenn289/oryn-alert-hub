@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Badge } from "../components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { 
   TrendingUp, 
   TrendingDown, 
@@ -27,12 +27,12 @@ import {
   AlertTriangle,
   Zap
 } from "lucide-react"
-import { cn } from "@/lib/utils"
+import { cn } from "../lib/utils"
 import { toast } from "sonner"
-import { useAuth } from "@/contexts/AuthContext"
-import { stockDataService } from "@/lib/stock-data-service"
-import { localizationService } from "@/lib/localization-service"
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { useAuth } from "../contexts/AuthContext"
+import { stockDataService } from "../lib/stock-data-service"
+import { localizationService } from "../lib/localization-service"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 interface ProFeature {
   id: string

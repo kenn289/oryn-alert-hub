@@ -1,9 +1,9 @@
 "use client"
 
 import { useState, useEffect } from 'react'
-import { Badge } from '@/components/ui/badge'
+import { Badge } from '../components/ui/badge'
 import { Wifi, WifiOff, RefreshCw } from 'lucide-react'
-import { realtimeSupportService } from '@/lib/realtime-support-service'
+import { realtimeSupportService } from '../lib/realtime-support-service'
 
 export function RealtimeStatus() {
   const [isConnected, setIsConnected] = useState(false)

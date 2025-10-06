@@ -1,10 +1,10 @@
 "use client"
 
-import { Button } from "@/components/ui/button"
-import { Card } from "@/components/ui/card"
+import { Button } from "../components/ui/button"
+import { Card } from "../components/ui/card"
 import { Activity, TrendingUp, AlertCircle, Zap } from "lucide-react"
 import Link from "next/link"
-import { OrynLogo } from "@/components/OrynLogo"
+import { OrynLogo } from "../components/OrynLogo"
 
 export function Hero() {
   return (

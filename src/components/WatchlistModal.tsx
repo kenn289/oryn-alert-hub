@@ -1,16 +1,16 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "@/components/ui/dialog"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card, CardContent } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from "../components/ui/dialog"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import { Label } from "../components/ui/label"
+import { Card, CardContent } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
 import { Search, TrendingUp, DollarSign, Activity, Star, X } from "lucide-react"
 import { toast } from "sonner"
 // Using parent-provided onAdd to persist to database
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 interface WatchlistModalProps {
   isOpen: boolean

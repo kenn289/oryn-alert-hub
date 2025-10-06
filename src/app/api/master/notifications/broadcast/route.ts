@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send real-time notifications to all users
-    const { realtimeNotificationService } = await import('@/lib/realtime-notifications')
+    const { realtimeNotificationService } = await import('../../../../../lib/realtime-notifications')
     await realtimeNotificationService.broadcastNotification(title, message, type)
 
     return NextResponse.json({ 

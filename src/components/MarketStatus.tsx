@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
 import { Clock, TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 interface MarketStatus {
   isOpen: boolean

@@ -3,13 +3,13 @@
 import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
-import { Button } from "@/components/ui/button"
+import { Button } from "../components/ui/button"
 import { Menu, X, LogOut, BarChart3, Brain, Zap, Users, Headphones, Shield } from "lucide-react"
 import { useTheme } from "next-themes"
-import { useAuth } from "@/contexts/AuthContext"
-import { OrynLogo } from "@/components/OrynLogo"
-import { NotificationCenter } from "@/components/NotificationCenter"
-import { CurrencySelector } from "@/components/CurrencySelector"
+import { useAuth } from "../contexts/AuthContext"
+import { OrynLogo } from "../components/OrynLogo"
+import { NotificationCenter } from "../components/NotificationCenter"
+import { CurrencySelector } from "../components/CurrencySelector"
 
 export function Navigation() {
   const [isOpen, setIsOpen] = useState(false)

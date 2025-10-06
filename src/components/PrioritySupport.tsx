@@ -1,18 +1,18 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Textarea } from "@/components/ui/textarea"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import { Textarea } from "../components/ui/textarea"
+import { Label } from "../components/ui/label"
+import { Badge } from "../components/ui/badge"
 import { Mail, Clock, Star, MessageSquare, Send, CheckCircle, RefreshCw, Wifi, WifiOff } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "@/contexts/AuthContext"
-import { supportService, SupportTicket, SupportStats } from "@/lib/support-service"
-import { realtimeSupportService } from "@/lib/realtime-support-service"
-import { TicketRatingModal } from "@/components/TicketRatingModal"
+import { useAuth } from "../contexts/AuthContext"
+import { supportService, SupportTicket, SupportStats } from "../lib/support-service"
+import { realtimeSupportService } from "../lib/realtime-support-service"
+import { TicketRatingModal } from "../components/TicketRatingModal"
 
 interface PrioritySupportProps {
   userPlan?: {

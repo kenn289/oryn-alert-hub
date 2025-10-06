@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Input } from "../components/ui/input"
+import { Label } from "../components/ui/label"
+import { Badge } from "../components/ui/badge"
 import { 
   Plus, 
   Trash2, 
@@ -20,18 +20,18 @@ import {
   Lightbulb
 } from "lucide-react"
 import { toast } from "sonner"
-import { DataFreshnessIndicator, RateLimitBanner } from "@/components/DataFreshnessIndicator"
-import { useAuth } from "@/contexts/AuthContext"
-import { subscriptionService } from "@/lib/subscription-service"
-import { stockDataService } from "@/lib/stock-data-service"
-import { globalStockService } from "@/lib/global-stock-service"
-import { StockSuggestionsService, StockSuggestion } from "@/lib/stock-suggestions"
-import { GlobalStockSelector } from "@/components/GlobalStockSelector"
-import { localizationService } from "@/lib/localization-service"
-import { currencyConversionService } from "@/lib/currency-conversion-service"
-import { useCurrency } from "@/contexts/CurrencyContext"
-import { PortfolioService, PortfolioItem, PortfolioSummary } from "@/lib/portfolio-service"
-import { DatabasePortfolioService } from "@/lib/database-portfolio-service"
+import { DataFreshnessIndicator, RateLimitBanner } from "../components/DataFreshnessIndicator"
+import { useAuth } from "../contexts/AuthContext"
+import { subscriptionService } from "../lib/subscription-service"
+import { stockDataService } from "../lib/stock-data-service"
+import { globalStockService } from "../lib/global-stock-service"
+import { StockSuggestionsService, StockSuggestion } from "../lib/stock-suggestions"
+import { GlobalStockSelector } from "../components/GlobalStockSelector"
+import { localizationService } from "../lib/localization-service"
+import { currencyConversionService } from "../lib/currency-conversion-service"
+import { useCurrency } from "../contexts/CurrencyContext"
+import { PortfolioService, PortfolioItem, PortfolioSummary } from "../lib/portfolio-service"
+import { DatabasePortfolioService } from "../lib/database-portfolio-service"
 
 // Remove duplicate interfaces as they're now imported from portfolio-service
 

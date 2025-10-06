@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Progress } from "@/components/ui/progress"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Progress } from "../components/ui/progress"
 import { 
   TrendingUp, 
   TrendingDown,
@@ -22,8 +22,8 @@ import {
   RefreshCw
 } from "lucide-react"
 import { toast } from "sonner"
-import { localizationService } from "@/lib/localization-service"
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { localizationService } from "../lib/localization-service"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 interface PortfolioItem {
   totalValue?: number

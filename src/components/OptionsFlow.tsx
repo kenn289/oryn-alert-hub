@@ -1,10 +1,10 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Button } from "@/components/ui/button"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
+import { Button } from "../components/ui/button"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../components/ui/tabs"
 import { 
   TrendingUp, 
   TrendingDown,
@@ -22,7 +22,7 @@ import {
   BarChart3
 } from "lucide-react"
 import { toast } from "sonner"
-import { WatchlistService } from "@/lib/watchlist"
+import { WatchlistService } from "../lib/watchlist"
 
 interface OptionsFlowData {
   unusualActivity: {

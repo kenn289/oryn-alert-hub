@@ -2,9 +2,9 @@
 
 import { createContext, useContext, useEffect, useState } from "react"
 import { User, Session } from "@supabase/supabase-js"
-import { supabase } from "@/lib/supabase"
-import { UserInitializationService } from "@/lib/user-initialization-service"
-import { UnifiedSyncService } from "@/lib/unified-sync-service"
+import { supabase } from "../lib/supabase"
+import { UserInitializationService } from "../lib/user-initialization-service"
+import { UnifiedSyncService } from "../lib/unified-sync-service"
 
 interface AuthContextType {
   user: User | null

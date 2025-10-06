@@ -1,11 +1,11 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Badge } from "../components/ui/badge"
 import { Clock, Globe, TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
-import { globalStockService, MarketInfo } from "@/lib/global-stock-service"
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { globalStockService, MarketInfo } from "../lib/global-stock-service"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 interface GlobalMarketStatusProps {
   selectedMarket?: string

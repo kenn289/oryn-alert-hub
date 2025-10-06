@@ -1,10 +1,10 @@
 "use client"
 
 import Link from "next/link"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { Button } from "../components/ui/button"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Activity, Home, ArrowLeft, Search } from "lucide-react"
-import { OrynLogo } from "@/components/OrynLogo"
+import { OrynLogo } from "../components/OrynLogo"
 
 export default function NotFound() {
   return (

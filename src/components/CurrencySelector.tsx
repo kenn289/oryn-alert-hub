@@ -1,7 +1,7 @@
 "use client"
 
 import { useState } from "react"
-import { Button } from "@/components/ui/button"
+import { Button } from "../components/ui/button"
 import { 
   DropdownMenu, 
   DropdownMenuContent, 
@@ -9,8 +9,8 @@ import {
   DropdownMenuLabel, 
   DropdownMenuSeparator, 
   DropdownMenuTrigger 
-} from "@/components/ui/dropdown-menu"
-import { Badge } from "@/components/ui/badge"
+} from "../components/ui/dropdown-menu"
+import { Badge } from "../components/ui/badge"
 import { 
   Globe, 
   DollarSign, 
@@ -18,7 +18,7 @@ import {
   ChevronDown,
   Check
 } from "lucide-react"
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 const currencies = [
   { code: 'USD', name: 'US Dollar', symbol: '$', flag: '🇺🇸' },

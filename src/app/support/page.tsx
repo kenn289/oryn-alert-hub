@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "@/contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
+import { useAuth } from "../../contexts/AuthContext"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
+import { Button } from "../../components/ui/button"
 import { Headphones, ArrowLeft, Zap, Clock, Shield } from "lucide-react"
-import { PrioritySupport } from "@/components/PrioritySupport"
-import { useFeatures } from "@/hooks/use-features"
-import { PLANS } from "@/lib/watchlist"
+import { PrioritySupport } from "../../components/PrioritySupport"
+import { useFeatures } from "../../hooks/use-features"
+import { PLANS } from "../../lib/watchlist"
 
 export default function SupportPage() {
   const router = useRouter()

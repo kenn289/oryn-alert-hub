@@ -1,14 +1,14 @@
 "use client"
 
 import { useState, useEffect } from "react"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Alert, AlertDescription } from "@/components/ui/alert"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Alert, AlertDescription } from "../components/ui/alert"
+import { Badge } from "../components/ui/badge"
 import { Zap, AlertTriangle, CheckCircle, XCircle, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { subscriptionService } from "@/lib/subscription-service"
-import { useAuth } from "@/contexts/AuthContext"
+import { subscriptionService } from "../lib/subscription-service"
+import { useAuth } from "../contexts/AuthContext"
 
 interface CancellationStatus {
   canCancel: boolean

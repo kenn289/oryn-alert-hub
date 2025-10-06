@@ -1,8 +1,8 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
+import { Button } from "../components/ui/button"
+import { Badge } from "../components/ui/badge"
 import { 
   Lock, 
   Check, 
@@ -16,7 +16,7 @@ import {
   Crown,
   Star
 } from "lucide-react"
-import { UserPlan, hasFeatureAccess, getFeatureDescription } from "@/lib/watchlist"
+import { UserPlan, hasFeatureAccess, getFeatureDescription } from "../lib/watchlist"
 import { toast } from "sonner"
 
 interface FeatureManagerProps {

@@ -1,8 +1,8 @@
 "use client"
 
-import { Badge } from '@/components/ui/badge'
-import { Alert, AlertDescription } from '@/components/ui/alert'
-import { Button } from '@/components/ui/button'
+import { Badge } from '../components/ui/badge'
+import { Alert, AlertDescription } from '../components/ui/alert'
+import { Button } from '../components/ui/button'
 import { 
   Clock, 
   AlertTriangle, 
@@ -12,7 +12,7 @@ import {
   XCircle
 } from 'lucide-react'
 import { useState } from 'react'
-import { useCurrency } from "@/contexts/CurrencyContext"
+import { useCurrency } from "../contexts/CurrencyContext"
 
 interface DataFreshnessIndicatorProps {
   source: 'fresh' | 'cached' | 'fallback'

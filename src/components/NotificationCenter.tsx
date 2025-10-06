@@ -2,14 +2,14 @@
 
 import { useState, useEffect } from 'react'
 import { Bell, X, CheckCircle, MessageSquare, UserPlus, AlertTriangle, RefreshCw } from 'lucide-react'
-import { Button } from '@/components/ui/button'
-import { Badge } from '@/components/ui/badge'
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { useAuth } from '@/contexts/AuthContext'
+import { Button } from '../components/ui/button'
+import { Badge } from '../components/ui/badge'
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '../components/ui/card'
+import { useAuth } from '../contexts/AuthContext'
 import { toast } from 'sonner'
-import { ClearNotificationsDialog } from '@/components/ConfirmationDialog'
-import { realtimeSupportService } from '@/lib/realtime-support-service'
-import { simpleNotificationService } from '@/lib/simple-notification-service'
+import { ClearNotificationsDialog } from '../components/ConfirmationDialog'
+import { realtimeSupportService } from '../lib/realtime-support-service'
+import { simpleNotificationService } from '../lib/simple-notification-service'
 
 interface Notification {
   id: string

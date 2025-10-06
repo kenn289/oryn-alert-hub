@@ -2,15 +2,15 @@
 
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
-import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { Label } from "@/components/ui/label"
-import { Card } from "@/components/ui/card"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
+import { Button } from "../../components/ui/button"
+import { Input } from "../../components/ui/input"
+import { Label } from "../../components/ui/label"
+import { Card } from "../../components/ui/card"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
 import { Activity, Loader2 } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "@/contexts/AuthContext"
-import { supabase } from "@/lib/supabase"
+import { useAuth } from "../../contexts/AuthContext"
+import { supabase } from "../../lib/supabase"
 
 export default function AuthPage() {
   const router = useRouter()
