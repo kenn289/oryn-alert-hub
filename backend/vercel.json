@@ -23,5 +23,10 @@
   "env": {
     "NODE_ENV": "production",
     "PORT": "3002"
+  },
+  "build": {
+    "env": {
+      "NODE_ENV": "production"
+    }
   }
 }
