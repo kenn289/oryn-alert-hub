@@ -104,12 +104,32 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   const signOut = async () => {
+    // Preserve important user data before clearing storage
+    const watchlistData = localStorage.getItem('oryn_watchlist')
+    const watchlistChecksum = localStorage.getItem('oryn_watchlist_checksum')
+    const userPlan = localStorage.getItem('oryn_user_plan')
+    const currencyPreference = localStorage.getItem('oryn_currency_preference')
+    
     // Clear all sessions and local storage
     await supabase.auth.signOut()
     
     // Clear any cached data
     localStorage.clear()
     sessionStorage.clear()
+    
+    // Restore preserved user data
+    if (watchlistData) {
+      localStorage.setItem('oryn_watchlist', watchlistData)
+    }
+    if (watchlistChecksum) {
+      localStorage.setItem('oryn_watchlist_checksum', watchlistChecksum)
+    }
+    if (userPlan) {
+      localStorage.setItem('oryn_user_plan', userPlan)
+    }
+    if (currencyPreference) {
+      localStorage.setItem('oryn_currency_preference', currencyPreference)
+    }
     
     // Force reload to clear any remaining state
     window.location.reload()

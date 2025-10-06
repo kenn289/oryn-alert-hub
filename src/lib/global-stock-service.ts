@@ -152,6 +152,7 @@ export class GlobalStockService {
       { symbol: 'V', name: 'Visa Inc.', sector: 'Financial Services' }
     ],
     IN: [
+      // Large Cap Blue Chips
       { symbol: 'RELIANCE', name: 'Reliance Industries Ltd', sector: 'Energy' },
       { symbol: 'TCS', name: 'Tata Consultancy Services Ltd', sector: 'Technology' },
       { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', sector: 'Financial Services' },
@@ -161,7 +162,34 @@ export class GlobalStockService {
       { symbol: 'SBIN', name: 'State Bank of India', sector: 'Financial Services' },
       { symbol: 'BHARTIARTL', name: 'Bharti Airtel Ltd', sector: 'Telecommunications' },
       { symbol: 'KOTAKBANK', name: 'Kotak Mahindra Bank Ltd', sector: 'Financial Services' },
-      { symbol: 'LT', name: 'Larsen & Toubro Ltd', sector: 'Industrials' }
+      { symbol: 'LT', name: 'Larsen & Toubro Ltd', sector: 'Industrials' },
+      
+      // Defence Stocks (as requested)
+      { symbol: 'HAL', name: 'Hindustan Aeronautics Ltd', sector: 'Defence' },
+      { symbol: 'BEML', name: 'BEML Ltd', sector: 'Defence' },
+      { symbol: 'BEL', name: 'Bharat Electronics Ltd', sector: 'Defence' },
+      { symbol: 'BDL', name: 'Bharat Dynamics Ltd', sector: 'Defence' },
+      { symbol: 'MAZDOCK', name: 'Mazagon Dock Shipbuilders', sector: 'Defence' },
+      { symbol: 'COCHINSHIP', name: 'Cochin Shipyard Ltd', sector: 'Defence' },
+      { symbol: 'GRSE', name: 'Garden Reach Shipbuilders', sector: 'Defence' },
+      
+      // Pharma (including Pfizer as requested)
+      { symbol: 'SUNPHARMA', name: 'Sun Pharmaceutical Industries', sector: 'Pharma' },
+      { symbol: 'DRREDDY', name: 'Dr. Reddy\'s Laboratories', sector: 'Pharma' },
+      { symbol: 'CIPLA', name: 'Cipla Ltd', sector: 'Pharma' },
+      { symbol: 'DIVISLAB', name: 'Divi\'s Laboratories', sector: 'Pharma' },
+      { symbol: 'LUPIN', name: 'Lupin Ltd', sector: 'Pharma' },
+      { symbol: 'PFIZER', name: 'Pfizer Ltd', sector: 'Pharma' },
+      { symbol: 'BIOCON', name: 'Biocon Ltd', sector: 'Pharma' },
+      { symbol: 'AUROPHARMA', name: 'Aurobindo Pharma Ltd', sector: 'Pharma' },
+      
+      // Automotive (including M&M as requested)
+      { symbol: 'MARUTI', name: 'Maruti Suzuki India Ltd', sector: 'Automotive' },
+      { symbol: 'M&M', name: 'Mahindra & Mahindra Ltd', sector: 'Automotive' },
+      { symbol: 'TATAMOTORS', name: 'Tata Motors Ltd', sector: 'Automotive' },
+      { symbol: 'BAJAJ-AUTO', name: 'Bajaj Auto Ltd', sector: 'Automotive' },
+      { symbol: 'HEROMOTOCO', name: 'Hero MotoCorp Ltd', sector: 'Automotive' },
+      { symbol: 'EICHERMOT', name: 'Eicher Motors Ltd', sector: 'Automotive' }
     ],
     UK: [
       { symbol: 'VOD', name: 'Vodafone Group Plc', sector: 'Telecommunications' },
