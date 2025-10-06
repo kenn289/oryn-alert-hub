@@ -1,4 +1,4 @@
-// Vercel serverless function for the backend
+// Simple Vercel serverless function for backend
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');
@@ -47,7 +47,6 @@ app.get('/api/health', (req, res) => {
 // Stock data endpoint
 app.get('/api/stock/:symbol', (req, res) => {
     const { symbol } = req.params;
-    // Mock stock data
     const stockData = {
         symbol: symbol.toUpperCase(),
         name: `${symbol} Inc.`,
@@ -72,12 +71,11 @@ app.get('/api/stock/:symbol', (req, res) => {
 // ML predictions endpoint
 app.get('/api/stock/:symbol/predictions', (req, res) => {
     const { symbol } = req.params;
-    // Mock ML prediction
     const prediction = {
         symbol: symbol.toUpperCase(),
         currentPrice: Math.random() * 1000 + 50,
         predictedPrice: Math.random() * 1000 + 50,
-        confidence: Math.random() * 0.4 + 0.6, // 60-100%
+        confidence: Math.random() * 0.4 + 0.6,
         timeframe: '3-5 days',
         reasoning: 'Technical analysis suggests moderate movement based on RSI and MACD indicators',
         technicalIndicators: {

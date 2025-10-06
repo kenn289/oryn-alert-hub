@@ -1,6 +1,5 @@
 {
   "version": 2,
-  "name": "oryn-backend",
   "functions": {
     "api/index.js": {
       "maxDuration": 60

@@ -15,23 +15,23 @@
   "rewrites": [
     {
       "source": "/api/stock/(.*)",
-      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/stock/$1"
+      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/stock/$1"
     },
     {
       "source": "/api/support/(.*)",
-      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/support/$1"
+      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/support/$1"
     },
     {
       "source": "/api/portfolio",
-      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/portfolio"
+      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/portfolio"
     },
     {
       "source": "/api/watchlist",
-      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/watchlist"
+      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/watchlist"
     },
     {
       "source": "/api/health",
-      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/health"
+      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/health"
     }
   ],
   "framework": "nextjs"
