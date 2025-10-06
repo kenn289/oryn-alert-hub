@@ -142,10 +142,13 @@ export function AIInsights() {
       }
       
       // Convert to the expected format
-      const aiPredictions: AIPrediction[] = realPredictions.map(pred => ({
+          const aiPredictions: AIPrediction[] = realPredictions.map(pred => ({
         symbol: pred.symbol,
         name: pred.name,
         currentPrice: pred.currentPrice,
+            // Preserve source currency for correct formatting
+            // @ts-ignore - extend local type with currency
+            currency: (pred as any).currency || 'USD',
         predictedPrice: pred.predictedPrice,
         confidence: pred.confidence,
         timeframe: pred.timeframe,
@@ -397,12 +400,12 @@ export function AIInsights() {
                           <div className="grid md:grid-cols-3 gap-6 mb-6">
                             <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">Current Price</div>
-                              <div className="text-2xl font-bold">{formatCurrency(prediction.currentPrice, 'USD')}</div>
+                              <div className="text-2xl font-bold">{formatCurrency(prediction.currentPrice, (prediction as any).currency || 'USD')}</div>
                   </div>
                             <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">Predicted Price</div>
                               <div className="text-2xl font-bold text-primary">
-                                {formatCurrency(prediction.predictedPrice, 'USD')}
+                                {formatCurrency(prediction.predictedPrice, (prediction as any).currency || 'USD')}
                     </div>
                   </div>
                             <div className="text-center">
@@ -443,11 +446,11 @@ export function AIInsights() {
                                 <div className="text-muted-foreground">Target & Stop Loss</div>
                                 <div className="font-medium">
                                   <DollarSign className="h-3 w-3 inline mr-1" />
-                                  Target: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.targetPrice, 'USD')}
+                                  Target: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.targetPrice, (prediction as any).currency || 'USD')}
                                 </div>
                                 <div className="font-medium">
                                   <AlertTriangle className="h-3 w-3 inline mr-1" />
-                                  Stop Loss: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.stopLoss, 'USD')}
+                                  Stop Loss: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.stopLoss, (prediction as any).currency || 'USD')}
                                 </div>
                               </div>
                             </div>

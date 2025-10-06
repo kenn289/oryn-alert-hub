@@ -506,9 +506,9 @@ export class WatchlistService {
       try {
         console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
         
-        // Use our API route to fetch data (handles CORS and server-side requests)
+        // Use our unified global endpoint which infers market from suffix automatically
         const marketQuery = item.market ? `?market=${encodeURIComponent(item.market)}` : ''
-        const response = await fetch(`/api/stock/multi/${item.ticker}${marketQuery}`)
+        const response = await fetch(`/api/stock/global/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
           throw new Error(`API HTTP error: ${response.status}`)
@@ -527,7 +527,7 @@ export class WatchlistService {
           change: stockData.change,
           changePercent: stockData.changePercent,
           volume: stockData.volume || 0,
-          source: stockData.source || 'yahoo_finance',
+          source: stockData.source || 'yahoo',
           currency: stockData.currency || undefined,
           exchange: stockData.exchange || undefined
         }
@@ -592,7 +592,7 @@ export class WatchlistService {
         
         // Use our API route to fetch data (handles CORS and server-side requests)
         const marketQuery = item.market ? `?market=${encodeURIComponent(item.market)}` : ''
-        const response = await fetch(`/api/stock/multi/${item.ticker}${marketQuery}`)
+        const response = await fetch(`/api/stock/global/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
           throw new Error(`API HTTP error: ${response.status}`)
@@ -611,7 +611,7 @@ export class WatchlistService {
           change: stockData.change,
           changePercent: stockData.changePercent,
           volume: stockData.volume || 0,
-          source: stockData.source || 'yahoo_finance',
+          source: stockData.source || 'yahoo',
           currency: stockData.currency || undefined
         }
         
