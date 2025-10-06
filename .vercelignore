@@ -1,7 +1,6 @@
 backend/
 *.md
 *.sql
-*.js
 *.ps1
 *.bat
 test-*.js
