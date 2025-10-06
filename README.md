@@ -1,36 +1,45 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+## Oryn: Real-time AI Market Analysis
 
-## Getting Started
+Oryn provides transparent, real-time market data and machine learning price predictions for global stocks. The UI highlights inputs, signals, and confidence so you can understand why a prediction was made.
 
-First, run the development server:
+### Getting Started
 
 ```bash
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Open `http://localhost:3000` and navigate to `Dashboard` to see AI Insights.
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### Data Sources
+- Yahoo Finance chart API for OHLCV and quotes
+- Optional paid providers (IEX, Polygon) if keys are configured
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### ML Model (v3.1.0-hist)
+- Inputs: recent OHLCV history (default 6 months, 1d), live quote, sector context.
+- Signals: SMA(20/50/200), RSI(14), MACD(12,26,9), ATR(14), support/resistance.
+- Confidence: signal agreement, liquidity vs. average volume, volatility sweet-spot.
+- Timeframe: derived from ATR% and market cap.
+- Prediction: momentum-weighted forecast combining trend slope, MACD histogram, RSI bias, and confidence, with bounds scaled to volatility.
 
-## Learn More
+The model is implemented in `src/lib/real-ai-analysis-service.ts` and served in the UI via `src/components/AIInsights.tsx`.
 
-To learn more about Next.js, take a look at the following resources:
+### Historical Data API
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+We expose a history endpoint used by the model:
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+```http
+GET /api/stock/history/:symbol?range=6mo&interval=1d&market=IN
+```
 
-## Deploy on Vercel
+Response includes `candles` array with `{ time, open, high, low, close, volume }`.
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+### Environment (optional)
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+Set any of the following to unlock additional providers:
+- `IEX_CLOUD_API_KEY`
+- `POLYGON_API_KEY`
+
+With no keys, Yahoo Finance remains the default.
+
+### Notes
+- This application uses real market data. Predictions are for research; not financial advice.

@@ -200,7 +200,7 @@ export function AIInsights() {
             <Brain className="h-6 w-6 text-primary" />
             Real AI Market Analysis
           </h2>
-          <p className="text-muted-foreground">Transparent AI analysis using real market data - no mock data</p>
+          <p className="text-muted-foreground">Transparent AI analysis using real market data</p>
           <div className="flex items-center gap-2 mt-1">
             <div className="flex items-center gap-1 text-xs text-green-600">
               <CheckCircle className="h-3 w-3" />
@@ -224,6 +224,41 @@ export function AIInsights() {
 
       {/* AI Insights */}
       <div className="space-y-4">
+        {/* ML Model Explanation */}
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AIBrain className="h-5 w-5 text-primary" />
+              How our ML predictions work
+            </CardTitle>
+            <CardDescription>
+              Uses recent historical prices (up to 6 months) and technical indicators to forecast short-term moves with a confidence score.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="font-semibold mb-1">Inputs</div>
+                <div className="text-muted-foreground">• OHLCV history from Yahoo</div>
+                <div className="text-muted-foreground">• Live price and volume</div>
+                <div className="text-muted-foreground">• Sector/market context</div>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">Signals</div>
+                <div className="text-muted-foreground">• SMA 20/50/200, RSI-14</div>
+                <div className="text-muted-foreground">• MACD (12-26-9)</div>
+                <div className="text-muted-foreground">• Support/Resistance</div>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">Prediction & Confidence</div>
+                <div className="text-muted-foreground">• Momentum-weighted forecast</div>
+                <div className="text-muted-foreground">• Confidence from signal agreement, liquidity, volatility</div>
+                <div className="text-muted-foreground">• Not financial advice</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {insights.map((insight) => (
           <Card key={insight.id} className={`hover-lift border-2 ${getInsightColor(insight.type)}`}>
             <CardHeader>

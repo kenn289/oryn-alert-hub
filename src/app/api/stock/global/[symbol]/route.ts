@@ -111,7 +111,26 @@ export async function GET(
       }
 
       if (stockData) {
-        return NextResponse.json(stockData)
+        // Normalize fallback to the same shape as unified response
+        return NextResponse.json({
+          symbol: stockData.symbol || upperSymbol,
+          name: stockData.name || upperSymbol,
+          price: stockData.price,
+          change: stockData.change,
+          changePercent: stockData.changePercent,
+          volume: stockData.volume,
+          avgVolume: stockData.avgVolume,
+          high: stockData.high,
+          low: stockData.low,
+          open: stockData.open,
+          previousClose: stockData.previousClose,
+          marketCap: stockData.marketCap,
+          pe: stockData.pe,
+          currency: stockData.currency || (market === 'US' ? 'USD' : undefined),
+          exchange: stockData.exchange || market,
+          source: stockData.source || 'fallback',
+          lastUpdated: new Date().toISOString()
+        })
       }
 
       // Last resort: explicit error to avoid random inconsistent prices
