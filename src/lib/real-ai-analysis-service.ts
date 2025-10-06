@@ -111,11 +111,13 @@ export class RealAIAnalysisService {
       }
 
       console.log(`📊 Fetching real-time data for ${symbol}...`)
-      
-      // Try multiple APIs for real data
+
+      // Infer market for correct routing (e.g., TCS -> IN, 532540 -> IN)
+      const inferredMarket = this.inferMarketFromSymbol(symbol)
+
+      // Try multiple APIs for real data (prefer unified global with market)
       const apis = [
-        `/api/stock/multi/${symbol}`,
-        `/api/stock/global/${symbol}`,
+        inferredMarket ? `/api/stock/global/${symbol}?market=${inferredMarket}` : `/api/stock/global/${symbol}`,
         `/api/stock/${symbol}`
       ]
 
@@ -129,7 +131,7 @@ export class RealAIAnalysisService {
                 symbol: data.symbol || symbol,
                 name: data.name || this.getCompanyName(symbol),
                 currentPrice: data.price,
-                currency: data.currency || 'USD',
+                currency: data.currency || (inferredMarket === 'IN' ? 'INR' : 'USD'),
                 previousClose: data.previousClose || data.price * 0.98,
                 change: data.change || 0,
                 changePercent: data.changePercent || 0,
@@ -193,6 +195,25 @@ export class RealAIAnalysisService {
     }
 
     return predictions
+  }
+
+  private inferMarketFromSymbol(input: string): string | undefined {
+    const s = (input || '').toUpperCase().trim()
+    if (!s) return undefined
+    if (/^\d+$/.test(s)) return 'IN' // BSE numeric codes
+    if (s.endsWith('.NS') || s.endsWith('.BO')) return 'IN'
+    if (s.endsWith('.L')) return 'GB'
+    if (s.endsWith('.T')) return 'JP'
+    if (s.endsWith('.AX')) return 'AU'
+    if (s.endsWith('.TO')) return 'CA'
+    if (s.endsWith('.DE')) return 'DE'
+    if (s.endsWith('.PA')) return 'FR'
+    // Common Indian NSE base symbols without suffix
+    const commonIN = new Set([
+      'RELIANCE','TCS','INFY','HDFCBANK','ICICIBANK','LT','BEL','BDL','MAZDOCK','HAL','COCHINSHIP','SUNPHARMA','DRREDDY','CIPLA','LUPIN','DIVISLAB','AUROPHARMA','BIOCON'
+    ])
+    if (commonIN.has(s)) return 'IN'
+    return undefined
   }
 
   /**
