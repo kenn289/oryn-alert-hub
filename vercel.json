@@ -2,7 +2,7 @@
   "version": 2,
   "buildCommand": "npm run build",
   "outputDirectory": ".next",
-  "installCommand": "npm install",
+  "installCommand": "npm install --production",
   "devCommand": "npm run dev",
   "env": {
     "NODE_ENV": "production"
@@ -34,5 +34,12 @@
       "destination": "https://oryn-backend.vercel.app/api/health"
     }
   ],
-  "ignoreCommand": "echo 'Frontend-only deployment'"
+  "ignoreCommand": "echo 'Frontend-only deployment - ignoring backend directory'",
+  "builds": [
+    {
+      "src": "package.json",
+      "use": "@vercel/next"
+    }
+  ],
+  "framework": "nextjs"
 }

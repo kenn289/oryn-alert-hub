@@ -1,7 +1,6 @@
-# Backend directory - completely exclude
+# Backend directories - completely exclude
 backend/
-backend/**
-backend/*
+backend-temp/
 
 # Documentation and SQL files
 *.md
@@ -22,20 +21,22 @@ fix-*.js
 apply-*.js
 check-*.js
 
-# Node modules in backend
-backend/node_modules/
-backend/dist/
-backend/api/
-
-# Any other backend-related files
+# Additional backend-related files that might cause issues
 backend/package.json
 backend/package-lock.json
+backend/node_modules/
+backend/dist/
+backend/src/
+backend/api/
+backend/vercel.json
 backend/tsconfig.json
 backend/tsconfig-simple.json
-backend/vercel.json
-
-# Additional exclusions
-backend/src/
 backend/README.md
 backend/start-backend.ps1
 backend/copy-server.js
+
+# Any other files that might interfere with frontend deployment
+.env.local
+.env.development.local
+.env.test.local
+.env.production.local
