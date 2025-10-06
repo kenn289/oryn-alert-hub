@@ -6,6 +6,8 @@ export async function GET(
   { params }: { params: Promise<{ symbol: string }> }
 ) {
   const { symbol } = await params
+  const { searchParams } = new URL(request.url)
+  const market = (searchParams.get('market') || undefined) as string | undefined
   
   try {
     if (!symbol) {
@@ -15,9 +17,17 @@ export async function GET(
       )
     }
 
-    const quote = await multiApiStockService.getStockQuote(symbol)
+    const quote = await multiApiStockService.getStockQuote(symbol, market)
     
-    return NextResponse.json(quote)
+    // Ensure extremely high precision for price fields
+    const precise = {
+      ...quote,
+      price: Number(quote.price.toPrecision(12)),
+      change: Number(quote.change.toPrecision(12)),
+      changePercent: Number(quote.changePercent.toPrecision(12))
+    }
+
+    return NextResponse.json(precise)
   } catch (error) {
     console.error(`Error fetching multi-API quote for ${symbol}:`, error)
     

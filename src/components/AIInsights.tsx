@@ -52,43 +52,8 @@ interface AIInsight {
   }
 }
 
-interface AIPrediction {
-  symbol: string
-  name: string
-  currentPrice: number
-  predictedPrice: number
-  confidence: number
-  timeframe: string
-  reasoning: string
-  detailedAnalysis: {
-    marketSentiment: 'bullish' | 'bearish' | 'neutral'
-    technicalIndicators: string[]
-    fundamentalFactors: string[]
-    riskFactors: string[]
-    buySellRecommendation: {
-      action: 'buy' | 'sell' | 'hold'
-      optimalDate: string
-      optimalTime: string
-      targetPrice: number
-      stopLoss: number
-      reasoning: string
-    }
-    marketTrends: {
-      sector: string
-      industry: string
-      competitorAnalysis: string
-      marketCap: string
-      volume: string
-    }
-    aiLearning: {
-      modelVersion: string
-      lastUpdated: string
-      accuracy: number
-      trainingData: string
-      confidenceFactors: string[]
-    }
-  }
-}
+// Align with RealAIPrediction for richer details
+type AIPrediction = RealAIPrediction
 
 export function AIInsights() {
   const { formatCurrency } = useCurrency()
@@ -141,17 +106,8 @@ export function AIInsights() {
         throw new Error('No real market data available for analysis')
       }
       
-      // Convert to the expected format
-      const aiPredictions: AIPrediction[] = realPredictions.map(pred => ({
-        symbol: pred.symbol,
-        name: pred.name,
-        currentPrice: pred.currentPrice,
-        predictedPrice: pred.predictedPrice,
-        confidence: pred.confidence,
-        timeframe: pred.timeframe,
-        reasoning: pred.reasoning,
-        detailedAnalysis: pred.detailedAnalysis
-      }))
+      // Already in correct shape; just forward through
+      const aiPredictions: AIPrediction[] = realPredictions as AIPrediction[]
 
       // Generate insights based on real predictions
       const aiInsights: AIInsight[] = await generateInsightsFromPredictions(realPredictions)
@@ -244,7 +200,7 @@ export function AIInsights() {
             <Brain className="h-6 w-6 text-primary" />
             Real AI Market Analysis
           </h2>
-          <p className="text-muted-foreground">Transparent AI analysis using real market data - no mock data</p>
+          <p className="text-muted-foreground">Transparent AI analysis using real market data</p>
           <div className="flex items-center gap-2 mt-1">
             <div className="flex items-center gap-1 text-xs text-green-600">
               <CheckCircle className="h-3 w-3" />
@@ -268,6 +224,41 @@ export function AIInsights() {
 
       {/* AI Insights */}
       <div className="space-y-4">
+        {/* ML Model Explanation */}
+        <Card className="border-dashed">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <AIBrain className="h-5 w-5 text-primary" />
+              How our ML predictions work
+            </CardTitle>
+            <CardDescription>
+              Uses recent historical prices (up to 6 months) and technical indicators to forecast short-term moves with a confidence score.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="grid md:grid-cols-3 gap-4 text-sm">
+              <div>
+                <div className="font-semibold mb-1">Inputs</div>
+                <div className="text-muted-foreground">• OHLCV history from Yahoo</div>
+                <div className="text-muted-foreground">• Live price and volume</div>
+                <div className="text-muted-foreground">• Sector/market context</div>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">Signals</div>
+                <div className="text-muted-foreground">• SMA 20/50/200, RSI-14</div>
+                <div className="text-muted-foreground">• MACD (12-26-9)</div>
+                <div className="text-muted-foreground">• Support/Resistance</div>
+              </div>
+              <div>
+                <div className="font-semibold mb-1">Prediction & Confidence</div>
+                <div className="text-muted-foreground">• Momentum-weighted forecast</div>
+                <div className="text-muted-foreground">• Confidence from signal agreement, liquidity, volatility</div>
+                <div className="text-muted-foreground">• Not financial advice</div>
+              </div>
+            </div>
+          </CardContent>
+        </Card>
+
         {insights.map((insight) => (
           <Card key={insight.id} className={`hover-lift border-2 ${getInsightColor(insight.type)}`}>
             <CardHeader>
@@ -397,12 +388,12 @@ export function AIInsights() {
                           <div className="grid md:grid-cols-3 gap-6 mb-6">
                             <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">Current Price</div>
-                              <div className="text-2xl font-bold">{formatCurrency(prediction.currentPrice, 'USD')}</div>
+                              <div className="text-2xl font-bold">{formatCurrency(prediction.currentPrice, (prediction as any).currency || 'USD')}</div>
                   </div>
                             <div className="text-center">
                     <div className="text-sm text-muted-foreground mb-1">Predicted Price</div>
                               <div className="text-2xl font-bold text-primary">
-                                {formatCurrency(prediction.predictedPrice, 'USD')}
+                                {formatCurrency(prediction.predictedPrice, (prediction as any).currency || 'USD')}
                     </div>
                   </div>
                             <div className="text-center">
@@ -443,11 +434,11 @@ export function AIInsights() {
                                 <div className="text-muted-foreground">Target & Stop Loss</div>
                                 <div className="font-medium">
                                   <DollarSign className="h-3 w-3 inline mr-1" />
-                                  Target: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.targetPrice, 'USD')}
+                                  Target: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.targetPrice, (prediction as any).currency || 'USD')}
                                 </div>
                                 <div className="font-medium">
                                   <AlertTriangle className="h-3 w-3 inline mr-1" />
-                                  Stop Loss: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.stopLoss, 'USD')}
+                                  Stop Loss: {formatCurrency(prediction.detailedAnalysis.buySellRecommendation.stopLoss, (prediction as any).currency || 'USD')}
                                 </div>
                               </div>
                             </div>
@@ -469,6 +460,7 @@ export function AIInsights() {
                                   <div className="text-sm text-muted-foreground">• MACD: {prediction.detailedAnalysis.technicalIndicators.macd.toFixed(2)}</div>
                                   <div className="text-sm text-muted-foreground">• SMA 20: {prediction.detailedAnalysis.technicalIndicators.sma20.toFixed(2)}</div>
                                   <div className="text-sm text-muted-foreground">• SMA 50: {prediction.detailedAnalysis.technicalIndicators.sma50.toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• SMA 200: {prediction.detailedAnalysis.technicalIndicators.sma200.toFixed(2)}</div>
                                   <div className="text-sm text-muted-foreground">• Support: {prediction.detailedAnalysis.technicalIndicators.support.toFixed(2)}</div>
                                   <div className="text-sm text-muted-foreground">• Resistance: {prediction.detailedAnalysis.technicalIndicators.resistance.toFixed(2)}</div>
                                   <div className="text-sm text-muted-foreground">• Trend: {prediction.detailedAnalysis.technicalIndicators.trend.toUpperCase()}</div>
@@ -482,10 +474,12 @@ export function AIInsights() {
                                 <div className="space-y-1">
                                   <div className="text-sm text-muted-foreground">• P/E: {prediction.detailedAnalysis.fundamentalFactors.pe.toFixed(1)}</div>
                                   <div className="text-sm text-muted-foreground">• PEG: {prediction.detailedAnalysis.fundamentalFactors.peg.toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• Debt/Equity: {prediction.detailedAnalysis.fundamentalFactors.debtToEquity.toFixed(2)}</div>
                                   <div className="text-sm text-muted-foreground">• ROE: {(prediction.detailedAnalysis.fundamentalFactors.roe * 100).toFixed(1)}%</div>
                                   <div className="text-sm text-muted-foreground">• Revenue Growth: {(prediction.detailedAnalysis.fundamentalFactors.revenueGrowth * 100).toFixed(1)}%</div>
                                   <div className="text-sm text-muted-foreground">• Earnings Growth: {(prediction.detailedAnalysis.fundamentalFactors.earningsGrowth * 100).toFixed(1)}%</div>
                                   <div className="text-sm text-muted-foreground">• Analyst Rating: {prediction.detailedAnalysis.fundamentalFactors.analystRating.toUpperCase()}</div>
+                                  <div className="text-sm text-muted-foreground">• Price Target: {formatCurrency(prediction.detailedAnalysis.fundamentalFactors.priceTarget, (prediction as any).currency || 'USD')}</div>
                                 </div>
                               </div>
                             </div>
@@ -510,8 +504,43 @@ export function AIInsights() {
                                   <div>Model: {prediction.detailedAnalysis.aiLearning.modelVersion}</div>
                                   <div>Accuracy: {prediction.detailedAnalysis.aiLearning.accuracy}%</div>
                                   <div>Training: {prediction.detailedAnalysis.aiLearning.trainingData}</div>
+                                  <div>Signals: {prediction.detailedAnalysis.aiLearning.dataPoints.toLocaleString()}</div>
+                                  <div className="mt-1">Confidence factors:</div>
+                                  <div className="mt-1 space-y-0.5">
+                                    {prediction.detailedAnalysis.aiLearning.confidenceFactors.map((f, i) => (
+                                      <div key={i} className="text-sm text-muted-foreground">• {f}</div>
+                                    ))}
+                                  </div>
                                 </div>
                               </div>
+                            </div>
+                          </div>
+
+                          {/* Market Context and Risk/Reward */}
+                          <div className="grid md:grid-cols-3 gap-4 mt-4">
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-sm text-muted-foreground mb-1">Market Context</div>
+                              <div className="text-sm">Sector: {prediction.detailedAnalysis.marketTrends.sector}</div>
+                              <div className="text-sm">Industry: {prediction.detailedAnalysis.marketTrends.industry}</div>
+                              <div className="text-sm">Market Cap: {prediction.detailedAnalysis.marketTrends.marketCap}</div>
+                              <div className="text-sm">Volume: {prediction.detailedAnalysis.marketTrends.volume}</div>
+                            </div>
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-sm text-muted-foreground mb-1">Expected Move</div>
+                              <div className={`text-lg font-semibold ${prediction.predictedPrice >= prediction.currentPrice ? 'text-green-600' : 'text-red-600'}`}>
+                                {((prediction.predictedPrice - prediction.currentPrice) / prediction.currentPrice * 100).toFixed(2)}%
+                              </div>
+                              <div className="text-sm text-muted-foreground">Δ {formatCurrency(Math.abs(prediction.predictedPrice - prediction.currentPrice), (prediction as any).currency || 'USD')}</div>
+                            </div>
+                            <div className="p-3 border rounded-lg">
+                              <div className="text-sm text-muted-foreground mb-1">Risk/Reward</div>
+                              {(() => {
+                                const risk = prediction.detailedAnalysis.buySellRecommendation.stopLoss
+                                const reward = prediction.detailedAnalysis.buySellRecommendation.targetPrice
+                                const rr = Math.max(0.1, Math.abs(reward - prediction.currentPrice) / Math.max(0.01, Math.abs(prediction.currentPrice - risk)))
+                                return <div className="text-lg font-semibold">{rr.toFixed(2)} : 1</div>
+                              })()}
+                              <div className="text-xs text-muted-foreground mt-1">Based on target vs. stop loss</div>
                             </div>
                           </div>
                         </div>

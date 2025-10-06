@@ -4,6 +4,7 @@ import { createContext, useContext, useEffect, useState } from "react"
 import { User, Session } from "@supabase/supabase-js"
 import { supabase } from "@/lib/supabase"
 import { UserInitializationService } from "@/lib/user-initialization-service"
+import { UnifiedSyncService } from "@/lib/unified-sync-service"
 
 interface AuthContextType {
   user: User | null
@@ -57,6 +58,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
                   // Update last login for existing users
                   await UserInitializationService.updateLastLogin(session.user.id)
                 }
+                // Unified sync after user initialization
+                try {
+                  console.log('🔄 Running unified data sync (watchlist + portfolio)')
+                  await UnifiedSyncService.unifyAll(session.user.id)
+                  console.log('✅ Unified data sync complete')
+                } catch (syncError) {
+                  console.error('Unified sync error:', syncError)
+                }
               })
               .catch(error => {
                 console.error('Error handling user initialization:', error)
@@ -92,6 +101,14 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
               await UserInitializationService.updateLastLogin(session.user.id)
             }
           }
+          // Always run unified sync on session restore
+          try {
+            console.log('🔄 Running unified data sync on session restore')
+            await UnifiedSyncService.unifyAll(session.user.id)
+            console.log('✅ Unified data sync complete')
+          } catch (syncError) {
+            console.error('Unified sync error:', syncError)
+          }
         } catch (error) {
           console.error('Error handling session initialization:', error)
         }
@@ -104,12 +121,36 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
   }, [])
 
   const signOut = async () => {
+    // Preserve important user data before clearing storage
+    const portfolioData = localStorage.getItem('oryn_portfolio')
+    const watchlistData = localStorage.getItem('oryn_watchlist')
+    const watchlistChecksum = localStorage.getItem('oryn_watchlist_checksum')
+    const userPlan = localStorage.getItem('oryn_user_plan')
+    const currencyPreference = localStorage.getItem('oryn_currency_preference')
+    
     // Clear all sessions and local storage
     await supabase.auth.signOut()
     
     // Clear any cached data
     localStorage.clear()
     sessionStorage.clear()
+    
+    // Restore preserved user data
+    if (portfolioData) {
+      localStorage.setItem('oryn_portfolio', portfolioData)
+    }
+    if (watchlistData) {
+      localStorage.setItem('oryn_watchlist', watchlistData)
+    }
+    if (watchlistChecksum) {
+      localStorage.setItem('oryn_watchlist_checksum', watchlistChecksum)
+    }
+    if (userPlan) {
+      localStorage.setItem('oryn_user_plan', userPlan)
+    }
+    if (currencyPreference) {
+      localStorage.setItem('oryn_currency_preference', currencyPreference)
+    }
     
     // Force reload to clear any remaining state
     window.location.reload()

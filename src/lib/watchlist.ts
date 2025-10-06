@@ -7,6 +7,13 @@ export interface WatchlistItem {
   name: string
   price: number
   change: number
+  changePercent?: number
+  // Currency of the price as returned by the data source (e.g., USD, INR)
+  currency?: string
+  // Exchange name, when available (e.g., NSE, BSE, NASDAQ)
+  exchange?: string
+  // Market code for correct routing (e.g., US, IN, UK)
+  market?: string
   addedAt: string
 }
 
@@ -167,9 +174,10 @@ export const checkFeatureAccess = (userPlan: UserPlan, feature: keyof UserPlan['
   return { hasAccess, isUnlimited, limit, remaining, canUse }
 }
 
-// Mock stock suggestions API
+// Stock suggestions API with comprehensive global coverage
 export const getStockSuggestions = async (query: string): Promise<Array<{ticker: string, name: string, sector: string}>> => {
   const allStocks = [
+    // US Stocks
     { ticker: "AAPL", name: "Apple Inc.", sector: "Technology" },
     { ticker: "MSFT", name: "Microsoft Corp.", sector: "Technology" },
     { ticker: "GOOGL", name: "Alphabet Inc.", sector: "Technology" },
@@ -224,15 +232,89 @@ export const getStockSuggestions = async (query: string): Promise<Array<{ticker:
     { ticker: "HD", name: "Home Depot Inc.", sector: "Consumer Discretionary" },
     { ticker: "LOW", name: "Lowe's Companies Inc.", sector: "Consumer Discretionary" },
     { ticker: "NKE", name: "Nike Inc.", sector: "Consumer Discretionary" },
-    { ticker: "SBUX", name: "Starbucks Corp.", sector: "Consumer Discretionary" }
+    { ticker: "SBUX", name: "Starbucks Corp.", sector: "Consumer Discretionary" },
+    
+    // Indian Stocks (NSE format)
+    // Large Cap Blue Chips
+    { ticker: "RELIANCE.NS", name: "Reliance Industries Ltd", sector: "Energy" },
+    { ticker: "TCS.NS", name: "Tata Consultancy Services Ltd", sector: "Technology" },
+    { ticker: "HDFCBANK.NS", name: "HDFC Bank Ltd", sector: "Financial Services" },
+    { ticker: "INFY.NS", name: "Infosys Ltd", sector: "Technology" },
+    { ticker: "HINDUNILVR.NS", name: "Hindustan Unilever Ltd", sector: "Consumer Goods" },
+    { ticker: "ITC.NS", name: "ITC Ltd", sector: "Consumer Goods" },
+    { ticker: "SBIN.NS", name: "State Bank of India", sector: "Financial Services" },
+    { ticker: "BHARTIARTL.NS", name: "Bharti Airtel Ltd", sector: "Telecommunications" },
+    { ticker: "KOTAKBANK.NS", name: "Kotak Mahindra Bank Ltd", sector: "Financial Services" },
+    { ticker: "LT.NS", name: "Larsen & Toubro Ltd", sector: "Industrials" },
+    
+    // Defence Stocks (as requested)
+    { ticker: "HAL.NS", name: "Hindustan Aeronautics Ltd", sector: "Defence" },
+    { ticker: "BEML.NS", name: "BEML Ltd", sector: "Defence" },
+    { ticker: "BEL.NS", name: "Bharat Electronics Ltd", sector: "Defence" },
+    { ticker: "BDL.NS", name: "Bharat Dynamics Ltd", sector: "Defence" },
+    { ticker: "MAZDOCK.NS", name: "Mazagon Dock Shipbuilders", sector: "Defence" },
+    { ticker: "COCHINSHIP.NS", name: "Cochin Shipyard Ltd", sector: "Defence" },
+    { ticker: "GRSE.NS", name: "Garden Reach Shipbuilders", sector: "Defence" },
+    
+    // Pharma (including Pfizer as requested)
+    { ticker: "SUNPHARMA.NS", name: "Sun Pharmaceutical Industries", sector: "Pharma" },
+    { ticker: "DRREDDY.NS", name: "Dr. Reddy's Laboratories", sector: "Pharma" },
+    { ticker: "CIPLA.NS", name: "Cipla Ltd", sector: "Pharma" },
+    { ticker: "DIVISLAB.NS", name: "Divi's Laboratories", sector: "Pharma" },
+    { ticker: "LUPIN.NS", name: "Lupin Ltd", sector: "Pharma" },
+    { ticker: "PFIZER.NS", name: "Pfizer Ltd", sector: "Pharma" },
+    { ticker: "BIOCON.NS", name: "Biocon Ltd", sector: "Pharma" },
+    { ticker: "AUROPHARMA.NS", name: "Aurobindo Pharma Ltd", sector: "Pharma" },
+    
+    // Automotive (including M&M as requested)
+    { ticker: "MARUTI.NS", name: "Maruti Suzuki India Ltd", sector: "Automotive" },
+    { ticker: "M&M.NS", name: "Mahindra & Mahindra Ltd", sector: "Automotive" },
+    { ticker: "TATAMOTORS.NS", name: "Tata Motors Ltd", sector: "Automotive" },
+    { ticker: "BAJAJ-AUTO.NS", name: "Bajaj Auto Ltd", sector: "Automotive" },
+    { ticker: "HEROMOTOCO.NS", name: "Hero MotoCorp Ltd", sector: "Automotive" },
+    { ticker: "EICHERMOT.NS", name: "Eicher Motors Ltd", sector: "Automotive" },
+    
+    // Technology & IT
+    { ticker: "WIPRO.NS", name: "Wipro Ltd", sector: "Technology" },
+    { ticker: "HCLTECH.NS", name: "HCL Technologies Ltd", sector: "Technology" },
+    { ticker: "TECHM.NS", name: "Tech Mahindra Ltd", sector: "Technology" },
+    { ticker: "TATAELXSI.NS", name: "Tata Elxsi Ltd", sector: "Technology" },
+    
+    // Financial Services
+    { ticker: "ICICIBANK.NS", name: "ICICI Bank Ltd", sector: "Financial Services" },
+    { ticker: "AXISBANK.NS", name: "Axis Bank Ltd", sector: "Financial Services" },
+    { ticker: "BAJFINANCE.NS", name: "Bajaj Finance Ltd", sector: "Financial Services" },
+    
+    // Consumer Goods
+    { ticker: "NESTLEIND.NS", name: "Nestle India Ltd", sector: "Consumer Goods" },
+    { ticker: "BRITANNIA.NS", name: "Britannia Industries Ltd", sector: "Consumer Goods" },
+    
+    // Industrials & Infrastructure
+    { ticker: "ULTRACEMCO.NS", name: "UltraTech Cement Ltd", sector: "Cement" },
+    { ticker: "ADANIPORTS.NS", name: "Adani Ports & SEZ Ltd", sector: "Infrastructure" },
+    
+    // Chemicals
+    { ticker: "DEEPAKNTR.NS", name: "Deepak Nitrite Ltd", sector: "Chemicals" },
+    { ticker: "ATUL.NS", name: "Atul Ltd", sector: "Chemicals" },
+    
+    // Metals & Mining
+    { ticker: "TATASTEEL.NS", name: "Tata Steel Ltd", sector: "Metals" },
+    { ticker: "JSWSTEEL.NS", name: "JSW Steel Ltd", sector: "Metals" },
+    { ticker: "HINDALCO.NS", name: "Hindalco Industries Ltd", sector: "Metals" },
+    
+    // Energy & Oil
+    { ticker: "ONGC.NS", name: "Oil & Natural Gas Corp Ltd", sector: "Energy" },
+    { ticker: "BPCL.NS", name: "Bharat Petroleum Corp Ltd", sector: "Energy" },
+    { ticker: "COALINDIA.NS", name: "Coal India Ltd", sector: "Energy" }
   ]
 
-  if (!query || query.length < 1) return allStocks.slice(0, 10)
+  if (!query || query.length < 1) return allStocks.slice(0, 15)
   
   return allStocks.filter(stock => 
     stock.ticker.toLowerCase().includes(query.toLowerCase()) ||
-    stock.name.toLowerCase().includes(query.toLowerCase())
-  ).slice(0, 10)
+    stock.name.toLowerCase().includes(query.toLowerCase()) ||
+    stock.sector.toLowerCase().includes(query.toLowerCase())
+  ).slice(0, 15)
 }
 
 // Watchlist management
@@ -240,6 +322,7 @@ export class WatchlistService {
   private static STORAGE_KEY = 'oryn_watchlist'
   private static USER_PLAN_KEY = 'oryn_user_plan'
   private static CHECKSUM_KEY = 'oryn_watchlist_checksum'
+  private static LAST_MODIFIED_KEY = 'oryn_watchlist_last_modified'
 
   static getUserPlan(): UserPlan {
     const stored = localStorage.getItem(this.USER_PLAN_KEY)
@@ -255,14 +338,22 @@ export class WatchlistService {
     return stored ? JSON.parse(stored) : []
   }
 
-  static addToWatchlist(ticker: string, name: string): { success: boolean, message: string } {
+  static addToWatchlist(ticker: string, name: string, market?: string): { success: boolean, message: string } {
     // Input validation and sanitization
     if (!ticker || typeof ticker !== 'string') {
       return { success: false, message: 'Invalid ticker symbol' }
     }
     
-    const cleanTicker = ticker.trim().toUpperCase()
-    if (cleanTicker.length === 0 || cleanTicker.length > 10) {
+    let cleanTicker = ticker.trim().toUpperCase()
+    // If market provided, ensure ticker has proper suffix for disambiguation
+    if (market) {
+      const marketCode = market.toUpperCase()
+      if (!cleanTicker.includes('.')) {
+        const suffix = this.getMarketSuffix(marketCode, cleanTicker)
+        cleanTicker = `${cleanTicker}${suffix}`
+      }
+    }
+    if (cleanTicker.length === 0 || cleanTicker.length > 30) {
       return { success: false, message: 'Invalid ticker symbol length' }
     }
     
@@ -305,6 +396,8 @@ export class WatchlistService {
       name: (name && name.trim()) ? name.trim().substring(0, 100) : `${cleanTicker} Inc.`, // Limit name length
       price: 0, // Will be fetched from API
       change: 0, // Will be fetched from API
+      changePercent: 0,
+      market: market?.toUpperCase(),
       addedAt: new Date().toISOString()
     }
 
@@ -323,6 +416,19 @@ export class WatchlistService {
     return { success: true, message: `Added ${cleanTicker} to watchlist` }
   }
 
+  private static getMarketSuffix(market: string, symbol: string): string {
+    if (symbol.includes('.')) return ''
+    if (market === 'IN') {
+      // If BSE numeric code, use .BO
+      if (/^\d+$/.test(symbol)) return '.BO'
+      return '.NS'
+    }
+    const suffixMap: Record<string, string> = {
+      US: '', GB: '.L', UK: '.L', JP: '.T', AU: '.AX', CA: '.TO', DE: '.DE', FR: '.PA'
+    }
+    return suffixMap[market] ?? ''
+  }
+
   static removeFromWatchlist(ticker: string): { success: boolean, message: string } {
     const currentWatchlist = this.getWatchlist()
     const updatedWatchlist = currentWatchlist.filter(item => item.ticker !== ticker.toUpperCase())
@@ -337,6 +443,8 @@ export class WatchlistService {
 
   static clearWatchlist() {
     localStorage.removeItem(this.STORAGE_KEY)
+    // mark modification
+    try { localStorage.setItem(this.LAST_MODIFIED_KEY, Date.now().toString()) } catch {}
   }
 
   // Enforce limits on existing watchlist (call this on app load)
@@ -385,7 +493,7 @@ export class WatchlistService {
         typeof item === 'object' &&
         typeof item.ticker === 'string' &&
         item.ticker.length > 0 &&
-        item.ticker.length <= 10 &&
+        item.ticker.length <= 30 &&
         typeof item.name === 'string' &&
         typeof item.price === 'number' &&
         typeof item.change === 'number' &&
@@ -457,6 +565,8 @@ export class WatchlistService {
     const checksum = this.generateChecksum(jsonData)
     localStorage.setItem(this.STORAGE_KEY, jsonData)
     localStorage.setItem(this.CHECKSUM_KEY, checksum)
+    // mark modification time for unified sync
+    try { localStorage.setItem(this.LAST_MODIFIED_KEY, Date.now().toString()) } catch {}
   }
 
   // Fetch real stock data for watchlist items
@@ -476,8 +586,11 @@ export class WatchlistService {
       try {
         console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
         
-        // Use our API route to fetch data (handles CORS and server-side requests)
-        const response = await fetch(`/api/stock/multi/${item.ticker}`)
+        // Use our unified global endpoint which infers market from suffix automatically
+        // Infer market from ticker if missing
+        const inferredMarket = item.market || inferMarketFromTicker(item.ticker)
+        const marketQuery = inferredMarket ? `?market=${encodeURIComponent(inferredMarket)}` : ''
+        const response = await fetch(`/api/stock/global/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
           throw new Error(`API HTTP error: ${response.status}`)
@@ -496,17 +609,23 @@ export class WatchlistService {
           change: stockData.change,
           changePercent: stockData.changePercent,
           volume: stockData.volume || 0,
-          source: stockData.source || 'yahoo_finance'
+          source: stockData.source || 'yahoo',
+          currency: stockData.currency || undefined,
+          exchange: stockData.exchange || undefined
         }
         
-        console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
+        console.log(`✅ Got REAL-TIME data for ${item.ticker}: ${realTimeData.currency || 'USD'} ${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
         
         updatedItems.push({
           ...item,
+          ticker: realTimeData.symbol || item.ticker,
           name: realTimeData.name,
           price: realTimeData.price,
           change: realTimeData.change,
-          changePercent: realTimeData.changePercent
+          changePercent: realTimeData.changePercent,
+          currency: realTimeData.currency,
+          exchange: realTimeData.exchange,
+          market: inferredMarket
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
@@ -554,7 +673,9 @@ export class WatchlistService {
         console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
         
         // Use our API route to fetch data (handles CORS and server-side requests)
-        const response = await fetch(`/api/stock/multi/${item.ticker}`)
+        const inferredMarket = item.market || inferMarketFromTicker(item.ticker)
+        const marketQuery = inferredMarket ? `?market=${encodeURIComponent(inferredMarket)}` : ''
+        const response = await fetch(`/api/stock/global/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
           throw new Error(`API HTTP error: ${response.status}`)
@@ -573,17 +694,22 @@ export class WatchlistService {
           change: stockData.change,
           changePercent: stockData.changePercent,
           volume: stockData.volume || 0,
-          source: stockData.source || 'yahoo_finance'
+          source: stockData.source || 'yahoo',
+          currency: stockData.currency || undefined
         }
         
-        console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
+        console.log(`✅ Got REAL-TIME data for ${item.ticker}: ${realTimeData.currency || 'USD'} ${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
         
         updatedItems.push({
           ...item,
+          ticker: realTimeData.symbol || item.ticker,
           name: realTimeData.name,
           price: realTimeData.price,
           change: realTimeData.change,
-          changePercent: realTimeData.changePercent
+          changePercent: realTimeData.changePercent,
+          currency: realTimeData.currency,
+          exchange: realTimeData.exchange,
+          market: inferredMarket
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
@@ -607,4 +733,18 @@ export class WatchlistService {
     // Don't clear the watchlist items, just force fresh price updates
     console.log('✅ Price cache cleared - will fetch fresh prices for existing items')
   }
+}
+
+function inferMarketFromTicker(ticker: string | undefined): string | undefined {
+  if (!ticker) return undefined
+  const s = ticker.toUpperCase()
+  if (/^\d+$/.test(s)) return 'IN' // BSE numeric
+  if (s.endsWith('.NS') || s.endsWith('.BO')) return 'IN'
+  if (s.endsWith('.L')) return 'GB'
+  if (s.endsWith('.T')) return 'JP'
+  if (s.endsWith('.AX')) return 'AU'
+  if (s.endsWith('.TO')) return 'CA'
+  if (s.endsWith('.DE')) return 'DE'
+  if (s.endsWith('.PA')) return 'FR'
+  return undefined
 }

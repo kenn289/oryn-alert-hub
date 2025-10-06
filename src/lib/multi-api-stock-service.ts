@@ -17,6 +17,8 @@ export interface StockQuote {
   pe: number
   timestamp: string
   source: 'iex_cloud' | 'polygon' | 'yahoo'
+  currency?: string
+  exchange?: string
   _cacheInfo?: {
     source: 'fresh' | 'cached' | 'fallback'
     age?: string
@@ -80,9 +82,10 @@ class MultiApiStockService {
     ].filter(api => api.enabled)
   }
 
-  async getStockQuote(symbol: string): Promise<StockQuote> {
+  async getStockQuote(symbol: string, market?: string): Promise<StockQuote> {
     const normalizedSymbol = symbol.toUpperCase().trim()
-    const cacheKey = `stock_${normalizedSymbol}`
+    const normalizedMarket = market?.toUpperCase().trim()
+    const cacheKey = `stock_${normalizedSymbol}_${normalizedMarket || 'US'}`
     
     // Check cache first
     const cached = this.cache.get(cacheKey)
@@ -100,7 +103,9 @@ class MultiApiStockService {
     }
 
     // Try APIs in priority order
-    const sortedApis = this.apis.sort((a, b) => a.priority - b.priority)
+    const sortedApis = this.apis
+      .filter(api => this.isApiSupportedForMarket(api.name, normalizedMarket))
+      .sort((a, b) => a.priority - b.priority)
     
     for (const api of sortedApis) {
       if (this.isRateLimited(api.name)) {
@@ -109,7 +114,7 @@ class MultiApiStockService {
       }
 
       try {
-        const response = await this.fetchFromApi(api, normalizedSymbol)
+        const response = await this.fetchFromApi(api, normalizedSymbol, normalizedMarket)
         if (response.success && response.data) {
           // Cache the successful response
           this.cache.set(cacheKey, {
@@ -130,7 +135,7 @@ class MultiApiStockService {
     throw new Error(`All stock data APIs failed for symbol: ${normalizedSymbol}`)
   }
 
-  private async fetchFromApi(api: ApiConfig, symbol: string): Promise<ApiResponse> {
+  private async fetchFromApi(api: ApiConfig, symbol: string, market?: string): Promise<ApiResponse> {
     try {
       let url: string
       let response: Response
@@ -138,19 +143,28 @@ class MultiApiStockService {
       switch (api.name) {
 
         case 'iex_cloud':
+          // IEX Cloud primarily supports US symbols
+          if (market && market !== 'US') {
+            return { success: false, error: 'Unsupported market for IEX', source: api.name }
+          }
           url = `${api.baseUrl}/stock/${symbol}/quote?token=${api.apiKey}`
           response = await fetch(url)
-          return this.parseIexCloudResponse(response, symbol, api.name)
+      return this.parseIexCloudResponse(response, symbol, api.name)
 
         case 'polygon':
+          // Polygon primarily supports US symbols
+          if (market && market !== 'US') {
+            return { success: false, error: 'Unsupported market for Polygon', source: api.name }
+          }
           url = `${api.baseUrl}/aggs/ticker/${symbol}/prev?apikey=${api.apiKey}`
           response = await fetch(url)
-          return this.parsePolygonResponse(response, symbol, api.name)
+      return this.parsePolygonResponse(response, symbol, api.name)
 
         case 'yahoo':
-          url = `${api.baseUrl}/${symbol}`
+          const yahooSymbol = this.getYahooSymbolForMarket(symbol, market)
+          url = `${api.baseUrl}/${yahooSymbol}`
           response = await fetch(url)
-          return this.parseYahooResponse(response, symbol, api.name)
+      return this.parseYahooResponse(response, yahooSymbol, api.name)
 
         default:
           throw new Error(`Unknown API: ${api.name}`)
@@ -202,7 +216,9 @@ class MultiApiStockService {
         marketCap: data.marketCap,
         pe: data.peRatio,
         timestamp: new Date().toISOString(),
-        source: source as 'iex_cloud' | 'polygon' | 'yahoo'
+        source: source as 'iex_cloud' | 'polygon' | 'yahoo',
+        currency: 'USD',
+        exchange: data.primaryExchange || 'US'
       },
       source
     }
@@ -254,7 +270,9 @@ class MultiApiStockService {
         marketCap: result.c * result.v * 0.1,
         pe: 20,
         timestamp: new Date().toISOString(),
-        source: source as 'iex_cloud' | 'polygon' | 'yahoo'
+        source: source as 'iex_cloud' | 'polygon' | 'yahoo',
+        currency: 'USD',
+        exchange: 'US'
       },
       source
     }
@@ -262,6 +280,18 @@ class MultiApiStockService {
 
   private async parseYahooResponse(response: Response, symbol: string, source: string): Promise<ApiResponse> {
     if (!response.ok) {
+      // Yahoo sometimes 404/400 for base symbol when suffix needed; try appending IN suffixes heuristically
+      if (response.status === 404 || response.status === 400) {
+        const guess = this.tryYahooSuffixFallback(symbol)
+        if (guess) {
+          try {
+            const retry = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${guess}`)
+            if (retry.ok) {
+              return this.parseYahooResponse(retry as unknown as Response, guess, source)
+            }
+          } catch {}
+        }
+      }
       return {
         success: false,
         error: `HTTP ${response.status}`,
@@ -299,7 +329,9 @@ class MultiApiStockService {
         marketCap: meta.marketCap,
         pe: meta.trailingPE,
         timestamp: new Date().toISOString(),
-        source: source as 'iex_cloud' | 'polygon' | 'yahoo'
+        source: source as 'iex_cloud' | 'polygon' | 'yahoo',
+        currency: meta.currency,
+        exchange: meta.exchangeName || meta.fullExchangeName || undefined
       },
       source
     }
@@ -328,6 +360,7 @@ class MultiApiStockService {
 
   private getStockName(symbol: string): string {
     const stockNames: Record<string, string> = {
+      // US Stocks
       'AAPL': 'Apple Inc.',
       'MSFT': 'Microsoft Corporation',
       'GOOGL': 'Alphabet Inc.',
@@ -347,9 +380,121 @@ class MultiApiStockService {
       'KO': 'Coca-Cola Co.',
       'PFE': 'Pfizer Inc.',
       'UNH': 'UnitedHealth Group Inc.',
-      'JNJ': 'Johnson & Johnson'
+      'JNJ': 'Johnson & Johnson',
+      
+      // Indian Stocks (with and without .NS suffix)
+      'RELIANCE': 'Reliance Industries Ltd',
+      'RELIANCE.NS': 'Reliance Industries Ltd',
+      'TCS': 'Tata Consultancy Services Ltd',
+      'TCS.NS': 'Tata Consultancy Services Ltd',
+      'HDFCBANK': 'HDFC Bank Ltd',
+      'HDFCBANK.NS': 'HDFC Bank Ltd',
+      'INFY': 'Infosys Ltd',
+      'INFY.NS': 'Infosys Ltd',
+      'ICICIBANK': 'ICICI Bank Ltd',
+      'ICICIBANK.NS': 'ICICI Bank Ltd',
+      
+      // Defence Stocks (as requested)
+      'HAL': 'Hindustan Aeronautics Ltd',
+      'HAL.NS': 'Hindustan Aeronautics Ltd',
+      'BEML': 'BEML Ltd',
+      'BEML.NS': 'BEML Ltd',
+      'BEL': 'Bharat Electronics Ltd',
+      'BEL.NS': 'Bharat Electronics Ltd',
+      'BDL': 'Bharat Dynamics Ltd',
+      'BDL.NS': 'Bharat Dynamics Ltd',
+      'MAZDOCK': 'Mazagon Dock Shipbuilders',
+      'MAZDOCK.NS': 'Mazagon Dock Shipbuilders',
+      'COCHINSHIP': 'Cochin Shipyard Ltd',
+      'COCHINSHIP.NS': 'Cochin Shipyard Ltd',
+      'GRSE': 'Garden Reach Shipbuilders',
+      'GRSE.NS': 'Garden Reach Shipbuilders',
+      
+      // Pharma Stocks (including Pfizer as requested)
+      'SUNPHARMA': 'Sun Pharmaceutical Industries',
+      'SUNPHARMA.NS': 'Sun Pharmaceutical Industries',
+      'DRREDDY': 'Dr. Reddy\'s Laboratories',
+      'DRREDDY.NS': 'Dr. Reddy\'s Laboratories',
+      'CIPLA': 'Cipla Ltd',
+      'CIPLA.NS': 'Cipla Ltd',
+      'DIVISLAB': 'Divi\'s Laboratories',
+      'DIVISLAB.NS': 'Divi\'s Laboratories',
+      'LUPIN': 'Lupin Ltd',
+      'LUPIN.NS': 'Lupin Ltd',
+      'PFIZER': 'Pfizer Ltd',
+      'PFIZER.NS': 'Pfizer Ltd',
+      'BIOCON': 'Biocon Ltd',
+      'BIOCON.NS': 'Biocon Ltd',
+      'AUROPHARMA': 'Aurobindo Pharma Ltd',
+      'AUROPHARMA.NS': 'Aurobindo Pharma Ltd',
+      
+      // Automotive Stocks (including M&M as requested)
+      'MARUTI': 'Maruti Suzuki India Ltd',
+      'MARUTI.NS': 'Maruti Suzuki India Ltd',
+      'M&M': 'Mahindra & Mahindra Ltd',
+      'M&M.NS': 'Mahindra & Mahindra Ltd',
+      'TATAMOTORS': 'Tata Motors Ltd',
+      'TATAMOTORS.NS': 'Tata Motors Ltd',
+      'BAJAJ-AUTO': 'Bajaj Auto Ltd',
+      'BAJAJ-AUTO.NS': 'Bajaj Auto Ltd',
+      'HEROMOTOCO': 'Hero MotoCorp Ltd',
+      'HEROMOTOCO.NS': 'Hero MotoCorp Ltd',
+      'EICHERMOT': 'Eicher Motors Ltd',
+      'EICHERMOT.NS': 'Eicher Motors Ltd'
     }
     return stockNames[symbol] || `${symbol} Inc.`
+  }
+
+  private isApiSupportedForMarket(apiName: string, market?: string): boolean {
+    if (!market || market === 'US') return true
+    // Only Yahoo has broad international coverage without paid keys
+    return apiName === 'yahoo'
+  }
+
+  private getYahooSymbolForMarket(symbol: string, market?: string): string {
+    if (!market || market === 'US') return symbol
+
+    const suffixMap: Record<string, string> = {
+      IN: '.NS', // Default to NSE; could enhance to .BO for BSE
+      GB: '.L',
+      UK: '.L', // handle 'UK' alias
+      JP: '.T',
+      AU: '.AX',
+      CA: '.TO',
+      DE: '.DE',
+      FR: '.PA'
+    }
+
+    const suffix = suffixMap[market] || ''
+    // If it's an Indian BSE numeric code, use .BO
+    if (market === 'IN' && /^\d+$/.test(symbol)) {
+      return `${symbol}.BO`
+    }
+    // If symbol already has a dot suffix, keep as is
+    if (symbol.includes('.')) return symbol
+    return `${symbol}${suffix}`
+  }
+
+  // Heuristic fallback when Yahoo returns 4xx without suffix
+  private tryYahooSuffixFallback(symbol: string): string | null {
+    const upper = symbol.toUpperCase().trim()
+    if (upper.includes('.')) return null
+    // Common international suffix guesses
+    const candidates = [
+      `${upper}.NS`, // NSE (India)
+      `${upper}.BO`, // BSE (India)
+      `${upper}.L`,  // LSE (UK)
+      `${upper}.T`,  // TSE (Japan)
+      `${upper}.AX`, // ASX (Australia)
+      `${upper}.TO`, // TSX (Canada)
+      `${upper}.DE`, // Xetra (Germany)
+      `${upper}.PA`  // Euronext Paris (France)
+    ]
+    // Only attempt for plausible non-US tickers
+    if (/^[A-Z0-9]{2,15}$/.test(upper)) {
+      return candidates[0]
+    }
+    return null
   }
 
   private formatAge(timestamp: number): string {
