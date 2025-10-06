@@ -33,5 +33,6 @@
       "source": "/api/health",
       "destination": "https://oryn-backend.vercel.app/api/health"
     }
-  ]
+  ],
+  "ignoreCommand": "echo 'Frontend-only deployment'"
 }

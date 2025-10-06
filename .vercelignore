@@ -1,6 +1,7 @@
 # Backend directory - completely exclude
 backend/
 backend/**
+backend/*
 
 # Documentation and SQL files
 *.md
@@ -32,3 +33,9 @@ backend/package-lock.json
 backend/tsconfig.json
 backend/tsconfig-simple.json
 backend/vercel.json
+
+# Additional exclusions
+backend/src/
+backend/README.md
+backend/start-backend.ps1
+backend/copy-server.js
