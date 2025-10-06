@@ -1,9 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase configuration')
+  }
+
+  return createClient(supabaseUrl, supabaseKey)
+}
 
 export interface PortfolioItem {
   id: string
@@ -36,7 +42,7 @@ export class PortfolioService {
   // Get user's portfolio from database
   static async getPortfolio(userId: string): Promise<PortfolioItem[]> {
     try {
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('portfolio_items')
         .select('*')
         .eq('user_id', userId)
@@ -86,7 +92,7 @@ export class PortfolioService {
       const gainLoss = totalValue - (shares * avgPrice)
       const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('portfolio_items')
         .insert({
           user_id: userId,
@@ -149,7 +155,7 @@ export class PortfolioService {
       const gainLoss = totalValue - (shares * avgPrice)
       const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
-      const { data, error } = await supabase
+      const { data, error } = await getSupabaseClient()
         .from('portfolio_items')
         .update({
           shares,
@@ -198,7 +204,7 @@ export class PortfolioService {
   // Delete portfolio item from database
   static async deletePortfolioItem(itemId: string, userId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const { error } = await supabase
+      const { error } = await getSupabaseClient()
         .from('portfolio_items')
         .delete()
         .eq('id', itemId)

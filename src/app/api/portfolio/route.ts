@@ -1,10 +1,16 @@
 import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
-const supabase = createClient(
-  process.env.NEXT_PUBLIC_SUPABASE_URL!,
-  process.env.SUPABASE_SERVICE_ROLE_KEY!
-)
+function getSupabaseClient() {
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+
+  if (!supabaseUrl || !supabaseKey) {
+    throw new Error('Missing Supabase configuration')
+  }
+
+  return createClient(supabaseUrl, supabaseKey)
+}
 
 // GET /api/portfolio - Get user's portfolio
 export async function GET(request: NextRequest) {
@@ -16,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    const { data: portfolio, error } = await supabase
+    const { data: portfolio, error } = await getSupabaseClient()
       .from('portfolio_items')
       .select('*')
       .eq('user_id', userId)
@@ -48,7 +54,7 @@ export async function POST(request: NextRequest) {
     const gainLoss = totalValue - (shares * avgPrice)
     const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('portfolio_items')
       .insert({
         user_id: userId,
@@ -97,7 +103,7 @@ export async function PUT(request: NextRequest) {
     const gainLoss = totalValue - (shares * avgPrice)
     const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
-    const { data, error } = await supabase
+    const { data, error } = await getSupabaseClient()
       .from('portfolio_items')
       .update({
         shares: parseFloat(shares),
@@ -138,7 +144,7 @@ export async function DELETE(request: NextRequest) {
       return NextResponse.json({ error: 'Missing required parameters' }, { status: 400 })
     }
 
-    const { error } = await supabase
+    const { error } = await getSupabaseClient()
       .from('portfolio_items')
       .delete()
       .eq('id', id)
