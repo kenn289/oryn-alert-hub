@@ -29,3 +29,4 @@ CREATE POLICY "Users can update their own notifications" ON notifications
 -- CREATE POLICY "Admins can view all notifications" ON notifications
 --     FOR ALL USING (auth.jwt() ->> 'role' = 'admin');
 
+

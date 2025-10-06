@@ -30,31 +30,9 @@ import { GlobalStockSelector } from "@/components/GlobalStockSelector"
 import { localizationService } from "@/lib/localization-service"
 import { currencyConversionService } from "@/lib/currency-conversion-service"
 import { useCurrency } from "@/contexts/CurrencyContext"
+import { PortfolioService, PortfolioItem, PortfolioSummary } from "@/lib/portfolio-service"
 
-interface PortfolioItem {
-  id: string
-  ticker: string
-  name: string
-  shares: number
-  avgPrice: number
-  currentPrice: number
-  totalValue: number
-  gainLoss: number
-  gainLossPercent: number
-  addedAt: string
-  market?: string
-  currency?: string
-  exchange?: string
-}
-
-interface PortfolioSummary {
-  totalValue: number
-  totalGainLoss: number
-  totalGainLossPercent: number
-  totalInvested: number
-  dayChange: number
-  dayChangePercent: number
-}
+// Remove duplicate interfaces as they're now imported from portfolio-service
 
 export function PortfolioTracker() {
   const { user } = useAuth()
@@ -196,15 +174,17 @@ export function PortfolioTracker() {
   }
 
   const loadPortfolio = async () => {
+    if (!user?.id) return
+    
     setLoading(true)
     try {
-      // Load from localStorage for now (in real app, this would be from API)
-      const stored = localStorage.getItem('oryn_portfolio')
-      if (stored) {
-        const portfolioData = JSON.parse(stored)
-        setPortfolio(portfolioData)
-        calculateSummary(portfolioData)
-      }
+      // First try to migrate any localStorage data to database
+      await PortfolioService.migrateFromLocalStorage(user.id)
+      
+      // Load portfolio from database
+      const portfolioData = await PortfolioService.getPortfolio(user.id)
+      setPortfolio(portfolioData)
+      calculateSummary(portfolioData)
     } catch (error) {
       console.error('Error loading portfolio:', error)
       toast.error('Failed to load portfolio')
@@ -388,6 +368,11 @@ export function PortfolioTracker() {
   }
 
   const handleAddStock = async () => {
+    if (!user?.id) {
+      toast.error('Please log in to add stocks to your portfolio')
+      return
+    }
+
     console.log('handleAddStock called with:', newItem)
     if (!newItem.ticker || !newItem.shares || !newItem.avgPrice) {
       toast.error('Please fill in all required fields')
@@ -425,39 +410,38 @@ export function PortfolioTracker() {
         toast.error('Unable to fetch current price. Please try again.')
         return
       }
-      
-      const totalValue = shares * fetchedCurrentPrice
-      const gainLoss = totalValue - (shares * avgPrice)
-      const gainLossPercent = (gainLoss / (shares * avgPrice)) * 100
 
-      const newPortfolioItem: PortfolioItem = {
-        id: `portfolio_${Math.floor(Math.random() * 1000000)}`,
-        ticker: newItem.ticker.toUpperCase(),
-        name: newItem.name || newItem.ticker.toUpperCase(),
+      // Add to database using PortfolioService
+      const result = await PortfolioService.addPortfolioItem(
+        user.id,
+        newItem.ticker,
+        newItem.name,
         shares,
-        avgPrice: avgPrice, // Store in USD
-        currentPrice: fetchedCurrentPrice, // Already in USD
-        totalValue, // Already in USD
-        gainLoss, // Already in USD
-        gainLossPercent,
-        addedAt: new Date().toISOString(),
-        market: newItem.market,
-        currency: 'USD', // Always store in USD
-        exchange: newItem.market === 'IN' ? 'NSE' : newItem.market === 'US' ? 'NASDAQ' : 'Unknown'
+        avgPrice,
+        fetchedCurrentPrice,
+        newItem.market,
+        newItem.currency,
+        newItem.market === 'IN' ? 'NSE' : newItem.market === 'US' ? 'NASDAQ' : 'Unknown'
+      )
+
+      if (!result.success) {
+        toast.error(result.message)
+        return
       }
 
-      const updatedPortfolio = [...portfolio, newPortfolioItem]
+      // Update local state
+      const updatedPortfolio = [...portfolio, result.item!]
       setPortfolio(updatedPortfolio)
       calculateSummary(updatedPortfolio)
       
-      // Save to localStorage
-      localStorage.setItem('oryn_portfolio', JSON.stringify(updatedPortfolio))
+      // Also save to localStorage as backup
+      PortfolioService.saveToLocalStorage(updatedPortfolio)
       
       // Reset form and close modal
       setNewItem({ ticker: '', name: '', shares: '', avgPrice: '' })
       setShowSuggestions(false)
       setAdding(false)
-      toast.success(`${newItem.ticker} added to portfolio!`)
+      toast.success(result.message)
     } catch (error) {
       console.error('Error adding stock:', error)
       
@@ -482,12 +466,32 @@ export function PortfolioTracker() {
     }
   }
 
-  const handleRemoveStock = (id: string) => {
-    const updatedPortfolio = portfolio.filter(item => item.id !== id)
-    setPortfolio(updatedPortfolio)
-    calculateSummary(updatedPortfolio)
-    localStorage.setItem('oryn_portfolio', JSON.stringify(updatedPortfolio))
-    toast.success('Stock removed from portfolio')
+  const handleRemoveStock = async (id: string) => {
+    if (!user?.id) {
+      toast.error('Please log in to manage your portfolio')
+      return
+    }
+
+    try {
+      const result = await PortfolioService.deletePortfolioItem(id, user.id)
+      
+      if (!result.success) {
+        toast.error(result.message)
+        return
+      }
+
+      const updatedPortfolio = portfolio.filter(item => item.id !== id)
+      setPortfolio(updatedPortfolio)
+      calculateSummary(updatedPortfolio)
+      
+      // Also update localStorage as backup
+      PortfolioService.saveToLocalStorage(updatedPortfolio)
+      
+      toast.success(result.message)
+    } catch (error) {
+      console.error('Error removing stock:', error)
+      toast.error('Failed to remove stock from portfolio')
+    }
   }
 
   const handleRefreshPrices = async () => {
