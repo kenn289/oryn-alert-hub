@@ -143,15 +143,21 @@ export function PortfolioTracker() {
 
     setLoadingPrice(true)
     try {
-      // Determine the correct market based on the ticker
-      let correctMarket = market
-      if (ticker === 'RELIANCE' || ticker === 'TCS' || ticker === 'INFY' || ticker === 'HDFCBANK' || ticker === 'ICICIBANK') {
-        correctMarket = 'IN'
-      } else if (ticker === '7203' || ticker === '6758' || ticker === '9984') {
-        correctMarket = 'JP'
-      } else if (ticker === 'TSCO' || ticker === 'VOD' || ticker === 'BP') {
-        correctMarket = 'GB'
+      // Determine the correct market based on symbol suffix or numeric codes
+      const inferMarketFromSymbol = (symbol: string): string | undefined => {
+        const upper = symbol.toUpperCase().trim()
+        if (/^\d+$/.test(upper)) return 'IN' // BSE numeric codes
+        if (upper.endsWith('.NS') || upper.endsWith('.BO')) return 'IN'
+        if (upper.endsWith('.T')) return 'JP'
+        if (upper.endsWith('.L')) return 'GB'
+        if (upper.endsWith('.AX')) return 'AU'
+        if (upper.endsWith('.TO')) return 'CA'
+        if (upper.endsWith('.DE')) return 'DE'
+        if (upper.endsWith('.PA')) return 'FR'
+        return undefined
       }
+      const inferred = inferMarketFromSymbol(ticker)
+      let correctMarket = inferred || market
       
       console.log(`📊 Fetching current price for ${ticker} from ${correctMarket}...`)
       const response = await fetch(`/api/stock/global/${ticker}?market=${correctMarket}`)
@@ -323,8 +329,29 @@ export function PortfolioTracker() {
 
   const fetchStockPrice = async (ticker: string): Promise<number> => {
     try {
-      const quote = await stockDataService.getStockQuote(ticker)
-      return quote.price
+      // Infer market from symbol
+      const inferMarketFromSymbol = (symbol: string): string | undefined => {
+        const upper = symbol.toUpperCase().trim()
+        if (/^\d+$/.test(upper)) return 'IN'
+        if (upper.endsWith('.NS') || upper.endsWith('.BO')) return 'IN'
+        if (upper.endsWith('.T')) return 'JP'
+        if (upper.endsWith('.L')) return 'GB'
+        if (upper.endsWith('.AX')) return 'AU'
+        if (upper.endsWith('.TO')) return 'CA'
+        if (upper.endsWith('.DE')) return 'DE'
+        if (upper.endsWith('.PA')) return 'FR'
+        return undefined
+      }
+      const market = inferMarketFromSymbol(ticker) || 'US'
+      const response = await fetch(`/api/stock/global/${ticker}?market=${market}`)
+      if (!response.ok) throw new Error(`HTTP ${response.status}`)
+      const data = await response.json()
+      const stockCurrency = data.currency || 'USD'
+      let priceInUSD = data.price
+      if (stockCurrency !== 'USD') {
+        priceInUSD = currencyConversionService.convertCurrency(data.price, stockCurrency, 'USD')
+      }
+      return priceInUSD
     } catch (error) {
       console.error('Error fetching real-time stock price:', error)
       throw error // Don't fallback to mock data

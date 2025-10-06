@@ -280,6 +280,18 @@ class MultiApiStockService {
 
   private async parseYahooResponse(response: Response, symbol: string, source: string): Promise<ApiResponse> {
     if (!response.ok) {
+      // Yahoo sometimes 404/400 for base symbol when suffix needed; try appending IN suffixes heuristically
+      if (response.status === 404 || response.status === 400) {
+        const guess = this.tryYahooSuffixFallback(symbol)
+        if (guess) {
+          try {
+            const retry = await fetch(`https://query1.finance.yahoo.com/v8/finance/chart/${guess}`)
+            if (retry.ok) {
+              return this.parseYahooResponse(retry as unknown as Response, guess, source)
+            }
+          } catch {}
+        }
+      }
       return {
         success: false,
         error: `HTTP ${response.status}`,
@@ -400,6 +412,28 @@ class MultiApiStockService {
     // If symbol already has a dot suffix, keep as is
     if (symbol.includes('.')) return symbol
     return `${symbol}${suffix}`
+  }
+
+  // Heuristic fallback when Yahoo returns 4xx without suffix
+  private tryYahooSuffixFallback(symbol: string): string | null {
+    const upper = symbol.toUpperCase().trim()
+    if (upper.includes('.')) return null
+    // Common international suffix guesses
+    const candidates = [
+      `${upper}.NS`, // NSE (India)
+      `${upper}.BO`, // BSE (India)
+      `${upper}.L`,  // LSE (UK)
+      `${upper}.T`,  // TSE (Japan)
+      `${upper}.AX`, // ASX (Australia)
+      `${upper}.TO`, // TSX (Canada)
+      `${upper}.DE`, // Xetra (Germany)
+      `${upper}.PA`  // Euronext Paris (France)
+    ]
+    // Only attempt for plausible non-US tickers
+    if (/^[A-Z0-9]{2,15}$/.test(upper)) {
+      return candidates[0]
+    }
+    return null
   }
 
   private formatAge(timestamp: number): string {
