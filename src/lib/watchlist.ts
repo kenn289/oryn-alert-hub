@@ -174,9 +174,10 @@ export const checkFeatureAccess = (userPlan: UserPlan, feature: keyof UserPlan['
   return { hasAccess, isUnlimited, limit, remaining, canUse }
 }
 
-// Mock stock suggestions API
+// Stock suggestions API with comprehensive global coverage
 export const getStockSuggestions = async (query: string): Promise<Array<{ticker: string, name: string, sector: string}>> => {
   const allStocks = [
+    // US Stocks
     { ticker: "AAPL", name: "Apple Inc.", sector: "Technology" },
     { ticker: "MSFT", name: "Microsoft Corp.", sector: "Technology" },
     { ticker: "GOOGL", name: "Alphabet Inc.", sector: "Technology" },
@@ -231,15 +232,89 @@ export const getStockSuggestions = async (query: string): Promise<Array<{ticker:
     { ticker: "HD", name: "Home Depot Inc.", sector: "Consumer Discretionary" },
     { ticker: "LOW", name: "Lowe's Companies Inc.", sector: "Consumer Discretionary" },
     { ticker: "NKE", name: "Nike Inc.", sector: "Consumer Discretionary" },
-    { ticker: "SBUX", name: "Starbucks Corp.", sector: "Consumer Discretionary" }
+    { ticker: "SBUX", name: "Starbucks Corp.", sector: "Consumer Discretionary" },
+    
+    // Indian Stocks (NSE format)
+    // Large Cap Blue Chips
+    { ticker: "RELIANCE.NS", name: "Reliance Industries Ltd", sector: "Energy" },
+    { ticker: "TCS.NS", name: "Tata Consultancy Services Ltd", sector: "Technology" },
+    { ticker: "HDFCBANK.NS", name: "HDFC Bank Ltd", sector: "Financial Services" },
+    { ticker: "INFY.NS", name: "Infosys Ltd", sector: "Technology" },
+    { ticker: "HINDUNILVR.NS", name: "Hindustan Unilever Ltd", sector: "Consumer Goods" },
+    { ticker: "ITC.NS", name: "ITC Ltd", sector: "Consumer Goods" },
+    { ticker: "SBIN.NS", name: "State Bank of India", sector: "Financial Services" },
+    { ticker: "BHARTIARTL.NS", name: "Bharti Airtel Ltd", sector: "Telecommunications" },
+    { ticker: "KOTAKBANK.NS", name: "Kotak Mahindra Bank Ltd", sector: "Financial Services" },
+    { ticker: "LT.NS", name: "Larsen & Toubro Ltd", sector: "Industrials" },
+    
+    // Defence Stocks (as requested)
+    { ticker: "HAL.NS", name: "Hindustan Aeronautics Ltd", sector: "Defence" },
+    { ticker: "BEML.NS", name: "BEML Ltd", sector: "Defence" },
+    { ticker: "BEL.NS", name: "Bharat Electronics Ltd", sector: "Defence" },
+    { ticker: "BDL.NS", name: "Bharat Dynamics Ltd", sector: "Defence" },
+    { ticker: "MAZDOCK.NS", name: "Mazagon Dock Shipbuilders", sector: "Defence" },
+    { ticker: "COCHINSHIP.NS", name: "Cochin Shipyard Ltd", sector: "Defence" },
+    { ticker: "GRSE.NS", name: "Garden Reach Shipbuilders", sector: "Defence" },
+    
+    // Pharma (including Pfizer as requested)
+    { ticker: "SUNPHARMA.NS", name: "Sun Pharmaceutical Industries", sector: "Pharma" },
+    { ticker: "DRREDDY.NS", name: "Dr. Reddy's Laboratories", sector: "Pharma" },
+    { ticker: "CIPLA.NS", name: "Cipla Ltd", sector: "Pharma" },
+    { ticker: "DIVISLAB.NS", name: "Divi's Laboratories", sector: "Pharma" },
+    { ticker: "LUPIN.NS", name: "Lupin Ltd", sector: "Pharma" },
+    { ticker: "PFIZER.NS", name: "Pfizer Ltd", sector: "Pharma" },
+    { ticker: "BIOCON.NS", name: "Biocon Ltd", sector: "Pharma" },
+    { ticker: "AUROPHARMA.NS", name: "Aurobindo Pharma Ltd", sector: "Pharma" },
+    
+    // Automotive (including M&M as requested)
+    { ticker: "MARUTI.NS", name: "Maruti Suzuki India Ltd", sector: "Automotive" },
+    { ticker: "M&M.NS", name: "Mahindra & Mahindra Ltd", sector: "Automotive" },
+    { ticker: "TATAMOTORS.NS", name: "Tata Motors Ltd", sector: "Automotive" },
+    { ticker: "BAJAJ-AUTO.NS", name: "Bajaj Auto Ltd", sector: "Automotive" },
+    { ticker: "HEROMOTOCO.NS", name: "Hero MotoCorp Ltd", sector: "Automotive" },
+    { ticker: "EICHERMOT.NS", name: "Eicher Motors Ltd", sector: "Automotive" },
+    
+    // Technology & IT
+    { ticker: "WIPRO.NS", name: "Wipro Ltd", sector: "Technology" },
+    { ticker: "HCLTECH.NS", name: "HCL Technologies Ltd", sector: "Technology" },
+    { ticker: "TECHM.NS", name: "Tech Mahindra Ltd", sector: "Technology" },
+    { ticker: "TATAELXSI.NS", name: "Tata Elxsi Ltd", sector: "Technology" },
+    
+    // Financial Services
+    { ticker: "ICICIBANK.NS", name: "ICICI Bank Ltd", sector: "Financial Services" },
+    { ticker: "AXISBANK.NS", name: "Axis Bank Ltd", sector: "Financial Services" },
+    { ticker: "BAJFINANCE.NS", name: "Bajaj Finance Ltd", sector: "Financial Services" },
+    
+    // Consumer Goods
+    { ticker: "NESTLEIND.NS", name: "Nestle India Ltd", sector: "Consumer Goods" },
+    { ticker: "BRITANNIA.NS", name: "Britannia Industries Ltd", sector: "Consumer Goods" },
+    
+    // Industrials & Infrastructure
+    { ticker: "ULTRACEMCO.NS", name: "UltraTech Cement Ltd", sector: "Cement" },
+    { ticker: "ADANIPORTS.NS", name: "Adani Ports & SEZ Ltd", sector: "Infrastructure" },
+    
+    // Chemicals
+    { ticker: "DEEPAKNTR.NS", name: "Deepak Nitrite Ltd", sector: "Chemicals" },
+    { ticker: "ATUL.NS", name: "Atul Ltd", sector: "Chemicals" },
+    
+    // Metals & Mining
+    { ticker: "TATASTEEL.NS", name: "Tata Steel Ltd", sector: "Metals" },
+    { ticker: "JSWSTEEL.NS", name: "JSW Steel Ltd", sector: "Metals" },
+    { ticker: "HINDALCO.NS", name: "Hindalco Industries Ltd", sector: "Metals" },
+    
+    // Energy & Oil
+    { ticker: "ONGC.NS", name: "Oil & Natural Gas Corp Ltd", sector: "Energy" },
+    { ticker: "BPCL.NS", name: "Bharat Petroleum Corp Ltd", sector: "Energy" },
+    { ticker: "COALINDIA.NS", name: "Coal India Ltd", sector: "Energy" }
   ]
 
-  if (!query || query.length < 1) return allStocks.slice(0, 10)
+  if (!query || query.length < 1) return allStocks.slice(0, 15)
   
   return allStocks.filter(stock => 
     stock.ticker.toLowerCase().includes(query.toLowerCase()) ||
-    stock.name.toLowerCase().includes(query.toLowerCase())
-  ).slice(0, 10)
+    stock.name.toLowerCase().includes(query.toLowerCase()) ||
+    stock.sector.toLowerCase().includes(query.toLowerCase())
+  ).slice(0, 15)
 }
 
 // Watchlist management

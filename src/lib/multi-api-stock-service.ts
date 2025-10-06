@@ -360,6 +360,7 @@ class MultiApiStockService {
 
   private getStockName(symbol: string): string {
     const stockNames: Record<string, string> = {
+      // US Stocks
       'AAPL': 'Apple Inc.',
       'MSFT': 'Microsoft Corporation',
       'GOOGL': 'Alphabet Inc.',
@@ -379,7 +380,67 @@ class MultiApiStockService {
       'KO': 'Coca-Cola Co.',
       'PFE': 'Pfizer Inc.',
       'UNH': 'UnitedHealth Group Inc.',
-      'JNJ': 'Johnson & Johnson'
+      'JNJ': 'Johnson & Johnson',
+      
+      // Indian Stocks (with and without .NS suffix)
+      'RELIANCE': 'Reliance Industries Ltd',
+      'RELIANCE.NS': 'Reliance Industries Ltd',
+      'TCS': 'Tata Consultancy Services Ltd',
+      'TCS.NS': 'Tata Consultancy Services Ltd',
+      'HDFCBANK': 'HDFC Bank Ltd',
+      'HDFCBANK.NS': 'HDFC Bank Ltd',
+      'INFY': 'Infosys Ltd',
+      'INFY.NS': 'Infosys Ltd',
+      'ICICIBANK': 'ICICI Bank Ltd',
+      'ICICIBANK.NS': 'ICICI Bank Ltd',
+      
+      // Defence Stocks (as requested)
+      'HAL': 'Hindustan Aeronautics Ltd',
+      'HAL.NS': 'Hindustan Aeronautics Ltd',
+      'BEML': 'BEML Ltd',
+      'BEML.NS': 'BEML Ltd',
+      'BEL': 'Bharat Electronics Ltd',
+      'BEL.NS': 'Bharat Electronics Ltd',
+      'BDL': 'Bharat Dynamics Ltd',
+      'BDL.NS': 'Bharat Dynamics Ltd',
+      'MAZDOCK': 'Mazagon Dock Shipbuilders',
+      'MAZDOCK.NS': 'Mazagon Dock Shipbuilders',
+      'COCHINSHIP': 'Cochin Shipyard Ltd',
+      'COCHINSHIP.NS': 'Cochin Shipyard Ltd',
+      'GRSE': 'Garden Reach Shipbuilders',
+      'GRSE.NS': 'Garden Reach Shipbuilders',
+      
+      // Pharma Stocks (including Pfizer as requested)
+      'SUNPHARMA': 'Sun Pharmaceutical Industries',
+      'SUNPHARMA.NS': 'Sun Pharmaceutical Industries',
+      'DRREDDY': 'Dr. Reddy\'s Laboratories',
+      'DRREDDY.NS': 'Dr. Reddy\'s Laboratories',
+      'CIPLA': 'Cipla Ltd',
+      'CIPLA.NS': 'Cipla Ltd',
+      'DIVISLAB': 'Divi\'s Laboratories',
+      'DIVISLAB.NS': 'Divi\'s Laboratories',
+      'LUPIN': 'Lupin Ltd',
+      'LUPIN.NS': 'Lupin Ltd',
+      'PFIZER': 'Pfizer Ltd',
+      'PFIZER.NS': 'Pfizer Ltd',
+      'BIOCON': 'Biocon Ltd',
+      'BIOCON.NS': 'Biocon Ltd',
+      'AUROPHARMA': 'Aurobindo Pharma Ltd',
+      'AUROPHARMA.NS': 'Aurobindo Pharma Ltd',
+      
+      // Automotive Stocks (including M&M as requested)
+      'MARUTI': 'Maruti Suzuki India Ltd',
+      'MARUTI.NS': 'Maruti Suzuki India Ltd',
+      'M&M': 'Mahindra & Mahindra Ltd',
+      'M&M.NS': 'Mahindra & Mahindra Ltd',
+      'TATAMOTORS': 'Tata Motors Ltd',
+      'TATAMOTORS.NS': 'Tata Motors Ltd',
+      'BAJAJ-AUTO': 'Bajaj Auto Ltd',
+      'BAJAJ-AUTO.NS': 'Bajaj Auto Ltd',
+      'HEROMOTOCO': 'Hero MotoCorp Ltd',
+      'HEROMOTOCO.NS': 'Hero MotoCorp Ltd',
+      'EICHERMOT': 'Eicher Motors Ltd',
+      'EICHERMOT.NS': 'Eicher Motors Ltd'
     }
     return stockNames[symbol] || `${symbol} Inc.`
   }
