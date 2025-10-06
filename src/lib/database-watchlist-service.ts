@@ -24,13 +24,18 @@ export class DatabaseWatchlistService {
   static async getWatchlist(userId: string): Promise<WatchlistItem[]> {
     try {
       const { data, error } = await supabase
-        .from('watchlists')
+        .from('watchlists_fixed')
         .select('*')
         .eq('user_id', userId)
         .order('added_at', { ascending: false })
 
       if (error) {
-        console.error('Error fetching watchlist from database:', error)
+        console.error('Error fetching watchlist from database:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint
+        })
         return []
       }
 
@@ -80,7 +85,7 @@ export class DatabaseWatchlistService {
 
       // Check if already exists
       const { data: existing } = await supabase
-        .from('watchlists')
+        .from('watchlists_fixed')
         .select('ticker')
         .eq('user_id', userId)
         .eq('ticker', finalTicker)
@@ -92,7 +97,7 @@ export class DatabaseWatchlistService {
 
       // Insert new watchlist item
       const { error } = await supabase
-        .from('watchlists')
+        .from('watchlists_fixed')
         .insert({
           user_id: userId,
           ticker: finalTicker,
@@ -121,7 +126,7 @@ export class DatabaseWatchlistService {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const { error } = await supabase
-        .from('watchlists')
+        .from('watchlists_fixed')
         .delete()
         .eq('user_id', userId)
         .eq('ticker', ticker.toUpperCase())
@@ -155,7 +160,7 @@ export class DatabaseWatchlistService {
     try {
       for (const update of priceUpdates) {
         await supabase
-          .from('watchlists')
+          .from('watchlists_fixed')
           .update({
             price: update.price,
             change: update.change,
@@ -178,7 +183,7 @@ export class DatabaseWatchlistService {
   static async clearWatchlist(userId: string): Promise<void> {
     try {
       await supabase
-        .from('watchlists')
+        .from('watchlists_fixed')
         .delete()
         .eq('user_id', userId)
     } catch (error) {
@@ -199,7 +204,7 @@ export class DatabaseWatchlistService {
         name: (i.name || i.ticker).trim(),
         market: i.market?.toUpperCase(),
       }))
-      const { error } = await supabase.from('watchlists').insert(payload)
+      const { error } = await supabase.from('watchlist_items').insert(payload)
       if (error) console.error('Error replacing watchlist:', error)
     } catch (error) {
       console.error('Error replacing watchlist:', error)
@@ -212,7 +217,7 @@ export class DatabaseWatchlistService {
   static async getLastUpdatedAt(userId: string): Promise<number | null> {
     try {
       const { data, error } = await supabase
-        .from('watchlists')
+        .from('watchlists_fixed')
         .select('updated_at')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })

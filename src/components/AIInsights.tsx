@@ -34,7 +34,9 @@ import { toast } from "sonner"
 import { multiApiStockService } from "@/lib/multi-api-stock-service"
 import { localizationService } from "@/lib/localization-service"
 import { useCurrency } from "@/contexts/CurrencyContext"
+import { useAuth } from "@/contexts/AuthContext"
 import { RealAIAnalysisService, RealAIPrediction } from "@/lib/real-ai-analysis-service"
+import { DatabaseWatchlistService } from "@/lib/database-watchlist-service"
 
 interface AIInsight {
   id: string
@@ -57,6 +59,7 @@ type AIPrediction = RealAIPrediction
 
 export function AIInsights() {
   const { formatCurrency } = useCurrency()
+  const { user } = useAuth()
   const [insights, setInsights] = useState<AIInsight[]>([])
   const [predictions, setPredictions] = useState<AIPrediction[]>([])
   const [loading, setLoading] = useState(true)
@@ -92,9 +95,30 @@ export function AIInsights() {
     try {
       console.log('🤖 Loading real AI insights with transparent market data...')
       
-      // Get user's watchlist from localStorage
-      const watchlist = JSON.parse(localStorage.getItem('oryn_watchlist') || '[]')
-      const symbols = watchlist.length > 0 ? watchlist.map((item: any) => item.ticker) : ['NVDA', 'AAPL', 'TSLA']
+      // Get user's watchlist from database first, then fallback to localStorage
+      let watchlist = []
+      let symbols = ['NVDA', 'AAPL', 'TSLA'] // Default fallback
+      
+      try {
+        // Try to get watchlist from database
+        if (user?.id) {
+          watchlist = await DatabaseWatchlistService.getWatchlist(user.id)
+          console.log('📊 Got watchlist from database:', watchlist.length, 'items')
+        }
+      } catch (dbError) {
+        console.warn('Database watchlist failed, trying localStorage:', dbError)
+      }
+      
+      // Fallback to localStorage if database failed or empty
+      if (watchlist.length === 0) {
+        watchlist = JSON.parse(localStorage.getItem('oryn_watchlist') || '[]')
+        console.log('📊 Got watchlist from localStorage:', watchlist.length, 'items')
+      }
+      
+      // Extract symbols from watchlist
+      if (watchlist.length > 0) {
+        symbols = watchlist.map((item: any) => item.ticker)
+      }
       
       console.log(`📊 Analyzing ${symbols.length} stocks: ${symbols.join(', ')}`)
       

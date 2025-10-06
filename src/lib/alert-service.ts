@@ -46,9 +46,12 @@ export class AlertService {
 
   private loadAlerts() {
     try {
-      const stored = localStorage.getItem('oryn_alerts')
-      if (stored) {
-        this.alerts = JSON.parse(stored)
+      // Check if we're in browser environment
+      if (typeof window !== 'undefined' && window.localStorage) {
+        const stored = localStorage.getItem('oryn_alerts')
+        if (stored) {
+          this.alerts = JSON.parse(stored)
+        }
       }
     } catch (error) {
       console.error('Failed to load alerts:', error)
@@ -58,7 +61,10 @@ export class AlertService {
 
   private saveAlerts() {
     try {
-      localStorage.setItem('oryn_alerts', JSON.stringify(this.alerts))
+      // Check if we're in browser environment
+      if (typeof window !== 'undefined' && window.localStorage) {
+        localStorage.setItem('oryn_alerts', JSON.stringify(this.alerts))
+      }
     } catch (error) {
       console.error('Failed to save alerts:', error)
     }

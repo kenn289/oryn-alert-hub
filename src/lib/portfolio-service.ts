@@ -1,15 +1,4 @@
-import { createClient } from '@supabase/supabase-js'
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase configuration')
-  }
-
-  return createClient(supabaseUrl, supabaseKey)
-}
+import { supabase } from './supabase'
 
 export interface PortfolioItem {
   id: string
@@ -42,8 +31,8 @@ export class PortfolioService {
   // Get user's portfolio from database
   static async getPortfolio(userId: string): Promise<PortfolioItem[]> {
     try {
-      const { data, error } = await getSupabaseClient()
-        .from('portfolio_items')
+      const { data, error } = await supabase
+        .from('portfolios_fixed')
         .select('*')
         .eq('user_id', userId)
         .order('added_at', { ascending: false })
@@ -92,8 +81,8 @@ export class PortfolioService {
       const gainLoss = totalValue - (shares * avgPrice)
       const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
-      const { data, error } = await getSupabaseClient()
-        .from('portfolio_items')
+      const { data, error } = await supabase
+        .from('portfolios_fixed')
         .insert({
           user_id: userId,
           ticker: ticker.toUpperCase(),
@@ -155,8 +144,8 @@ export class PortfolioService {
       const gainLoss = totalValue - (shares * avgPrice)
       const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
-      const { data, error } = await getSupabaseClient()
-        .from('portfolio_items')
+      const { data, error } = await supabase
+        .from('portfolios_fixed')
         .update({
           shares,
           avg_price: avgPrice,
@@ -204,8 +193,8 @@ export class PortfolioService {
   // Delete portfolio item from database
   static async deletePortfolioItem(itemId: string, userId: string): Promise<{ success: boolean; message: string }> {
     try {
-      const { error } = await getSupabaseClient()
-        .from('portfolio_items')
+      const { error } = await supabase
+        .from('portfolios_fixed')
         .delete()
         .eq('id', itemId)
         .eq('user_id', userId)

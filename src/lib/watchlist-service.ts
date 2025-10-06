@@ -1,16 +1,5 @@
-import { createClient } from '@supabase/supabase-js'
+import { supabase } from './supabase'
 import { multiApiStockService } from './multi-api-stock-service'
-
-function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
-
-  if (!supabaseUrl || !supabaseKey) {
-    throw new Error('Missing Supabase configuration')
-  }
-
-  return createClient(supabaseUrl, supabaseKey)
-}
 
 export interface WatchlistItem {
   id: string
@@ -148,7 +137,7 @@ export class WatchlistService {
   // Get user's watchlist from database
   static async getWatchlist(userId: string): Promise<WatchlistItem[]> {
     try {
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('watchlist_items')
         .select('*')
         .eq('user_id', userId)
@@ -237,7 +226,7 @@ export class WatchlistService {
         }
       }
 
-      const { data, error } = await getSupabaseClient()
+      const { data, error } = await supabase
         .from('watchlist_items')
         .insert({
           user_id: userId,
@@ -283,7 +272,7 @@ export class WatchlistService {
     userId: string
   ): Promise<{ success: boolean; message: string }> {
     try {
-      const { error } = await getSupabaseClient()
+      const { error } = await supabase
         .from('watchlist_items')
         .delete()
         .eq('id', itemId)

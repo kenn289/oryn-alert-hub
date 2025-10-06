@@ -2,8 +2,8 @@ import { NextRequest, NextResponse } from 'next/server'
 import { createClient } from '@supabase/supabase-js'
 
 function getSupabaseClient() {
-  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL
-  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bwrurebhoxyozdjbokhe.supabase.co'
+  const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVyZWJob3h5b3pkamJva2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzODQ4NDUsImV4cCI6MjA3NDk2MDg0NX0.uVqhgfs0a_ji3BlVq0cUAd4XzhFT-zDvLNenNOWL6oE'
 
   if (!supabaseUrl || !supabaseKey) {
     throw new Error('Missing Supabase configuration')
@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: portfolio, error } = await getSupabaseClient()
-      .from('portfolio_items')
+      .from('portfolios_fixed')
       .select('*')
       .eq('user_id', userId)
       .order('added_at', { ascending: false })
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
     const { data, error } = await getSupabaseClient()
-      .from('portfolio_items')
+      .from('portfolios_fixed')
       .insert({
         user_id: userId,
         ticker: ticker.toUpperCase(),
@@ -104,7 +104,7 @@ export async function PUT(request: NextRequest) {
     const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
     const { data, error } = await getSupabaseClient()
-      .from('portfolio_items')
+      .from('portfolios_fixed')
       .update({
         shares: parseFloat(shares),
         avg_price: parseFloat(avgPrice),
@@ -145,7 +145,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await getSupabaseClient()
-      .from('portfolio_items')
+      .from('portfolios_fixed')
       .delete()
       .eq('id', id)
       .eq('user_id', userId)

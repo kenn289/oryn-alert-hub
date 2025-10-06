@@ -1,15 +1,38 @@
 {
-  "framework": "nextjs",
+  "version": 2,
   "buildCommand": "npm run build",
-  "devCommand": "npm run dev",
-  "installCommand": "npm install",
   "outputDirectory": ".next",
+  "installCommand": "npm install",
+  "devCommand": "npm run dev",
+  "env": {
+    "NODE_ENV": "production"
+  },
   "functions": {
     "src/app/api/**/*.ts": {
+      "memory": 1024,
       "maxDuration": 30
     }
   },
-  "env": {
-    "NODE_ENV": "production"
-  }
+  "rewrites": [
+    {
+      "source": "/api/stock/(.*)",
+      "destination": "https://oryn-backend.vercel.app/api/stock/$1"
+    },
+    {
+      "source": "/api/support/(.*)",
+      "destination": "https://oryn-backend.vercel.app/api/support/$1"
+    },
+    {
+      "source": "/api/portfolio",
+      "destination": "https://oryn-backend.vercel.app/api/portfolio"
+    },
+    {
+      "source": "/api/watchlist",
+      "destination": "https://oryn-backend.vercel.app/api/watchlist"
+    },
+    {
+      "source": "/api/health",
+      "destination": "https://oryn-backend.vercel.app/api/health"
+    }
+  ]
 }

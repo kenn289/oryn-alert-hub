@@ -31,6 +31,7 @@ import { localizationService } from "@/lib/localization-service"
 import { currencyConversionService } from "@/lib/currency-conversion-service"
 import { useCurrency } from "@/contexts/CurrencyContext"
 import { PortfolioService, PortfolioItem, PortfolioSummary } from "@/lib/portfolio-service"
+import { DatabasePortfolioService } from "@/lib/database-portfolio-service"
 
 // Remove duplicate interfaces as they're now imported from portfolio-service
 

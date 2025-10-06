@@ -102,15 +102,25 @@ export function PrioritySupport({ userPlan, subscriptionStatus }: PrioritySuppor
     try {
       setLoading(true)
       
+      // Add a small delay to ensure API is ready
+      await new Promise(resolve => setTimeout(resolve, 100))
+      
       // Try to load data, but don't fail if APIs are down
-      const ticketsPromise = supportService.getTickets(user.id).catch(() => [])
-      const statsPromise = supportService.getStats().catch(() => ({
-        openTickets: 0,
-        resolvedThisMonth: 0,
-        averageResponseTime: 0,
-        customerRating: 0,
-        totalTickets: 0
-      }))
+      const ticketsPromise = supportService.getTickets(user.id).catch((error) => {
+        console.warn('Failed to load tickets:', error)
+        return []
+      })
+      
+      const statsPromise = supportService.getStats().catch((error) => {
+        console.warn('Failed to load stats:', error)
+        return {
+          openTickets: 0,
+          resolvedThisMonth: 0,
+          averageResponseTime: 0,
+          customerRating: 0,
+          totalTickets: 0
+        }
+      })
       
       const [ticketsData, statsData] = await Promise.all([ticketsPromise, statsPromise])
       setTickets(ticketsData)

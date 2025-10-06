@@ -118,10 +118,15 @@ class SupportService {
 
   async getStats(): Promise<SupportStats> {
     try {
-      const response = await fetch(`${this.baseUrl}/stats`)
+      const response = await fetch(`${this.baseUrl}/stats`, {
+        method: 'GET',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+      })
       
       if (!response.ok) {
-        console.error('Support stats API failed:', response.status, response.statusText)
+        console.warn('Support stats API failed:', response.status, response.statusText)
         // Return default stats instead of throwing error
         return {
           openTickets: 0,
@@ -132,9 +137,11 @@ class SupportService {
         }
       }
 
-      return await response.json()
+      const data = await response.json()
+      console.log('✅ Support stats loaded successfully:', data)
+      return data
     } catch (error) {
-      console.error('Error fetching support stats:', error)
+      console.warn('Error fetching support stats:', error)
       return {
         openTickets: 0,
         resolvedThisMonth: 0,
