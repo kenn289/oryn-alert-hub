@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
+import { multiApiStockService } from '@/lib/multi-api-stock-service'
 
 export async function GET(
   request: NextRequest,
@@ -6,7 +7,33 @@ export async function GET(
 ) {
   const { symbol } = await params
   const { searchParams } = new URL(request.url)
-  const market = searchParams.get('market') || 'US'
+  const providedMarket = (searchParams.get('market') || undefined) as string | undefined
+  
+  // Normalize symbol and infer market from suffix when possible
+  const upperSymbol = (symbol || '').toUpperCase().trim()
+  const suffixToMarket: Record<string, string> = {
+    '.NS': 'IN',
+    '.BO': 'IN',
+    '.L': 'GB',
+    '.T': 'JP',
+    '.AX': 'AU',
+    '.TO': 'CA',
+    '.DE': 'DE',
+    '.PA': 'FR'
+  }
+  const inferMarketFromSymbol = (s: string): string | undefined => {
+    const dotIndex = s.lastIndexOf('.')
+    if (dotIndex > 0) {
+      const suffix = s.substring(dotIndex)
+      return suffixToMarket[suffix]
+    }
+    // Numeric-only symbols are commonly BSE codes
+    if (/^\d+$/.test(s)) return 'IN'
+    return undefined
+  }
+  const inferredMarket = inferMarketFromSymbol(upperSymbol)
+  // Prefer inferred market from suffix to avoid wrong routing (e.g., TCS.NS)
+  const market = (inferredMarket || (providedMarket ? providedMarket.toUpperCase().trim() : undefined)) || 'US'
   
   try {
     if (!symbol) {
@@ -16,80 +43,84 @@ export async function GET(
       )
     }
 
-    // Route to market-specific APIs
-    let stockData
-    switch (market) {
-      case 'IN':
-        // Try NSE first, then BSE
+    // Prefer unified multi-API (Yahoo primary) for ALL markets for consistency
+    try {
+      const quote = await multiApiStockService.getStockQuote(upperSymbol, market)
+      return NextResponse.json({
+        symbol: quote.symbol,
+        name: quote.name,
+        price: quote.price,
+        change: quote.change,
+        changePercent: quote.changePercent,
+        volume: quote.volume,
+        avgVolume: quote.avgVolume,
+        high: quote.high,
+        low: quote.low,
+        open: quote.open,
+        previousClose: quote.previousClose,
+        marketCap: quote.marketCap,
+        pe: quote.pe,
+        currency: quote.currency || (market === 'US' ? 'USD' : undefined),
+        exchange: quote.exchange || market,
+        source: quote.source,
+        lastUpdated: new Date().toISOString()
+      })
+    } catch (primaryError) {
+      // Fallbacks for specific markets (keeps legacy behavior but with better normalization)
+      let stockData: any | undefined
+      if (market === 'IN') {
+        // Normalize to base symbol for NSE/BSE mock APIs
+        const baseSymbol = upperSymbol.includes('.') ? upperSymbol.split('.')[0] : upperSymbol
         try {
-          const nseResponse = await fetch(`${request.nextUrl.origin}/api/stock/nse?symbol=${symbol}`)
+          const nseResponse = await fetch(`${request.nextUrl.origin}/api/stock/nse?symbol=${baseSymbol}`)
           if (nseResponse.ok) {
             stockData = await nseResponse.json()
-            break
           }
         } catch (e) {
           console.warn('NSE API failed, trying BSE')
         }
-        
-        try {
-          const bseResponse = await fetch(`${request.nextUrl.origin}/api/stock/bse?symbol=${symbol}`)
-          if (bseResponse.ok) {
-            stockData = await bseResponse.json()
-            break
+        if (!stockData) {
+          try {
+            const bseSymbol = /^\d+$/.test(baseSymbol) ? baseSymbol : baseSymbol
+            const bseResponse = await fetch(`${request.nextUrl.origin}/api/stock/bse?symbol=${bseSymbol}`)
+            if (bseResponse.ok) {
+              stockData = await bseResponse.json()
+            }
+          } catch (e) {
+            console.warn('BSE API failed')
           }
-        } catch (e) {
-          console.warn('BSE API failed')
         }
-        break
-        
-      case 'JP':
+      } else if (market === 'JP') {
         try {
-          const tseResponse = await fetch(`${request.nextUrl.origin}/api/stock/tse?symbol=${symbol}`)
+          const tseResponse = await fetch(`${request.nextUrl.origin}/api/stock/tse?symbol=${upperSymbol}`)
           if (tseResponse.ok) {
             stockData = await tseResponse.json()
-            break
           }
         } catch (e) {
           console.warn('TSE API failed')
         }
-        break
-        
-      case 'GB':
+      } else if (market === 'GB') {
         try {
-          const lseResponse = await fetch(`${request.nextUrl.origin}/api/stock/lse?symbol=${symbol}`)
+          const lseResponse = await fetch(`${request.nextUrl.origin}/api/stock/lse?symbol=${upperSymbol}`)
           if (lseResponse.ok) {
             stockData = await lseResponse.json()
-            break
           }
         } catch (e) {
           console.warn('LSE API failed')
         }
-        break
-        
-      default:
-        // For US and other markets, return mock data
-        stockData = {
-          symbol: symbol,
-          name: `${symbol} Inc.`,
-          price: Math.random() * 200 + 50,
-          change: (Math.random() - 0.5) * 10,
-          changePercent: (Math.random() - 0.5) * 5,
-          volume: Math.floor(Math.random() * 1000000),
-          currency: market === 'US' ? 'USD' : 'USD',
-          exchange: market === 'US' ? 'NASDAQ' : 'Unknown',
-          country: market,
-          lastUpdated: new Date().toISOString()
-        }
-    }
-    
-    if (!stockData) {
+      }
+
+      if (stockData) {
+        return NextResponse.json(stockData)
+      }
+
+      // Last resort: explicit error to avoid random inconsistent prices
       return NextResponse.json(
-        { error: 'Stock not found' },
+        { error: 'Stock not found or data unavailable', symbol: upperSymbol, market },
         { status: 404 }
       )
     }
     
-    return NextResponse.json(stockData)
   } catch (error) {
     console.error(`Error fetching global stock data for ${symbol}:`, error)
     

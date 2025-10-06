@@ -7,6 +7,7 @@ export interface RealTimeMarketData {
   symbol: string
   name: string
   currentPrice: number
+  currency: string
   previousClose: number
   change: number
   changePercent: number
@@ -30,6 +31,7 @@ export interface RealAIPrediction {
   symbol: string
   name: string
   currentPrice: number
+  currency: string
   predictedPrice: number
   confidence: number
   timeframe: string
@@ -127,6 +129,7 @@ export class RealAIAnalysisService {
                 symbol: data.symbol || symbol,
                 name: data.name || this.getCompanyName(symbol),
                 currentPrice: data.price,
+                currency: data.currency || 'USD',
                 previousClose: data.previousClose || data.price * 0.98,
                 change: data.change || 0,
                 changePercent: data.changePercent || 0,
@@ -180,7 +183,8 @@ export class RealAIAnalysisService {
         }
 
         const prediction = await this.analyzeStock(marketData)
-        predictions.push(prediction)
+        // Attach currency to prediction for correct formatting downstream
+        predictions.push({ ...prediction, currency: marketData.currency })
         
         console.log(`✅ Generated real AI prediction for ${symbol}: ${prediction.confidence.toFixed(1)}% confidence`)
       } catch (error) {
