@@ -1,25 +1,38 @@
 {
   "version": 2,
-  "buildCommand": "cd backend && npm run build",
-  "installCommand": "cd backend && npm install --production",
-  "outputDirectory": "backend/dist",
-  "routes": [
-    {
-      "src": "/api/(.*)",
-      "dest": "/api/index.js"
-    },
-    {
-      "src": "/(.*)",
-      "dest": "/api/index.js"
-    }
-  ],
+  "buildCommand": "npm run build",
+  "outputDirectory": ".next",
+  "installCommand": "npm install --production",
+  "devCommand": "npm run dev",
   "env": {
     "NODE_ENV": "production"
   },
-  "builds": [
-    {
-      "src": "api/index.js",
-      "use": "@vercel/node"
+  "functions": {
+    "src/app/api/**/route.ts": {
+      "maxDuration": 30
     }
-  ]
+  },
+  "rewrites": [
+    {
+      "source": "/api/stock/(.*)",
+      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/stock/$1"
+    },
+    {
+      "source": "/api/support/(.*)",
+      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/support/$1"
+    },
+    {
+      "source": "/api/portfolio",
+      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/portfolio"
+    },
+    {
+      "source": "/api/watchlist",
+      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/watchlist"
+    },
+    {
+      "source": "/api/health",
+      "destination": "https://oryn-alert-a3v8gxanr-kenneths-projects-29fb6d97.vercel.app/api/health"
+    }
+  ],
+  "framework": "nextjs"
 }

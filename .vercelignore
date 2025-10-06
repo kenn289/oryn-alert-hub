@@ -1,3 +1,7 @@
+# Backend directories - exclude from frontend deployment
+backend/
+backend-temp/
+
 # Documentation and SQL files
 *.md
 *.sql
@@ -22,10 +26,3 @@ check-*.js
 .env.development.local
 .env.test.local
 .env.production.local
-
-# Frontend-specific files (keep backend)
-src/
-public/
-next.config.js
-tailwind.config.js
-postcss.config.js

@@ -1,4 +1,4 @@
-# Backend Deployment Script
+# Clean Backend Deployment Script
 Write-Host "🚀 Deploying Backend (Express.js) to Vercel..." -ForegroundColor Green
 
 # Check if Vercel CLI is installed
@@ -14,27 +14,33 @@ Set-Location backend
 # Verify backend files exist
 Write-Host "📋 Checking backend files..." -ForegroundColor Yellow
 if (Test-Path "package.json") {
-    Write-Host "✅ backend/package.json found" -ForegroundColor Green
+    Write-Host "✅ package.json found" -ForegroundColor Green
 } else {
-    Write-Host "❌ backend/package.json not found" -ForegroundColor Red
+    Write-Host "❌ package.json not found" -ForegroundColor Red
     Set-Location ..
     exit 1
 }
 
 if (Test-Path "api/index.js") {
-    Write-Host "✅ backend/api/index.js found" -ForegroundColor Green
+    Write-Host "✅ api/index.js found" -ForegroundColor Green
 } else {
-    Write-Host "❌ backend/api/index.js not found" -ForegroundColor Red
+    Write-Host "❌ api/index.js not found" -ForegroundColor Red
     Set-Location ..
     exit 1
 }
 
 if (Test-Path "vercel.json") {
-    Write-Host "✅ backend/vercel.json found" -ForegroundColor Green
+    Write-Host "✅ vercel.json found" -ForegroundColor Green
 } else {
-    Write-Host "❌ backend/vercel.json not found" -ForegroundColor Red
+    Write-Host "❌ vercel.json not found" -ForegroundColor Red
     Set-Location ..
     exit 1
+}
+
+# Remove any existing .vercel directory to avoid conflicts
+if (Test-Path ".vercel") {
+    Remove-Item .vercel -Recurse -Force
+    Write-Host "✅ Removed existing .vercel directory" -ForegroundColor Green
 }
 
 # Deploy backend
