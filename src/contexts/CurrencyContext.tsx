@@ -76,13 +76,13 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
     
     // If same currency or USD, just format normally
     const formatters: { [key: string]: Intl.NumberFormat } = {
-      'USD': new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD' }),
-      'INR': new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }),
-      'GBP': new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP' }),
-      'JPY': new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY' }),
-      'AUD': new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD' }),
-      'CAD': new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD' }),
-      'EUR': new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR' })
+      'USD': new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 2, maximumFractionDigits: 6 }),
+      'INR': new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR', minimumFractionDigits: 2, maximumFractionDigits: 6 }),
+      'GBP': new Intl.NumberFormat('en-GB', { style: 'currency', currency: 'GBP', minimumFractionDigits: 2, maximumFractionDigits: 6 }),
+      'JPY': new Intl.NumberFormat('ja-JP', { style: 'currency', currency: 'JPY', minimumFractionDigits: 0, maximumFractionDigits: 6 }),
+      'AUD': new Intl.NumberFormat('en-AU', { style: 'currency', currency: 'AUD', minimumFractionDigits: 2, maximumFractionDigits: 6 }),
+      'CAD': new Intl.NumberFormat('en-CA', { style: 'currency', currency: 'CAD', minimumFractionDigits: 2, maximumFractionDigits: 6 }),
+      'EUR': new Intl.NumberFormat('de-DE', { style: 'currency', currency: 'EUR', minimumFractionDigits: 2, maximumFractionDigits: 6 })
     }
 
     const formatter = formatters[selectedCurrency] || formatters['USD']

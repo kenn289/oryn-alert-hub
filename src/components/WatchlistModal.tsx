@@ -9,13 +9,14 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search, TrendingUp, DollarSign, Activity, Star, X } from "lucide-react"
 import { toast } from "sonner"
-import { getStockSuggestions, WatchlistService } from "@/lib/watchlist"
+import { WatchlistService } from "@/lib/watchlist"
 import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface WatchlistModalProps {
   isOpen: boolean
   onClose: () => void
   onAdd: (ticker: string) => void
+  defaultMarket?: string
 }
 
 const popularStocksData = [
@@ -34,11 +35,11 @@ const sectors = [
   "Communication Services", "Industrials", "Energy", "Materials"
 ]
 
-export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) {
+export function WatchlistModal({ isOpen, onClose, onAdd, defaultMarket }: WatchlistModalProps) {
   const { formatCurrency } = useCurrency()
   const [searchTerm, setSearchTerm] = useState("")
   const [selectedSector, setSelectedSector] = useState("")
-  const [suggestions, setSuggestions] = useState<Array<{ticker: string, name: string, sector: string}>>([])
+  const [suggestions, setSuggestions] = useState<Array<{ticker: string, name: string, sector: string, market?: string, currency?: string}>>([])
   const [showSuggestions, setShowSuggestions] = useState(false)
   const [isLoading, setIsLoading] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
@@ -49,8 +50,21 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
     const fetchSuggestions = async () => {
       if (searchTerm.length >= 1) {
         setIsLoading(true)
-        const results = await getStockSuggestions(searchTerm)
-        setSuggestions(results)
+        // Use global search API to get market-aware symbols with suffix
+        const res = await fetch(`/api/stock/global-search?q=${encodeURIComponent(searchTerm)}&limit=20`)
+        if (res.ok) {
+          const data = await res.json()
+          const mapped = (data.results || []).map((r: any) => ({
+            ticker: r.symbol,
+            name: r.name,
+            sector: r.sector || '',
+            market: r.market,
+            currency: r.currency
+          }))
+          setSuggestions(mapped)
+        } else {
+          setSuggestions([])
+        }
         setShowSuggestions(true)
         setIsLoading(false)
       } else {
@@ -70,7 +84,7 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
     selectedSector === "" || stock.sector === selectedSector
   )
 
-  const handleAddStock = async (ticker: string, name?: string) => {
+  const handleAddStock = async (ticker: string, name?: string, market?: string) => {
     // Prevent rapid-fire additions (rate limiting)
     const now = Date.now()
     if (now - lastAddTime < 1000) { // 1 second cooldown
@@ -87,7 +101,7 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
     setLastAddTime(now)
     
     try {
-      const result = WatchlistService.addToWatchlist(ticker, name || "")
+      const result = WatchlistService.addToWatchlist(ticker, name || "", market || defaultMarket)
       if (result.success) {
         onAdd(ticker)
         toast.success(result.message)
@@ -104,13 +118,13 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
 
   const handleAddCustom = () => {
     if (searchTerm.trim()) {
-      handleAddStock(searchTerm.trim().toUpperCase())
+      handleAddStock(searchTerm.trim().toUpperCase(), undefined, defaultMarket)
       setSearchTerm("")
     }
   }
 
-  const handleSuggestionClick = (suggestion: {ticker: string, name: string, sector: string}) => {
-    handleAddStock(suggestion.ticker, suggestion.name)
+  const handleSuggestionClick = (suggestion: {ticker: string, name: string, sector: string, market?: string}) => {
+    handleAddStock(suggestion.ticker, suggestion.name, suggestion.market)
     setShowSuggestions(false)
     setSearchTerm("")
   }
@@ -193,9 +207,14 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
                               <div className="text-sm text-muted-foreground">{suggestion.name}</div>
                             </div>
                           </div>
-                          <Badge variant="secondary" className="text-xs">
-                            {suggestion.sector}
-                          </Badge>
+                          <div className="flex items-center gap-2">
+                            {suggestion.market && (
+                              <Badge variant="secondary" className="text-xs">{suggestion.market}</Badge>
+                            )}
+                            {suggestion.sector && (
+                              <Badge variant="secondary" className="text-xs">{suggestion.sector}</Badge>
+                            )}
+                          </div>
                         </div>
                       ))}
                     </div>
@@ -219,7 +238,7 @@ export function WatchlistModal({ isOpen, onClose, onAdd }: WatchlistModalProps) 
                 <Card 
                   key={stock.ticker} 
                   className={`hover-lift cursor-pointer border-border/50 hover:border-primary/50 transition-all ${isAdding ? 'opacity-50 cursor-not-allowed' : ''}`}
-                  onClick={() => !isAdding && handleAddStock(stock.ticker)}
+                  onClick={() => !isAdding && handleAddStock(stock.ticker, stock.name, defaultMarket)}
                 >
                   <CardContent className="p-4">
                     <div className="flex items-center justify-between mb-2">
