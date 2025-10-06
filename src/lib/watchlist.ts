@@ -7,6 +7,8 @@ export interface WatchlistItem {
   name: string
   price: number
   change: number
+  // Currency of the price as returned by the data source (e.g., USD, INR)
+  currency?: string
   addedAt: string
 }
 
@@ -496,7 +498,8 @@ export class WatchlistService {
           change: stockData.change,
           changePercent: stockData.changePercent,
           volume: stockData.volume || 0,
-          source: stockData.source || 'yahoo_finance'
+          source: stockData.source || 'yahoo_finance',
+          currency: stockData.currency || undefined
         }
         
         console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
@@ -506,7 +509,9 @@ export class WatchlistService {
           name: realTimeData.name,
           price: realTimeData.price,
           change: realTimeData.change,
-          changePercent: realTimeData.changePercent
+          // @ts-expect-error keep backwards compatibility if changePercent not on type
+          changePercent: realTimeData.changePercent,
+          currency: realTimeData.currency
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
@@ -573,7 +578,8 @@ export class WatchlistService {
           change: stockData.change,
           changePercent: stockData.changePercent,
           volume: stockData.volume || 0,
-          source: stockData.source || 'yahoo_finance'
+          source: stockData.source || 'yahoo_finance',
+          currency: stockData.currency || undefined
         }
         
         console.log(`✅ Got REAL-TIME data for ${item.ticker}: $${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
@@ -583,7 +589,9 @@ export class WatchlistService {
           name: realTimeData.name,
           price: realTimeData.price,
           change: realTimeData.change,
-          changePercent: realTimeData.changePercent
+          // @ts-expect-error keep backwards compatibility if changePercent not on type
+          changePercent: realTimeData.changePercent,
+          currency: realTimeData.currency
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
