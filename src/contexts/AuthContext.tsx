@@ -105,6 +105,7 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     // Preserve important user data before clearing storage
+    const portfolioData = localStorage.getItem('oryn_portfolio')
     const watchlistData = localStorage.getItem('oryn_watchlist')
     const watchlistChecksum = localStorage.getItem('oryn_watchlist_checksum')
     const userPlan = localStorage.getItem('oryn_user_plan')
@@ -118,6 +119,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
     sessionStorage.clear()
     
     // Restore preserved user data
+    if (portfolioData) {
+      localStorage.setItem('oryn_portfolio', portfolioData)
+    }
     if (watchlistData) {
       localStorage.setItem('oryn_watchlist', watchlistData)
     }
