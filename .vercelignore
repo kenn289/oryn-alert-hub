@@ -1,8 +1,16 @@
+# Backend directory - completely exclude
 backend/
+backend/**
+
+# Documentation and SQL files
 *.md
 *.sql
+
+# Scripts and batch files
 *.ps1
 *.bat
+
+# Test and utility scripts
 test-*.js
 quick-*.js
 comprehensive-*.js
@@ -12,3 +20,15 @@ create-*.js
 fix-*.js
 apply-*.js
 check-*.js
+
+# Node modules in backend
+backend/node_modules/
+backend/dist/
+backend/api/
+
+# Any other backend-related files
+backend/package.json
+backend/package-lock.json
+backend/tsconfig.json
+backend/tsconfig-simple.json
+backend/vercel.json
