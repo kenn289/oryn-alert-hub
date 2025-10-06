@@ -9,6 +9,7 @@ import { Activity, TrendingUp, AlertCircle, Zap, LogOut, Plus, Bell, Info, X, Re
 import { toast } from "sonner"
 import { WatchlistModal } from "@/components/WatchlistModal"
 import { WatchlistService, WatchlistItem, PLANS } from "@/lib/watchlist"
+import { DatabaseWatchlistService } from "@/lib/database-watchlist-service"
 import { UserInitializationService } from "@/lib/user-initialization-service"
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip"
 import { FeatureManager } from "@/components/FeatureManager"
@@ -148,11 +149,16 @@ export default function DashboardPage() {
           toast.warning(limitEnforcement.message)
         }
         
-        // Load watchlist with fresh Yahoo Finance data (keep existing items)
-        console.log('🔄 Loading watchlist with fresh Yahoo Finance prices...')
+        // Load watchlist from database for unified cross-device state
+        console.log('🔄 Loading watchlist from database...')
+        const dbWatchlist = await DatabaseWatchlistService.getWatchlist(user.id)
+        // Also mirror to local for offline and pricing refresh
+        localStorage.setItem('oryn_watchlist', JSON.stringify(dbWatchlist))
+        localStorage.setItem('oryn_watchlist_last_modified', Date.now().toString())
+        // Fetch real-time prices and update local for UI display
         const savedWatchlist = await WatchlistService.getWatchlistWithData()
         setWatchlist(savedWatchlist)
-        console.log('✅ Watchlist loaded with real-time Yahoo Finance data')
+        console.log('✅ Watchlist loaded from DB and refreshed with real-time data')
         
         // Load portfolio data
         try {
@@ -250,15 +256,21 @@ export default function DashboardPage() {
     setIsWatchlistModalOpen(true)
   }
 
-  const handleAddToWatchlist = (ticker: string, market?: string) => {
-    const result = WatchlistService.addToWatchlist(ticker, "", market)
-    if (result.success) {
-      const updatedWatchlist = WatchlistService.getWatchlist()
-      setWatchlist(updatedWatchlist)
-      setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
-      toast.success(result.message)
-    } else {
-      toast.error(result.message)
+  const handleAddToWatchlist = async (ticker: string, market?: string) => {
+    try {
+      const added = await DatabaseWatchlistService.addToWatchlist(user!.id, ticker, ticker, market)
+      if (!added.success) {
+        toast.error(added.message)
+        return
+      }
+      // Mirror to local and refresh UI pricing
+      await DatabaseWatchlistService.syncDatabaseToLocal(user!.id)
+      const updated = await WatchlistService.getWatchlistWithData()
+      setWatchlist(updated)
+      setLiveStats(prev => ({ ...prev, watchlistCount: updated.length }))
+      toast.success(added.message)
+    } catch (e) {
+      toast.error('Failed to add to watchlist')
     }
   }
 
@@ -267,29 +279,38 @@ export default function DashboardPage() {
     setIsMarketSelectorOpen(true)
   }
 
-  const handleGlobalStockSelect = (stock: any) => {
-    // Ensure market-aware addition; stock.market is expected from selector
-    const result = WatchlistService.addToWatchlist(stock.symbol, stock.name, stock.market)
-    if (result.success) {
-      const updatedWatchlist = WatchlistService.getWatchlist()
-      setWatchlist(updatedWatchlist)
-      setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
-      toast.success(result.message)
-    } else {
-      toast.error(result.message)
+  const handleGlobalStockSelect = async (stock: any) => {
+    try {
+      const res = await DatabaseWatchlistService.addToWatchlist(user!.id, stock.symbol, stock.name, stock.market)
+      if (!res.success) {
+        toast.error(res.message)
+        return
+      }
+      await DatabaseWatchlistService.syncDatabaseToLocal(user!.id)
+      const updated = await WatchlistService.getWatchlistWithData()
+      setWatchlist(updated)
+      setLiveStats(prev => ({ ...prev, watchlistCount: updated.length }))
+      toast.success(res.message)
+    } catch (e) {
+      toast.error('Failed to add stock')
     }
   }
 
 
-  const handleRemoveFromWatchlist = (ticker: string) => {
-    const result = WatchlistService.removeFromWatchlist(ticker)
-    if (result.success) {
-      const updatedWatchlist = WatchlistService.getWatchlist()
-      setWatchlist(updatedWatchlist)
-      setLiveStats(prev => ({ ...prev, watchlistCount: updatedWatchlist.length }))
-      toast.success(result.message)
-    } else {
-      toast.error(result.message)
+  const handleRemoveFromWatchlist = async (ticker: string) => {
+    try {
+      const res = await DatabaseWatchlistService.removeFromWatchlist(user!.id, ticker)
+      if (!res.success) {
+        toast.error(res.message)
+        return
+      }
+      await DatabaseWatchlistService.syncDatabaseToLocal(user!.id)
+      const updated = await WatchlistService.getWatchlistWithData()
+      setWatchlist(updated)
+      setLiveStats(prev => ({ ...prev, watchlistCount: updated.length }))
+      toast.success(res.message)
+    } catch (e) {
+      toast.error('Failed to remove from watchlist')
     }
   }
 
@@ -1027,7 +1048,7 @@ export default function DashboardPage() {
       <WatchlistModal
         isOpen={isWatchlistModalOpen}
         onClose={() => setIsWatchlistModalOpen(false)}
-        onAdd={(ticker) => handleAddToWatchlist(ticker, selectedMarket)}
+        onAdd={(ticker, name, market) => handleAddToWatchlist(ticker, (market as any) || selectedMarket)}
         defaultMarket={selectedMarket}
       />
 
