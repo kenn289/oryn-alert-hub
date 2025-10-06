@@ -507,7 +507,9 @@ export class WatchlistService {
         console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
         
         // Use our unified global endpoint which infers market from suffix automatically
-        const marketQuery = item.market ? `?market=${encodeURIComponent(item.market)}` : ''
+        // Infer market from ticker if missing
+        const inferredMarket = item.market || inferMarketFromTicker(item.ticker)
+        const marketQuery = inferredMarket ? `?market=${encodeURIComponent(inferredMarket)}` : ''
         const response = await fetch(`/api/stock/global/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
@@ -543,7 +545,7 @@ export class WatchlistService {
           changePercent: realTimeData.changePercent,
           currency: realTimeData.currency,
           exchange: realTimeData.exchange,
-          market: item.market
+          market: inferredMarket
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
@@ -591,7 +593,8 @@ export class WatchlistService {
         console.log(`📊 Fetching REAL-TIME data for ${item.ticker} from Yahoo Finance...`)
         
         // Use our API route to fetch data (handles CORS and server-side requests)
-        const marketQuery = item.market ? `?market=${encodeURIComponent(item.market)}` : ''
+        const inferredMarket = item.market || inferMarketFromTicker(item.ticker)
+        const marketQuery = inferredMarket ? `?market=${encodeURIComponent(inferredMarket)}` : ''
         const response = await fetch(`/api/stock/global/${item.ticker}${marketQuery}`)
         
         if (!response.ok) {
@@ -626,7 +629,7 @@ export class WatchlistService {
           changePercent: realTimeData.changePercent,
           currency: realTimeData.currency,
           exchange: realTimeData.exchange,
-          market: item.market
+          market: inferredMarket
         })
       } catch (error) {
         console.warn(`❌ Failed to fetch real-time data for ${item.ticker}:`, error)
@@ -650,4 +653,18 @@ export class WatchlistService {
     // Don't clear the watchlist items, just force fresh price updates
     console.log('✅ Price cache cleared - will fetch fresh prices for existing items')
   }
+}
+
+function inferMarketFromTicker(ticker: string | undefined): string | undefined {
+  if (!ticker) return undefined
+  const s = ticker.toUpperCase()
+  if (/^\d+$/.test(s)) return 'IN' // BSE numeric
+  if (s.endsWith('.NS') || s.endsWith('.BO')) return 'IN'
+  if (s.endsWith('.L')) return 'GB'
+  if (s.endsWith('.T')) return 'JP'
+  if (s.endsWith('.AX')) return 'AU'
+  if (s.endsWith('.TO')) return 'CA'
+  if (s.endsWith('.DE')) return 'DE'
+  if (s.endsWith('.PA')) return 'FR'
+  return undefined
 }
