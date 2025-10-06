@@ -12,7 +12,9 @@ const morgan_1 = __importDefault(require("morgan"));
 const http_1 = require("http");
 const socket_io_1 = require("socket.io");
 const dotenv_1 = __importDefault(require("dotenv"));
-dotenv_1.default.config({ path: '.env.local' });
+// Load environment variables
+dotenv_1.default.config();
+// Simple logger
 const logger = {
     info: (message, ...args) => console.log(`[INFO] ${message}`, ...args),
     error: (message, ...args) => console.error(`[ERROR] ${message}`, ...args),
@@ -26,6 +28,7 @@ const io = new socket_io_1.Server(server, {
         methods: ['GET', 'POST']
     }
 });
+// Middleware
 app.use((0, helmet_1.default)());
 app.use((0, cors_1.default)({
     origin: process.env.CORS_ORIGINS?.split(',') || ['http://localhost:3000', 'http://localhost:3001'],
@@ -35,11 +38,13 @@ app.use((0, compression_1.default)());
 app.use((0, morgan_1.default)('combined'));
 app.use(express_1.default.json({ limit: '10mb' }));
 app.use(express_1.default.urlencoded({ extended: true }));
+// Rate limiting
 app.use((0, express_rate_limit_1.default)({
     windowMs: parseInt(process.env.RATE_LIMIT_WINDOW_MS || '60000'),
     max: parseInt(process.env.RATE_LIMIT_MAX_REQUESTS || '100'),
     message: 'Too many requests from this IP, please try again later.'
 }));
+// Health check
 app.get('/api/health', (req, res) => {
     res.json({
         success: true,
@@ -56,8 +61,10 @@ app.get('/api/health', (req, res) => {
         }
     });
 });
+// Stock data endpoint
 app.get('/api/stock/:symbol', (req, res) => {
     const { symbol } = req.params;
+    // Mock stock data
     const stockData = {
         symbol: symbol.toUpperCase(),
         name: `${symbol} Inc.`,
@@ -78,13 +85,15 @@ app.get('/api/stock/:symbol', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// ML predictions endpoint
 app.get('/api/stock/:symbol/predictions', (req, res) => {
     const { symbol } = req.params;
+    // Mock ML prediction
     const prediction = {
         symbol: symbol.toUpperCase(),
         currentPrice: Math.random() * 1000 + 50,
         predictedPrice: Math.random() * 1000 + 50,
-        confidence: Math.random() * 0.4 + 0.6,
+        confidence: Math.random() * 0.4 + 0.6, // 60-100%
         timeframe: '3-5 days',
         reasoning: 'Technical analysis suggests moderate movement based on RSI and MACD indicators',
         technicalIndicators: {
@@ -113,6 +122,7 @@ app.get('/api/stock/:symbol/predictions', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Portfolio endpoint
 app.get('/api/portfolio', (req, res) => {
     const portfolio = [
         {
@@ -144,6 +154,7 @@ app.get('/api/portfolio', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Watchlist endpoint
 app.get('/api/watchlist', (req, res) => {
     const watchlist = [
         {
@@ -169,6 +180,7 @@ app.get('/api/watchlist', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Support stats endpoint
 app.get('/api/support/stats', (req, res) => {
     const stats = {
         openTickets: 5,
@@ -183,6 +195,7 @@ app.get('/api/support/stats', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// WebSocket connection handling
 io.on('connection', (socket) => {
     logger.info(`Client connected: ${socket.id}`);
     socket.on('subscribe', (symbol) => {
@@ -197,6 +210,7 @@ io.on('connection', (socket) => {
         logger.info(`Client disconnected: ${socket.id}`);
     });
 });
+// 404 handler
 app.use('*', (req, res) => {
     res.status(404).json({
         success: false,
@@ -205,6 +219,7 @@ app.use('*', (req, res) => {
         timestamp: new Date().toISOString()
     });
 });
+// Error handler
 app.use((error, req, res, next) => {
     logger.error('Server error:', error);
     res.status(500).json({
@@ -214,6 +229,7 @@ app.use((error, req, res, next) => {
         timestamp: new Date().toISOString()
     });
 });
+// Start server
 const PORT = process.env.PORT || 3002;
 const HOST = process.env.HOST || 'localhost';
 server.listen(PORT, () => {
@@ -224,6 +240,7 @@ server.listen(PORT, () => {
     logger.info(`💾 Cache Status: In-memory caching enabled`);
     logger.info(`🗄️ Database Status: Mock data mode`);
 });
+// Graceful shutdown
 process.on('SIGTERM', () => {
     logger.info('SIGTERM received, shutting down gracefully');
     server.close(() => {
@@ -239,4 +256,4 @@ process.on('SIGINT', () => {
     });
 });
 exports.default = app;
-//# sourceMappingURL=server.js.map
+//# sourceMappingURL=server-simple.js.map

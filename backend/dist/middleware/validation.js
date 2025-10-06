@@ -26,7 +26,7 @@ exports.validateSymbols = [
     (0, express_validator_1.param)('symbols')
         .isString()
         .isLength({ min: 1, max: 500 })
-        .matches(/^[A-Z0-9.-,]+$/)
+        .matches(/^[A-Z0-9.\-,]+$/)
         .withMessage('Invalid symbols format'),
     exports.validateRequest
 ];

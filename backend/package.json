@@ -2,11 +2,11 @@
   "name": "oryn-backend",
   "version": "1.0.0",
   "description": "Production-ready backend for Oryn Alert Hub",
-  "main": "dist/server.js",
+  "main": "dist/server-simple.js",
   "scripts": {
-    "start": "node dist/server.js",
-    "dev": "nodemon src/server.ts",
-    "build": "tsc",
+    "start": "node dist/server-simple.js",
+    "dev": "nodemon src/server-simple.ts",
+    "build": "tsc -p tsconfig-simple.json",
     "test": "jest",
     "lint": "eslint src/**/*.ts"
   },
