@@ -1,34 +1,56 @@
 # Backend Deployment Script for Vercel
-Write-Host "🚀 Deploying Backend to Vercel..." -ForegroundColor Green
+Write-Host "🚀 Starting Backend Deployment to Vercel..." -ForegroundColor Green
 
 # Check if Vercel CLI is installed
-if (-not (Get-Command "vercel" -ErrorAction SilentlyContinue)) {
-    Write-Host "❌ Vercel CLI not found. Installing..." -ForegroundColor Yellow
+if (!(Get-Command vercel -ErrorAction SilentlyContinue)) {
+    Write-Host "❌ Vercel CLI not found. Installing..." -ForegroundColor Red
     npm install -g vercel
 }
 
 # Navigate to backend directory
+Write-Host "📁 Navigating to backend directory..." -ForegroundColor Yellow
 Set-Location backend
 
-# Set environment variables for production
-$env:NODE_ENV = "production"
-
-Write-Host "📦 Building backend..." -ForegroundColor Yellow
-npm run build
-
-if ($LASTEXITCODE -ne 0) {
-    Write-Host "❌ Build failed!" -ForegroundColor Red
+# Verify backend files exist
+Write-Host "📋 Checking backend files..." -ForegroundColor Yellow
+if (Test-Path "package.json") {
+    Write-Host "✅ package.json found" -ForegroundColor Green
+} else {
+    Write-Host "❌ package.json not found" -ForegroundColor Red
+    Set-Location ..
     exit 1
 }
 
-Write-Host "🚀 Deploying to Vercel..." -ForegroundColor Yellow
-vercel --prod
+if (Test-Path "vercel.json") {
+    Write-Host "✅ vercel.json found" -ForegroundColor Green
+} else {
+    Write-Host "❌ vercel.json not found" -ForegroundColor Red
+    Set-Location ..
+    exit 1
+}
 
-Write-Host "✅ Backend deployment complete!" -ForegroundColor Green
-Write-Host "📝 Don't forget to:" -ForegroundColor Cyan
-Write-Host "   1. Set environment variables in Vercel dashboard" -ForegroundColor Cyan
-Write-Host "   2. Update frontend BACKEND_URL with this backend URL" -ForegroundColor Cyan
-Write-Host "   3. Test the API endpoints" -ForegroundColor Cyan
+# Check if dist directory exists
+if (Test-Path "dist") {
+    Write-Host "✅ dist directory found" -ForegroundColor Green
+} else {
+    Write-Host "⚠️  dist directory not found - will build during deployment" -ForegroundColor Yellow
+}
 
-# Return to root directory
-Set-Location ..
+# Deploy to Vercel
+Write-Host "🚀 Deploying backend to Vercel..." -ForegroundColor Green
+Write-Host "This will deploy your Express.js backend as Vercel serverless functions." -ForegroundColor Cyan
+
+try {
+    # Use Vercel CLI to deploy from backend directory
+    vercel --prod
+    
+    Write-Host "✅ Backend deployment completed successfully!" -ForegroundColor Green
+    Write-Host "Your backend should now be accessible at the provided URL." -ForegroundColor Cyan
+} catch {
+    Write-Host "❌ Deployment failed: $($_.Exception.Message)" -ForegroundColor Red
+} finally {
+    # Return to root directory
+    Set-Location ..
+}
+
+Write-Host "🎉 Backend deployment process completed!" -ForegroundColor Green
