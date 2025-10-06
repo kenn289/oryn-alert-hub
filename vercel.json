@@ -15,24 +15,29 @@
   "rewrites": [
     {
       "source": "/api/stock/(.*)",
-      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/stock/$1"
+      "destination": "https://backend-api-gray-six.vercel.app/api/stock/$1"
     },
     {
       "source": "/api/support/(.*)",
-      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/support/$1"
+      "destination": "https://backend-api-gray-six.vercel.app/api/support/$1"
     },
     {
       "source": "/api/portfolio",
-      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/portfolio"
+      "destination": "https://backend-api-gray-six.vercel.app/api/portfolio"
     },
     {
       "source": "/api/watchlist",
-      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/watchlist"
+      "destination": "https://backend-api-gray-six.vercel.app/api/watchlist"
     },
     {
       "source": "/api/health",
-      "destination": "https://backend-diur0bmc7-kenneths-projects-29fb6d97.vercel.app/api/health"
+      "destination": "https://backend-api-gray-six.vercel.app/api/health"
     }
   ],
+  "env": {
+    "NEXT_PUBLIC_BASE_URL": "https://oryn-pi.vercel.app",
+    "NEXT_PUBLIC_APP_URL": "https://oryn-pi.vercel.app",
+    "BACKEND_URL": "https://backend-api-gray-six.vercel.app"
+  },
   "framework": "nextjs"
 }

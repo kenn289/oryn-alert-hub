@@ -16,6 +16,9 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production"
+    "NODE_ENV": "production",
+    "CORS_ORIGINS": "https://oryn-pi.vercel.app,https://oryn-pi.vercel.app",
+    "RATE_LIMIT_WINDOW_MS": "60000",
+    "RATE_LIMIT_MAX_REQUESTS": "100"
   }
 }

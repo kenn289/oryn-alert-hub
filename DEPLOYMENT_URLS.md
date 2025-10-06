@@ -8,9 +8,10 @@
 - **Status**: ✅ Deployed and Working
 
 ### Backend (Express.js)
-- **Project Name**: oryn-backend-api
-- **URL**: https://oryn-backend-api.vercel.app
+- **Project Name**: backend-api
+- **URL**: https://backend-api-gray-six.vercel.app
 - **Status**: ✅ Deployed and Working
+- **Git Connected**: ✅ Yes (auto-deploys from repository)
 
 ## Other Projects (Kept)
 - **stryde**: https://stryde-kappa.vercel.app
@@ -40,7 +41,21 @@ To set up a custom domain like `oryn-pi.com`:
 4. Add your custom domain
 5. Update DNS records as instructed
 
-## Deployment Commands
+## Auto-Deployment Setup
+
+Both frontend and backend are now connected to the Git repository and will auto-deploy when you push changes:
+
+### Frontend Auto-Deployment
+- **Connected to**: `oryn-pi` Vercel project
+- **Triggers on**: Push to `main` branch
+- **Directory**: Root of repository
+
+### Backend Auto-Deployment  
+- **Connected to**: `backend-api` Vercel project
+- **Triggers on**: Push to `main` branch
+- **Directory**: `backend-api/` folder
+
+## Manual Deployment Commands
 
 ### Frontend Deployment
 ```bash
@@ -49,7 +64,7 @@ vercel --prod --yes
 
 ### Backend Deployment
 ```bash
-cd backend-minimal
+cd backend-api
 vercel --prod --yes
 ```
 
