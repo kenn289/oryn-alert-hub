@@ -187,6 +187,45 @@ export class DatabaseWatchlistService {
   }
 
   /**
+   * Replace entire watchlist with provided items (one-time reset/unify)
+   */
+  static async replaceAll(userId: string, items: Array<{ ticker: string; name: string; market?: string }>): Promise<void> {
+    try {
+      await this.clearWatchlist(userId)
+      if (items.length === 0) return
+      const payload = items.map((i) => ({
+        user_id: userId,
+        ticker: i.ticker.toUpperCase(),
+        name: (i.name || i.ticker).trim(),
+        market: i.market?.toUpperCase(),
+      }))
+      const { error } = await supabase.from('watchlists').insert(payload)
+      if (error) console.error('Error replacing watchlist:', error)
+    } catch (error) {
+      console.error('Error replacing watchlist:', error)
+    }
+  }
+
+  /**
+   * Get most recent updated_at for user's watchlist
+   */
+  static async getLastUpdatedAt(userId: string): Promise<number | null> {
+    try {
+      const { data, error } = await supabase
+        .from('watchlists')
+        .select('updated_at')
+        .eq('user_id', userId)
+        .order('updated_at', { ascending: false })
+        .limit(1)
+      if (error || !data || data.length === 0) return null
+      const ts = new Date(data[0].updated_at as any).getTime()
+      return Number.isFinite(ts) ? ts : null
+    } catch {
+      return null
+    }
+  }
+
+  /**
    * Sync localStorage watchlist to database
    */
   static async syncLocalToDatabase(userId: string): Promise<void> {
@@ -226,6 +265,7 @@ export class DatabaseWatchlistService {
       
       if (dbWatchlist.length > 0) {
         localStorage.setItem('oryn_watchlist', JSON.stringify(dbWatchlist))
+        try { localStorage.setItem('oryn_watchlist_last_modified', Date.now().toString()) } catch {}
         console.log(`✅ Synced ${dbWatchlist.length} items from database to localStorage`)
       }
     } catch (error) {

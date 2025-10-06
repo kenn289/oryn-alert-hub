@@ -9,13 +9,13 @@ import { Card, CardContent } from "@/components/ui/card"
 import { Badge } from "@/components/ui/badge"
 import { Search, TrendingUp, DollarSign, Activity, Star, X } from "lucide-react"
 import { toast } from "sonner"
-import { WatchlistService } from "@/lib/watchlist"
+// Using parent-provided onAdd to persist to database
 import { useCurrency } from "@/contexts/CurrencyContext"
 
 interface WatchlistModalProps {
   isOpen: boolean
   onClose: () => void
-  onAdd: (ticker: string) => void
+  onAdd: (ticker: string, name?: string, market?: string) => void
   defaultMarket?: string
 }
 
@@ -101,14 +101,8 @@ export function WatchlistModal({ isOpen, onClose, onAdd, defaultMarket }: Watchl
     setLastAddTime(now)
     
     try {
-      const result = WatchlistService.addToWatchlist(ticker, name || "", market || defaultMarket)
-      if (result.success) {
-        onAdd(ticker)
-        toast.success(result.message)
-        // Don't close modal automatically, let user add multiple stocks
-      } else {
-        toast.error(result.message)
-      }
+      onAdd(ticker, name, market || defaultMarket)
+      // Don't close modal automatically, let user add multiple stocks
     } catch (error) {
       toast.error("Failed to add stock. Please try again.")
     } finally {
