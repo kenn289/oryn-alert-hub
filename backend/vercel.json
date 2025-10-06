@@ -1,12 +1,9 @@
 {
   "version": 2,
   "buildCommand": "npm run build",
-  "outputDirectory": "dist",
   "installCommand": "npm install",
-  "devCommand": "npm run dev",
   "functions": {
     "api/server-simple.js": {
-      "memory": 1024,
       "maxDuration": 60
     }
   },
@@ -21,12 +18,6 @@
     }
   ],
   "env": {
-    "NODE_ENV": "production",
-    "PORT": "3002"
-  },
-  "build": {
-    "env": {
-      "NODE_ENV": "production"
-    }
+    "NODE_ENV": "production"
   }
 }
