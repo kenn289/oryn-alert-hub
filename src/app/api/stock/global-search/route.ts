@@ -1,23 +1,39 @@
 import { NextRequest, NextResponse } from 'next/server'
 
+// Yahoo Finance global search (covers NSE/BSE/US/UK/JP/etc.)
+// Docs (informal): `https://query2.finance.yahoo.com/v1/finance/search?q=RELIANCE`
+
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url)
-    const query = searchParams.get('q')
-    const market = searchParams.get('market')
-    
+    const query = searchParams.get('q')?.trim()
+    const market = normalizeMarket(searchParams.get('market') || undefined)
+    const limit = Math.min(parseInt(searchParams.get('limit') || '30', 10) || 30, 100)
+
     if (!query) {
       return NextResponse.json({ error: 'Query is required' }, { status: 400 })
     }
 
-    // Search across all markets
-    const results = await searchGlobalStocks(query, market)
-    
+    const url = `https://query2.finance.yahoo.com/v1/finance/search?q=${encodeURIComponent(query)}&quotesCount=${limit}&newsCount=0&enableFuzzyQuery=true&lang=en-US&quotesQueryId=tss_match_phrase_query`
+    const response = await fetch(url, { next: { revalidate: 60 } })
+    if (!response.ok) {
+      return NextResponse.json({ error: `Upstream search HTTP ${response.status}` }, { status: 502 })
+    }
+    const data = await response.json()
+    const quotes: any[] = Array.isArray(data.quotes) ? data.quotes : []
+
+    const mapped = quotes
+      .filter((q) => !!q.symbol && !!(q.shortname || q.longname || q.name))
+      .map((q) => mapYahooQuote(q))
+      .filter((r) => !!r.symbol)
+
+    const filtered = market ? mapped.filter((r) => r.market === market) : mapped
+
     return NextResponse.json({
       query,
       market: market || 'all',
-      results,
-      total: results.length
+      results: dedupeBySymbol(filtered).slice(0, limit),
+      total: filtered.length
     })
   } catch (error) {
     console.error('Global stock search error:', error)
@@ -25,156 +41,64 @@ export async function GET(request: NextRequest) {
   }
 }
 
-async function searchGlobalStocks(query: string, market?: string) {
-  const results: any[] = []
-  
-  // Define markets to search
-  const marketsToSearch = market ? [market] : ['US', 'IN', 'JP', 'GB', 'AU', 'CA', 'DE', 'FR']
-  
-  for (const marketCode of marketsToSearch) {
-    try {
-      const marketResults = await searchInMarket(query, marketCode)
-      results.push(...marketResults)
-    } catch (error) {
-      console.warn(`Search failed for market ${marketCode}:`, error)
+function mapYahooQuote(q: any) {
+  const symbol: string = q.symbol
+  const name: string = q.shortname || q.longname || q.name || symbol
+  const currency: string | undefined = q.currency
+  const market = inferMarketFromSymbol(symbol, q)
+  return {
+    symbol,
+    name,
+    market,
+    currency: currency || defaultCurrencyForMarket(market)
+  }
+}
+
+function normalizeMarket(input?: string): string | undefined {
+  if (!input) return undefined
+  const u = input.toUpperCase()
+  if (u === 'UK') return 'GB'
+  return u
+}
+
+function inferMarketFromSymbol(symbol: string, q?: any): string {
+  const upper = symbol.toUpperCase()
+  if (upper.endsWith('.NS') || upper.endsWith('.BO') || /^\d+$/.test(upper)) return 'IN'
+  if (upper.endsWith('.L')) return 'GB'
+  if (upper.endsWith('.T')) return 'JP'
+  if (upper.endsWith('.AX')) return 'AU'
+  if (upper.endsWith('.TO')) return 'CA'
+  if (upper.endsWith('.DE')) return 'DE'
+  if (upper.endsWith('.PA')) return 'FR'
+  // Attempt to use region/exchange hints
+  const exch: string = (q?.exchDisp || q?.exchange || '').toUpperCase()
+  if (exch.includes('NSE') || exch.includes('BSE')) return 'IN'
+  if (exch.includes('LSE')) return 'GB'
+  if (exch.includes('TSE')) return 'JP'
+  return 'US'
+}
+
+function defaultCurrencyForMarket(market?: string): string {
+  switch (market) {
+    case 'IN': return 'INR'
+    case 'GB': return 'GBP'
+    case 'JP': return 'JPY'
+    case 'AU': return 'AUD'
+    case 'CA': return 'CAD'
+    case 'DE': return 'EUR'
+    case 'FR': return 'EUR'
+    default: return 'USD'
+  }
+}
+
+function dedupeBySymbol(list: Array<{ symbol: string }>) {
+  const seen = new Set<string>()
+  const result: any[] = []
+  for (const item of list) {
+    if (!seen.has(item.symbol)) {
+      seen.add(item.symbol)
+      result.push(item)
     }
   }
-  
-  return results
-}
-
-async function searchInMarket(query: string, market: string) {
-  // Normalize common aliases
-  if (market === 'UK') market = 'GB'
-  const results: any[] = []
-  
-  switch (market) {
-    case 'IN':
-      // Search NSE and BSE
-      results.push(...await searchNSE(query))
-      results.push(...await searchBSE(query))
-      break
-    case 'JP':
-      results.push(...await searchTSE(query))
-      break
-    case 'GB':
-      results.push(...await searchLSE(query))
-      break
-    case 'US':
-      results.push(...await searchUS(query))
-      break
-    default:
-      // For other markets, use generic search
-      results.push(...await searchGeneric(query, market))
-  }
-  
-  return results
-}
-
-async function searchNSE(query: string) {
-  // Mock NSE search results
-  const nseStocks = [
-    { symbol: 'RELIANCE', name: 'Reliance Industries Ltd', exchange: 'NSE', market: 'IN', currency: 'INR' },
-    { symbol: 'TCS', name: 'Tata Consultancy Services Ltd', exchange: 'NSE', market: 'IN', currency: 'INR' },
-    { symbol: 'INFY', name: 'Infosys Ltd', exchange: 'NSE', market: 'IN', currency: 'INR' },
-    { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', exchange: 'NSE', market: 'IN', currency: 'INR' },
-    { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', exchange: 'NSE', market: 'IN', currency: 'INR' }
-  ]
-
-  const filtered = nseStocks.filter(stock => 
-    stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
-    stock.name.toLowerCase().includes(query.toLowerCase())
-  )
-  return filtered.map(withSuffix)
-}
-
-async function searchBSE(query: string) {
-  // Mock BSE search results
-  const bseStocks = [
-    { symbol: '500325', name: 'Reliance Industries Ltd', exchange: 'BSE', market: 'IN', currency: 'INR' },
-    { symbol: '532540', name: 'Tata Consultancy Services Ltd', exchange: 'BSE', market: 'IN', currency: 'INR' },
-    { symbol: '500209', name: 'Infosys Ltd', exchange: 'BSE', market: 'IN', currency: 'INR' },
-    { symbol: '500180', name: 'HDFC Bank Ltd', exchange: 'BSE', market: 'IN', currency: 'INR' },
-    { symbol: '532174', name: 'ICICI Bank Ltd', exchange: 'BSE', market: 'IN', currency: 'INR' }
-  ]
-
-  const filtered = bseStocks.filter(stock => 
-    stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
-    stock.name.toLowerCase().includes(query.toLowerCase())
-  )
-  return filtered.map(withSuffix)
-}
-
-async function searchTSE(query: string) {
-  // Mock TSE search results
-  const tseStocks = [
-    { symbol: '7203', name: 'Toyota Motor Corporation', exchange: 'TSE', market: 'JP', currency: 'JPY' },
-    { symbol: '6758', name: 'Sony Group Corporation', exchange: 'TSE', market: 'JP', currency: 'JPY' },
-    { symbol: '9984', name: 'SoftBank Group Corp', exchange: 'TSE', market: 'JP', currency: 'JPY' }
-  ]
-
-  const filtered = tseStocks.filter(stock => 
-    stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
-    stock.name.toLowerCase().includes(query.toLowerCase())
-  )
-  return filtered.map(withSuffix)
-}
-
-async function searchLSE(query: string) {
-  // Mock LSE search results
-  const lseStocks = [
-    { symbol: 'TSCO', name: 'Tesco PLC', exchange: 'LSE', market: 'GB', currency: 'GBP' },
-    { symbol: 'VOD', name: 'Vodafone Group PLC', exchange: 'LSE', market: 'GB', currency: 'GBP' },
-    { symbol: 'BP', name: 'BP PLC', exchange: 'LSE', market: 'GB', currency: 'GBP' }
-  ]
-
-  const filtered = lseStocks.filter(stock => 
-    stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
-    stock.name.toLowerCase().includes(query.toLowerCase())
-  )
-  return filtered.map(withSuffix)
-}
-
-async function searchUS(query: string) {
-  // Mock US search results
-  const usStocks = [
-    { symbol: 'AAPL', name: 'Apple Inc', exchange: 'NASDAQ', market: 'US', currency: 'USD' },
-    { symbol: 'GOOGL', name: 'Alphabet Inc', exchange: 'NASDAQ', market: 'US', currency: 'USD' },
-    { symbol: 'MSFT', name: 'Microsoft Corporation', exchange: 'NASDAQ', market: 'US', currency: 'USD' },
-    { symbol: 'TSLA', name: 'Tesla Inc', exchange: 'NASDAQ', market: 'US', currency: 'USD' },
-    { symbol: 'NVDA', name: 'NVIDIA Corporation', exchange: 'NASDAQ', market: 'US', currency: 'USD' }
-  ]
-
-  const filtered = usStocks.filter(stock => 
-    stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
-    stock.name.toLowerCase().includes(query.toLowerCase())
-  )
-  return filtered.map(withSuffix)
-}
-
-async function searchGeneric(query: string, market: string) {
-  // Generic search for other markets
-  return []
-}
-
-function withSuffix(stock: { symbol: string; market: string; exchange?: string; name: string; currency: string }) {
-  const { symbol, market, exchange } = stock
-  if (symbol.includes('.')) return stock
-
-  const suffixMap: Record<string, string> = {
-    US: '',
-    IN: exchange === 'BSE' ? '.BO' : '.NS',
-    GB: '.L',
-    JP: '.T',
-    AU: '.AX',
-    CA: '.TO',
-    DE: '.DE',
-    FR: '.PA'
-  }
-
-  const suffix = suffixMap[market] ?? ''
-  return {
-    ...stock,
-    symbol: `${symbol}${suffix}`
-  }
+  return result
 }
