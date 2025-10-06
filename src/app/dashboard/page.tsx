@@ -998,8 +998,11 @@ export default function DashboardPage() {
                       <div className="flex items-center gap-4">
                         <div className="text-right">
                           <div className="font-medium">{formatCurrency(item.price, item.currency || 'USD')}</div>
-                          <div className={`text-sm ${item.change >= 0 ? 'text-success' : 'text-destructive'}`}>
-                            {item.change >= 0 ? '+' : ''}{item.change.toFixed(2)}%
+                      <div className={`text-sm ${((item.changePercent ?? 0) >= 0) ? 'text-success' : 'text-destructive'}`}>
+                        {((item.changePercent ?? 0) >= 0 ? '+' : '')}{(item.changePercent ?? 0).toFixed(2)}%
+                      </div>
+                          <div className="text-xs text-muted-foreground">
+                            {(item.market || '')}{item.exchange ? ` • ${item.exchange}` : ''}
                           </div>
                         </div>
                         <Button
@@ -1025,6 +1028,7 @@ export default function DashboardPage() {
         isOpen={isWatchlistModalOpen}
         onClose={() => setIsWatchlistModalOpen(false)}
         onAdd={(ticker) => handleAddToWatchlist(ticker, selectedMarket)}
+        defaultMarket={selectedMarket}
       />
 
       {/* Market-aware Global Stock Selector Dialog */}
