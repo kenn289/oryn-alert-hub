@@ -1,46 +1,25 @@
 {
   "version": 2,
-  "name": "oryn-frontend",
-  "buildCommand": "npm run build",
-  "outputDirectory": ".next",
-  "installCommand": "npm install --production",
-  "devCommand": "npm run dev",
+  "buildCommand": "cd backend && npm run build",
+  "installCommand": "cd backend && npm install --production",
+  "outputDirectory": "backend/dist",
+  "routes": [
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/index.js"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.js"
+    }
+  ],
   "env": {
     "NODE_ENV": "production"
   },
-  "functions": {
-    "src/app/api/**/route.ts": {
-      "maxDuration": 30
-    }
-  },
-  "rewrites": [
-    {
-      "source": "/api/stock/(.*)",
-      "destination": "https://oryn-backend.vercel.app/api/stock/$1"
-    },
-    {
-      "source": "/api/support/(.*)",
-      "destination": "https://oryn-backend.vercel.app/api/support/$1"
-    },
-    {
-      "source": "/api/portfolio",
-      "destination": "https://oryn-backend.vercel.app/api/portfolio"
-    },
-    {
-      "source": "/api/watchlist",
-      "destination": "https://oryn-backend.vercel.app/api/watchlist"
-    },
-    {
-      "source": "/api/health",
-      "destination": "https://oryn-backend.vercel.app/api/health"
-    }
-  ],
-  "ignoreCommand": "echo 'Frontend-only deployment - ignoring backend directory'",
   "builds": [
     {
-      "src": "package.json",
-      "use": "@vercel/next"
+      "src": "api/index.js",
+      "use": "@vercel/node"
     }
-  ],
-  "framework": "nextjs"
+  ]
 }

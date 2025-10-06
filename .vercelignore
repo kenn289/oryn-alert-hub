@@ -1,11 +1,3 @@
-# Completely exclude backend directories
-backend/
-backend-temp/
-
-# Exclude all backend-related files and directories
-**/backend/**
-**/backend-temp/**
-
 # Documentation and SQL files
 *.md
 *.sql
@@ -31,16 +23,9 @@ check-*.js
 .env.test.local
 .env.production.local
 
-# Node modules in any backend directory
-**/backend/node_modules/
-**/backend-temp/node_modules/
-
-# Backend package files
-**/backend/package.json
-**/backend/package-lock.json
-**/backend-temp/package.json
-**/backend-temp/package-lock.json
-
-# Additional exclusions to prevent any backend detection
-backend/**
-backend-temp/**
+# Frontend-specific files (keep backend)
+src/
+public/
+next.config.js
+tailwind.config.js
+postcss.config.js
