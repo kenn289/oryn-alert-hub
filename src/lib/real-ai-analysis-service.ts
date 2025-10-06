@@ -210,7 +210,7 @@ export class RealAIAnalysisService {
     if (s.endsWith('.PA')) return 'FR'
     // Common Indian NSE base symbols without suffix
     const commonIN = new Set([
-      'RELIANCE','TCS','INFY','HDFCBANK','ICICIBANK','LT','BEL','BDL','MAZDOCK','HAL','COCHINSHIP','SUNPHARMA','DRREDDY','CIPLA','LUPIN','DIVISLAB','AUROPHARMA','BIOCON'
+      'RELIANCE','TCS','INFY','HDFCBANK','ICICIBANK','LT','BEL','BDL','MAZDOCK','HAL','BEML','COCHINSHIP','GRSE','SUNPHARMA','DRREDDY','CIPLA','LUPIN','DIVISLAB','PFIZER','AUROPHARMA','BIOCON','MARUTI','M&M','TATAMOTORS','BAJAJ-AUTO','HEROMOTOCO','EICHERMOT','WIPRO','HCLTECH','TECHM','TATAELXSI','KOTAKBANK','SBIN','AXISBANK','BAJFINANCE','HINDUNILVR','ITC','NESTLEIND','BRITANNIA','ULTRACEMCO','ADANIPORTS','DEEPAKNTR','ATUL','BHARTIARTL','TATASTEEL','JSWSTEEL','HINDALCO','ONGC','BPCL','COALINDIA'
     ])
     if (commonIN.has(s)) return 'IN'
     return undefined
@@ -540,6 +540,7 @@ export class RealAIAnalysisService {
 
   private getCompanyName(symbol: string): string {
     const names: { [key: string]: string } = {
+      // US Stocks
       'NVDA': 'NVIDIA Corporation',
       'AAPL': 'Apple Inc.',
       'TSLA': 'Tesla Inc.',
@@ -552,7 +553,131 @@ export class RealAIAnalysisService {
       'COP': 'ConocoPhillips',
       'JNJ': 'Johnson & Johnson',
       'PFE': 'Pfizer Inc.',
-      'UNH': 'UnitedHealth Group Inc.'
+      'UNH': 'UnitedHealth Group Inc.',
+      
+      // Indian Stocks (with and without .NS suffix)
+      'RELIANCE': 'Reliance Industries Ltd',
+      'RELIANCE.NS': 'Reliance Industries Ltd',
+      'TCS': 'Tata Consultancy Services Ltd',
+      'TCS.NS': 'Tata Consultancy Services Ltd',
+      'HDFCBANK': 'HDFC Bank Ltd',
+      'HDFCBANK.NS': 'HDFC Bank Ltd',
+      'INFY': 'Infosys Ltd',
+      'INFY.NS': 'Infosys Ltd',
+      'ICICIBANK': 'ICICI Bank Ltd',
+      'ICICIBANK.NS': 'ICICI Bank Ltd',
+      
+      // Defence Stocks
+      'HAL': 'Hindustan Aeronautics Ltd',
+      'HAL.NS': 'Hindustan Aeronautics Ltd',
+      'BEML': 'BEML Ltd',
+      'BEML.NS': 'BEML Ltd',
+      'BEL': 'Bharat Electronics Ltd',
+      'BEL.NS': 'Bharat Electronics Ltd',
+      'BDL': 'Bharat Dynamics Ltd',
+      'BDL.NS': 'Bharat Dynamics Ltd',
+      'MAZDOCK': 'Mazagon Dock Shipbuilders',
+      'MAZDOCK.NS': 'Mazagon Dock Shipbuilders',
+      'COCHINSHIP': 'Cochin Shipyard Ltd',
+      'COCHINSHIP.NS': 'Cochin Shipyard Ltd',
+      'GRSE': 'Garden Reach Shipbuilders',
+      'GRSE.NS': 'Garden Reach Shipbuilders',
+      
+      // Pharma Stocks
+      'SUNPHARMA': 'Sun Pharmaceutical Industries',
+      'SUNPHARMA.NS': 'Sun Pharmaceutical Industries',
+      'DRREDDY': 'Dr. Reddy\'s Laboratories',
+      'DRREDDY.NS': 'Dr. Reddy\'s Laboratories',
+      'CIPLA': 'Cipla Ltd',
+      'CIPLA.NS': 'Cipla Ltd',
+      'DIVISLAB': 'Divi\'s Laboratories',
+      'DIVISLAB.NS': 'Divi\'s Laboratories',
+      'LUPIN': 'Lupin Ltd',
+      'LUPIN.NS': 'Lupin Ltd',
+      'PFIZER': 'Pfizer Ltd',
+      'PFIZER.NS': 'Pfizer Ltd',
+      'BIOCON': 'Biocon Ltd',
+      'BIOCON.NS': 'Biocon Ltd',
+      'AUROPHARMA': 'Aurobindo Pharma Ltd',
+      'AUROPHARMA.NS': 'Aurobindo Pharma Ltd',
+      
+      // Automotive Stocks
+      'MARUTI': 'Maruti Suzuki India Ltd',
+      'MARUTI.NS': 'Maruti Suzuki India Ltd',
+      'M&M': 'Mahindra & Mahindra Ltd',
+      'M&M.NS': 'Mahindra & Mahindra Ltd',
+      'TATAMOTORS': 'Tata Motors Ltd',
+      'TATAMOTORS.NS': 'Tata Motors Ltd',
+      'BAJAJ-AUTO': 'Bajaj Auto Ltd',
+      'BAJAJ-AUTO.NS': 'Bajaj Auto Ltd',
+      'HEROMOTOCO': 'Hero MotoCorp Ltd',
+      'HEROMOTOCO.NS': 'Hero MotoCorp Ltd',
+      'EICHERMOT': 'Eicher Motors Ltd',
+      'EICHERMOT.NS': 'Eicher Motors Ltd',
+      
+      // Technology & IT
+      'WIPRO': 'Wipro Ltd',
+      'WIPRO.NS': 'Wipro Ltd',
+      'HCLTECH': 'HCL Technologies Ltd',
+      'HCLTECH.NS': 'HCL Technologies Ltd',
+      'TECHM': 'Tech Mahindra Ltd',
+      'TECHM.NS': 'Tech Mahindra Ltd',
+      'TATAELXSI': 'Tata Elxsi Ltd',
+      'TATAELXSI.NS': 'Tata Elxsi Ltd',
+      
+      // Financial Services
+      'KOTAKBANK': 'Kotak Mahindra Bank Ltd',
+      'KOTAKBANK.NS': 'Kotak Mahindra Bank Ltd',
+      'SBIN': 'State Bank of India',
+      'SBIN.NS': 'State Bank of India',
+      'AXISBANK': 'Axis Bank Ltd',
+      'AXISBANK.NS': 'Axis Bank Ltd',
+      'BAJFINANCE': 'Bajaj Finance Ltd',
+      'BAJFINANCE.NS': 'Bajaj Finance Ltd',
+      
+      // Consumer Goods
+      'HINDUNILVR': 'Hindustan Unilever Ltd',
+      'HINDUNILVR.NS': 'Hindustan Unilever Ltd',
+      'ITC': 'ITC Ltd',
+      'ITC.NS': 'ITC Ltd',
+      'NESTLEIND': 'Nestle India Ltd',
+      'NESTLEIND.NS': 'Nestle India Ltd',
+      'BRITANNIA': 'Britannia Industries Ltd',
+      'BRITANNIA.NS': 'Britannia Industries Ltd',
+      
+      // Industrials & Infrastructure
+      'LT': 'Larsen & Toubro Ltd',
+      'LT.NS': 'Larsen & Toubro Ltd',
+      'ULTRACEMCO': 'UltraTech Cement Ltd',
+      'ULTRACEMCO.NS': 'UltraTech Cement Ltd',
+      'ADANIPORTS': 'Adani Ports & SEZ Ltd',
+      'ADANIPORTS.NS': 'Adani Ports & SEZ Ltd',
+      
+      // Chemicals
+      'DEEPAKNTR': 'Deepak Nitrite Ltd',
+      'DEEPAKNTR.NS': 'Deepak Nitrite Ltd',
+      'ATUL': 'Atul Ltd',
+      'ATUL.NS': 'Atul Ltd',
+      
+      // Telecom
+      'BHARTIARTL': 'Bharti Airtel Ltd',
+      'BHARTIARTL.NS': 'Bharti Airtel Ltd',
+      
+      // Metals & Mining
+      'TATASTEEL': 'Tata Steel Ltd',
+      'TATASTEEL.NS': 'Tata Steel Ltd',
+      'JSWSTEEL': 'JSW Steel Ltd',
+      'JSWSTEEL.NS': 'JSW Steel Ltd',
+      'HINDALCO': 'Hindalco Industries Ltd',
+      'HINDALCO.NS': 'Hindalco Industries Ltd',
+      
+      // Energy & Oil
+      'ONGC': 'Oil & Natural Gas Corp Ltd',
+      'ONGC.NS': 'Oil & Natural Gas Corp Ltd',
+      'BPCL': 'Bharat Petroleum Corp Ltd',
+      'BPCL.NS': 'Bharat Petroleum Corp Ltd',
+      'COALINDIA': 'Coal India Ltd',
+      'COALINDIA.NS': 'Coal India Ltd'
     }
     return names[symbol] || `${symbol} Corporation`
   }
