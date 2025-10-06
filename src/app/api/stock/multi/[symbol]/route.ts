@@ -6,6 +6,8 @@ export async function GET(
   { params }: { params: Promise<{ symbol: string }> }
 ) {
   const { symbol } = await params
+  const { searchParams } = new URL(request.url)
+  const market = (searchParams.get('market') || undefined) as string | undefined
   
   try {
     if (!symbol) {
@@ -15,7 +17,7 @@ export async function GET(
       )
     }
 
-    const quote = await multiApiStockService.getStockQuote(symbol)
+    const quote = await multiApiStockService.getStockQuote(symbol, market)
     
     return NextResponse.json(quote)
   } catch (error) {
