@@ -80,11 +80,12 @@ async function searchNSE(query: string) {
     { symbol: 'HDFCBANK', name: 'HDFC Bank Ltd', exchange: 'NSE', market: 'IN', currency: 'INR' },
     { symbol: 'ICICIBANK', name: 'ICICI Bank Ltd', exchange: 'NSE', market: 'IN', currency: 'INR' }
   ]
-  
-  return nseStocks.filter(stock => 
+
+  const filtered = nseStocks.filter(stock => 
     stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
     stock.name.toLowerCase().includes(query.toLowerCase())
   )
+  return filtered.map(withSuffix)
 }
 
 async function searchBSE(query: string) {
@@ -96,11 +97,12 @@ async function searchBSE(query: string) {
     { symbol: '500180', name: 'HDFC Bank Ltd', exchange: 'BSE', market: 'IN', currency: 'INR' },
     { symbol: '532174', name: 'ICICI Bank Ltd', exchange: 'BSE', market: 'IN', currency: 'INR' }
   ]
-  
-  return bseStocks.filter(stock => 
+
+  const filtered = bseStocks.filter(stock => 
     stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
     stock.name.toLowerCase().includes(query.toLowerCase())
   )
+  return filtered.map(withSuffix)
 }
 
 async function searchTSE(query: string) {
@@ -110,11 +112,12 @@ async function searchTSE(query: string) {
     { symbol: '6758', name: 'Sony Group Corporation', exchange: 'TSE', market: 'JP', currency: 'JPY' },
     { symbol: '9984', name: 'SoftBank Group Corp', exchange: 'TSE', market: 'JP', currency: 'JPY' }
   ]
-  
-  return tseStocks.filter(stock => 
+
+  const filtered = tseStocks.filter(stock => 
     stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
     stock.name.toLowerCase().includes(query.toLowerCase())
   )
+  return filtered.map(withSuffix)
 }
 
 async function searchLSE(query: string) {
@@ -124,11 +127,12 @@ async function searchLSE(query: string) {
     { symbol: 'VOD', name: 'Vodafone Group PLC', exchange: 'LSE', market: 'GB', currency: 'GBP' },
     { symbol: 'BP', name: 'BP PLC', exchange: 'LSE', market: 'GB', currency: 'GBP' }
   ]
-  
-  return lseStocks.filter(stock => 
+
+  const filtered = lseStocks.filter(stock => 
     stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
     stock.name.toLowerCase().includes(query.toLowerCase())
   )
+  return filtered.map(withSuffix)
 }
 
 async function searchUS(query: string) {
@@ -140,14 +144,37 @@ async function searchUS(query: string) {
     { symbol: 'TSLA', name: 'Tesla Inc', exchange: 'NASDAQ', market: 'US', currency: 'USD' },
     { symbol: 'NVDA', name: 'NVIDIA Corporation', exchange: 'NASDAQ', market: 'US', currency: 'USD' }
   ]
-  
-  return usStocks.filter(stock => 
+
+  const filtered = usStocks.filter(stock => 
     stock.symbol.toLowerCase().includes(query.toLowerCase()) ||
     stock.name.toLowerCase().includes(query.toLowerCase())
   )
+  return filtered.map(withSuffix)
 }
 
 async function searchGeneric(query: string, market: string) {
   // Generic search for other markets
   return []
+}
+
+function withSuffix(stock: { symbol: string; market: string; exchange?: string; name: string; currency: string }) {
+  const { symbol, market, exchange } = stock
+  if (symbol.includes('.')) return stock
+
+  const suffixMap: Record<string, string> = {
+    US: '',
+    IN: exchange === 'BSE' ? '.BO' : '.NS',
+    GB: '.L',
+    JP: '.T',
+    AU: '.AX',
+    CA: '.TO',
+    DE: '.DE',
+    FR: '.PA'
+  }
+
+  const suffix = suffixMap[market] ?? ''
+  return {
+    ...stock,
+    symbol: `${symbol}${suffix}`
+  }
 }

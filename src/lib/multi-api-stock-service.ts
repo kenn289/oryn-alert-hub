@@ -18,6 +18,7 @@ export interface StockQuote {
   timestamp: string
   source: 'iex_cloud' | 'polygon' | 'yahoo'
   currency?: string
+  exchange?: string
   _cacheInfo?: {
     source: 'fresh' | 'cached' | 'fallback'
     age?: string
@@ -148,7 +149,7 @@ class MultiApiStockService {
           }
           url = `${api.baseUrl}/stock/${symbol}/quote?token=${api.apiKey}`
           response = await fetch(url)
-          return this.parseIexCloudResponse(response, symbol, api.name)
+      return this.parseIexCloudResponse(response, symbol, api.name)
 
         case 'polygon':
           // Polygon primarily supports US symbols
@@ -157,13 +158,13 @@ class MultiApiStockService {
           }
           url = `${api.baseUrl}/aggs/ticker/${symbol}/prev?apikey=${api.apiKey}`
           response = await fetch(url)
-          return this.parsePolygonResponse(response, symbol, api.name)
+      return this.parsePolygonResponse(response, symbol, api.name)
 
         case 'yahoo':
           const yahooSymbol = this.getYahooSymbolForMarket(symbol, market)
           url = `${api.baseUrl}/${yahooSymbol}`
           response = await fetch(url)
-          return this.parseYahooResponse(response, yahooSymbol, api.name)
+      return this.parseYahooResponse(response, yahooSymbol, api.name)
 
         default:
           throw new Error(`Unknown API: ${api.name}`)
@@ -216,7 +217,8 @@ class MultiApiStockService {
         pe: data.peRatio,
         timestamp: new Date().toISOString(),
         source: source as 'iex_cloud' | 'polygon' | 'yahoo',
-        currency: 'USD'
+        currency: 'USD',
+        exchange: data.primaryExchange || 'US'
       },
       source
     }
@@ -269,7 +271,8 @@ class MultiApiStockService {
         pe: 20,
         timestamp: new Date().toISOString(),
         source: source as 'iex_cloud' | 'polygon' | 'yahoo',
-        currency: 'USD'
+        currency: 'USD',
+        exchange: 'US'
       },
       source
     }
@@ -315,7 +318,8 @@ class MultiApiStockService {
         pe: meta.trailingPE,
         timestamp: new Date().toISOString(),
         source: source as 'iex_cloud' | 'polygon' | 'yahoo',
-        currency: meta.currency
+        currency: meta.currency,
+        exchange: meta.exchangeName || meta.fullExchangeName || undefined
       },
       source
     }

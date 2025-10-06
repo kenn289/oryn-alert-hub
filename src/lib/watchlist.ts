@@ -7,8 +7,11 @@ export interface WatchlistItem {
   name: string
   price: number
   change: number
+  changePercent?: number
   // Currency of the price as returned by the data source (e.g., USD, INR)
   currency?: string
+  // Exchange name, when available (e.g., NSE, BSE, NASDAQ)
+  exchange?: string
   // Market code for correct routing (e.g., US, IN, UK)
   market?: string
   addedAt: string
@@ -265,8 +268,16 @@ export class WatchlistService {
       return { success: false, message: 'Invalid ticker symbol' }
     }
     
-    const cleanTicker = ticker.trim().toUpperCase()
-    if (cleanTicker.length === 0 || cleanTicker.length > 10) {
+    let cleanTicker = ticker.trim().toUpperCase()
+    // If market provided, ensure ticker has proper suffix for disambiguation
+    if (market) {
+      const marketCode = market.toUpperCase()
+      if (!cleanTicker.includes('.')) {
+        const suffix = this.getMarketSuffix(marketCode, cleanTicker)
+        cleanTicker = `${cleanTicker}${suffix}`
+      }
+    }
+    if (cleanTicker.length === 0 || cleanTicker.length > 30) {
       return { success: false, message: 'Invalid ticker symbol length' }
     }
     
@@ -309,7 +320,8 @@ export class WatchlistService {
       name: (name && name.trim()) ? name.trim().substring(0, 100) : `${cleanTicker} Inc.`, // Limit name length
       price: 0, // Will be fetched from API
       change: 0, // Will be fetched from API
-      market: market,
+      changePercent: 0,
+      market: market?.toUpperCase(),
       addedAt: new Date().toISOString()
     }
 
@@ -326,6 +338,19 @@ export class WatchlistService {
     this.saveWithChecksum(updatedWatchlist)
     
     return { success: true, message: `Added ${cleanTicker} to watchlist` }
+  }
+
+  private static getMarketSuffix(market: string, symbol: string): string {
+    if (symbol.includes('.')) return ''
+    if (market === 'IN') {
+      // If BSE numeric code, use .BO
+      if (/^\d+$/.test(symbol)) return '.BO'
+      return '.NS'
+    }
+    const suffixMap: Record<string, string> = {
+      US: '', GB: '.L', UK: '.L', JP: '.T', AU: '.AX', CA: '.TO', DE: '.DE', FR: '.PA'
+    }
+    return suffixMap[market] ?? ''
   }
 
   static removeFromWatchlist(ticker: string): { success: boolean, message: string } {
@@ -390,7 +415,7 @@ export class WatchlistService {
         typeof item === 'object' &&
         typeof item.ticker === 'string' &&
         item.ticker.length > 0 &&
-        item.ticker.length <= 10 &&
+        item.ticker.length <= 30 &&
         typeof item.name === 'string' &&
         typeof item.price === 'number' &&
         typeof item.change === 'number' &&
@@ -503,19 +528,21 @@ export class WatchlistService {
           changePercent: stockData.changePercent,
           volume: stockData.volume || 0,
           source: stockData.source || 'yahoo_finance',
-          currency: stockData.currency || undefined
+          currency: stockData.currency || undefined,
+          exchange: stockData.exchange || undefined
         }
         
         console.log(`✅ Got REAL-TIME data for ${item.ticker}: ${realTimeData.currency || 'USD'} ${realTimeData.price} (${realTimeData.changePercent.toFixed(2)}%)`)
         
         updatedItems.push({
           ...item,
+          ticker: realTimeData.symbol || item.ticker,
           name: realTimeData.name,
           price: realTimeData.price,
           change: realTimeData.change,
-          // @ts-expect-error keep backwards compatibility if changePercent not on type
           changePercent: realTimeData.changePercent,
           currency: realTimeData.currency,
+          exchange: realTimeData.exchange,
           market: item.market
         })
       } catch (error) {
@@ -592,12 +619,13 @@ export class WatchlistService {
         
         updatedItems.push({
           ...item,
+          ticker: realTimeData.symbol || item.ticker,
           name: realTimeData.name,
           price: realTimeData.price,
           change: realTimeData.change,
-          // @ts-expect-error keep backwards compatibility if changePercent not on type
           changePercent: realTimeData.changePercent,
           currency: realTimeData.currency,
+          exchange: realTimeData.exchange,
           market: item.market
         })
       } catch (error) {
