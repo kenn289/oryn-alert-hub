@@ -1,0 +1,15 @@
+backend/
+*.md
+*.sql
+*.js
+*.ps1
+*.bat
+test-*.js
+quick-*.js
+comprehensive-*.js
+debug-*.js
+setup-*.js
+create-*.js
+fix-*.js
+apply-*.js
+check-*.js
