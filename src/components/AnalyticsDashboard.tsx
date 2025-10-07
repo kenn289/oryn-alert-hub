@@ -194,13 +194,19 @@ export function AnalyticsDashboard() {
       console.log('📊 Portfolio data:', portfolio)
       console.log('📊 Watchlist data:', watchlist)
       
-      // Calculate portfolio metrics
+      // Calculate portfolio metrics with safe number handling
       const totalValue = portfolio.reduce((sum: number, item: PortfolioItem) => {
-        const currentValue = item.shares * item.currentPrice
-        console.log(`📊 Item: ${item.ticker || 'unknown'}, shares: ${item.shares}, currentPrice: ${item.currentPrice}, value: ${currentValue}`)
+        const shares = Number(item.shares) || 0
+        const currentPrice = Number(item.currentPrice) || 0
+        const currentValue = shares * currentPrice
+        console.log(`📊 Item: ${item.ticker || 'unknown'}, shares: ${shares}, currentPrice: ${currentPrice}, value: ${currentValue}`)
         return sum + currentValue
       }, 0)
-      const totalInvested = portfolio.reduce((sum: number, item: PortfolioItem) => sum + (item.shares * item.avgPrice), 0)
+      const totalInvested = portfolio.reduce((sum: number, item: PortfolioItem) => {
+        const shares = Number(item.shares) || 0
+        const avgPrice = Number(item.avgPrice) || 0
+        return sum + (shares * avgPrice)
+      }, 0)
       const totalGainLoss = totalValue - totalInvested
       const totalReturn = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0
       
@@ -208,26 +214,29 @@ export function AnalyticsDashboard() {
       
       // Calculate day change (simplified - in real app would use previous day's data)
       const dayChange = portfolio.reduce((sum: number, item: PortfolioItem) => {
-        const currentValue = item.shares * item.currentPrice
-        const previousValue = item.shares * (item.currentPrice - (item.gainLoss / item.shares))
+        const shares = Number(item.shares) || 0
+        const currentPrice = Number(item.currentPrice) || 0
+        const gainLoss = Number(item.gainLoss) || 0
+        const currentValue = shares * currentPrice
+        const previousValue = shares > 0 ? shares * (currentPrice - (gainLoss / shares)) : 0
         return sum + (currentValue - previousValue)
       }, 0)
       const dayChangePercent = totalValue > 0 ? (dayChange / totalValue) * 100 : 0
       
-      // Calculate watchlist performance
-      const gainers = watchlist.filter((item: WatchlistItem) => (item.change || 0) > 0).length
-      const losers = watchlist.filter((item: WatchlistItem) => (item.change || 0) < 0).length
-      const unchanged = watchlist.filter((item: WatchlistItem) => (item.change || 0) === 0).length
+      // Calculate watchlist performance with safe number handling
+      const gainers = watchlist.filter((item: WatchlistItem) => (Number(item.change) || 0) > 0).length
+      const losers = watchlist.filter((item: WatchlistItem) => (Number(item.change) || 0) < 0).length
+      const unchanged = watchlist.filter((item: WatchlistItem) => (Number(item.change) || 0) === 0).length
       
       console.log('📊 Watchlist performance:', { gainers, losers, unchanged, total: watchlist.length })
       
       const topGainer = watchlist.reduce((max: WatchlistItem, item: WatchlistItem) => 
-        (item.change || 0) > (max.change || 0) ? item : max, 
+        (Number(item.change) || 0) > (Number(max.change) || 0) ? item : max, 
         { symbol: 'N/A', change: 0, changePercent: 0 }
       )
       
       const topLoser = watchlist.reduce((min: WatchlistItem, item: WatchlistItem) => 
-        (item.change || 0) < (min.change || 0) ? item : min, 
+        (Number(item.change) || 0) < (Number(min.change) || 0) ? item : min, 
         { symbol: 'N/A', change: 0, changePercent: 0 }
       )
       

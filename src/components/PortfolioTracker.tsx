@@ -565,7 +565,8 @@ export function PortfolioTracker() {
   }
 
   const formatPercent = (percent: number) => {
-    return `${percent >= 0 ? '+' : ''}${percent.toFixed(2)}%`
+    const safePercent = Number(percent) || 0
+    return `${safePercent >= 0 ? '+' : ''}${safePercent.toFixed(2)}%`
   }
 
   if (loading) {

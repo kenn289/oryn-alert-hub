@@ -496,12 +496,12 @@ export function AIInsights() {
                                   Fundamental Factors
                                 </div>
                                 <div className="space-y-1">
-                                  <div className="text-sm text-muted-foreground">• P/E: {prediction.detailedAnalysis.fundamentalFactors.pe.toFixed(1)}</div>
-                                  <div className="text-sm text-muted-foreground">• PEG: {prediction.detailedAnalysis.fundamentalFactors.peg.toFixed(2)}</div>
-                                  <div className="text-sm text-muted-foreground">• Debt/Equity: {prediction.detailedAnalysis.fundamentalFactors.debtToEquity.toFixed(2)}</div>
-                                  <div className="text-sm text-muted-foreground">• ROE: {(prediction.detailedAnalysis.fundamentalFactors.roe * 100).toFixed(1)}%</div>
-                                  <div className="text-sm text-muted-foreground">• Revenue Growth: {(prediction.detailedAnalysis.fundamentalFactors.revenueGrowth * 100).toFixed(1)}%</div>
-                                  <div className="text-sm text-muted-foreground">• Earnings Growth: {(prediction.detailedAnalysis.fundamentalFactors.earningsGrowth * 100).toFixed(1)}%</div>
+                                  <div className="text-sm text-muted-foreground">• P/E: {(Number(prediction.detailedAnalysis.fundamentalFactors.pe) || 0).toFixed(1)}</div>
+                                  <div className="text-sm text-muted-foreground">• PEG: {(Number(prediction.detailedAnalysis.fundamentalFactors.peg) || 0).toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• Debt/Equity: {(Number(prediction.detailedAnalysis.fundamentalFactors.debtToEquity) || 0).toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• ROE: {((Number(prediction.detailedAnalysis.fundamentalFactors.roe) || 0) * 100).toFixed(1)}%</div>
+                                  <div className="text-sm text-muted-foreground">• Revenue Growth: {((Number(prediction.detailedAnalysis.fundamentalFactors.revenueGrowth) || 0) * 100).toFixed(1)}%</div>
+                                  <div className="text-sm text-muted-foreground">• Earnings Growth: {((Number(prediction.detailedAnalysis.fundamentalFactors.earningsGrowth) || 0) * 100).toFixed(1)}%</div>
                                   <div className="text-sm text-muted-foreground">• Analyst Rating: {prediction.detailedAnalysis.fundamentalFactors.analystRating.toUpperCase()}</div>
                                   <div className="text-sm text-muted-foreground">• Price Target: {formatCurrency(prediction.detailedAnalysis.fundamentalFactors.priceTarget, (prediction as any).currency || 'USD')}</div>
                                 </div>
