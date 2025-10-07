@@ -86,6 +86,29 @@ export function AnalyticsDashboard() {
 
   useEffect(() => {
     loadAnalyticsData()
+    
+    // Listen for storage changes to update analytics when portfolio/watchlist changes
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === 'oryn_portfolio' || e.key === 'oryn_watchlist') {
+        loadAnalyticsData()
+      }
+    }
+    
+    window.addEventListener('storage', handleStorageChange)
+    
+    // Also listen for custom events from the app
+    const handleDataUpdate = () => {
+      loadAnalyticsData()
+    }
+    
+    window.addEventListener('portfolioUpdated', handleDataUpdate)
+    window.addEventListener('watchlistUpdated', handleDataUpdate)
+    
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      window.removeEventListener('portfolioUpdated', handleDataUpdate)
+      window.removeEventListener('watchlistUpdated', handleDataUpdate)
+    }
   }, [])
 
   const loadAnalyticsData = async () => {
@@ -99,18 +122,35 @@ export function AnalyticsDashboard() {
       let watchlist = []
       
       if (portfolioData) {
-        portfolio = JSON.parse(portfolioData)
+        try {
+          portfolio = JSON.parse(portfolioData)
+        } catch (error) {
+          console.error('Failed to parse portfolio data:', error)
+          portfolio = []
+        }
       }
       
       if (watchlistData) {
-        watchlist = JSON.parse(watchlistData)
+        try {
+          watchlist = JSON.parse(watchlistData)
+        } catch (error) {
+          console.error('Failed to parse watchlist data:', error)
+          watchlist = []
+        }
       }
       
+      console.log('📊 Analytics Dashboard - Portfolio items:', portfolio.length, 'Watchlist items:', watchlist.length)
+      
       // Calculate portfolio metrics
-      const totalValue = portfolio.reduce((sum: number, item: PortfolioItem) => sum + (item.totalValue || 0), 0)
+      const totalValue = portfolio.reduce((sum: number, item: PortfolioItem) => {
+        const currentValue = item.shares * item.currentPrice
+        return sum + currentValue
+      }, 0)
       const totalInvested = portfolio.reduce((sum: number, item: PortfolioItem) => sum + (item.shares * item.avgPrice), 0)
       const totalGainLoss = totalValue - totalInvested
       const totalReturn = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0
+      
+      console.log('📊 Portfolio calculations:', { totalValue, totalInvested, totalGainLoss, totalReturn })
       
       // Calculate day change (simplified - in real app would use previous day's data)
       const dayChange = portfolio.reduce((sum: number, item: PortfolioItem) => {
@@ -124,6 +164,8 @@ export function AnalyticsDashboard() {
       const gainers = watchlist.filter((item: WatchlistItem) => (item.change || 0) > 0).length
       const losers = watchlist.filter((item: WatchlistItem) => (item.change || 0) < 0).length
       const unchanged = watchlist.filter((item: WatchlistItem) => (item.change || 0) === 0).length
+      
+      console.log('📊 Watchlist performance:', { gainers, losers, unchanged, total: watchlist.length })
       
       const topGainer = watchlist.reduce((max: WatchlistItem, item: WatchlistItem) => 
         (item.change || 0) > (max.change || 0) ? item : max, 
@@ -185,9 +227,15 @@ export function AnalyticsDashboard() {
 
   const handleRefresh = async () => {
     setRefreshing(true)
-    await loadAnalyticsData()
-    setRefreshing(false)
-    toast.success('Analytics data refreshed')
+    try {
+      await loadAnalyticsData()
+      toast.success('Analytics data refreshed')
+    } catch (error) {
+      console.error('Failed to refresh analytics:', error)
+      toast.error('Failed to refresh analytics data')
+    } finally {
+      setRefreshing(false)
+    }
   }
 
   if (loading) {

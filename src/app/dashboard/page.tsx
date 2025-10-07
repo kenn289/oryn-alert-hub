@@ -134,7 +134,8 @@ export default function DashboardPage() {
         // Validate data integrity first
         const integrityCheck = WatchlistService.validateDataIntegrity()
         if (!integrityCheck.valid) {
-          ErrorHandler.handleError(new Error(integrityCheck.message), 'validating data integrity')
+          console.warn('Data integrity check failed:', integrityCheck.message)
+          ErrorHandler.handleError(new Error(`Data integrity check failed: ${integrityCheck.message}`), 'validating data integrity')
         }
         
         // Validate and sanitize watchlist data
@@ -202,6 +203,7 @@ export default function DashboardPage() {
         // No fallback to sample data - show empty state or error messages
         
       } catch (error) {
+        console.error('Dashboard loadUserData error:', error)
         const errorMsg = ErrorHandler.handleError(error, 'loading dashboard data')
         setHasError(true)
         setErrorMessage(errorMsg)
@@ -268,6 +270,10 @@ export default function DashboardPage() {
       const updated = await WatchlistService.getWatchlistWithData()
       setWatchlist(updated)
       setLiveStats(prev => ({ ...prev, watchlistCount: updated.length }))
+      
+      // Dispatch event to notify analytics dashboard
+      window.dispatchEvent(new CustomEvent('watchlistUpdated'))
+      
       toast.success(added.message)
     } catch (e) {
       toast.error('Failed to add to watchlist')
@@ -308,6 +314,10 @@ export default function DashboardPage() {
       const updated = await WatchlistService.getWatchlistWithData()
       setWatchlist(updated)
       setLiveStats(prev => ({ ...prev, watchlistCount: updated.length }))
+      
+      // Dispatch event to notify analytics dashboard
+      window.dispatchEvent(new CustomEvent('watchlistUpdated'))
+      
       toast.success(res.message)
     } catch (e) {
       toast.error('Failed to remove from watchlist')

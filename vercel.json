@@ -4,9 +4,6 @@
   "outputDirectory": ".next",
   "installCommand": "npm install --production",
   "devCommand": "npm run dev",
-  "env": {
-    "NODE_ENV": "production"
-  },
   "functions": {
     "src/app/api/**/route.ts": {
       "maxDuration": 30
@@ -19,9 +16,28 @@
     }
   ],
   "env": {
+    "NODE_ENV": "production",
     "NEXT_PUBLIC_BASE_URL": "https://oryn-pi.vercel.app",
     "NEXT_PUBLIC_APP_URL": "https://oryn-pi.vercel.app",
-    "BACKEND_URL": "https://backend-api-gray-six.vercel.app"
+    "BACKEND_URL": "https://backend-api-gray-six.vercel.app",
+    "NEXT_PUBLIC_SUPABASE_URL": "https://bwrurebhoxyozdjbokhe.supabase.co",
+    "NEXT_PUBLIC_SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVyZWJob3h5b3pkamJva2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzODQ4NDUsImV4cCI6MjA3NDk2MDg0NX0.uVqhgfs0a_ji3BlVq0cUAd4XzhFT-zDvLNenNOWL6oE",
+    "SUPABASE_URL": "https://bwrurebhoxyozdjbokhe.supabase.co",
+    "SUPABASE_ANON_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVyZWJob3h5b3pkamJva2hlIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NTkzODQ4NDUsImV4cCI6MjA3NDk2MDg0NX0.uVqhgfs0a_ji3BlVq0cUAd4XzhFT-zDvLNenNOWL6oE",
+    "SUPABASE_SERVICE_ROLE_KEY": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImJ3cnVyZWJob3h5b3pkamJva2hlIiwicm9sZSI6InNlcnZpY2Vfcm9sZSIsImlhdCI6MTc1OTM4NDg0NSwiZXhwIjoyMDc0OTYwODQ1fQ.JMLCsJjRBsO7baZ1-heVOSjYbxpH2N-Ff1JTCKjUJ50",
+    "REDIS_URL": "redis://default:AUMDAAIncDI5MDVmNDRiMWMwYzQ0YTI5OGQyYTYxNzJmNDI3Nzg4YXAyMTcxNTU@glorious-honeybee-17155.upstash.io:6379",
+    "ALPHA_VANTAGE_API_KEY": "Q87CVF9TL2VQU0A2",
+    "POLYGON_API_KEY": "FJ6anV3GATZrBzpmLwG2pZkMhsa90aBc",
+    "OPENAI_API_KEY": "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",
+    "RAZORPAY_KEY_ID": "rzp_live_ROUVLcLuL7BfUs",
+    "RAZORPAY_KEY_SECRET": "Et0LtoI8QtpdDvYUkBgGfAlC",
+    "RAZORPAY_WEBHOOK_SECRET": "_cJ4Mx_bAawdNs9",
+    "NEXT_PUBLIC_RAZORPAY_KEY_ID": "rzp_live_ROUVLcLuL7BfUs",
+    "JWT_SECRET": "2Lk9Vf8qT5XhY7bM1aPzN4vR3eJ6dK8q",
+    "ENCRYPTION_KEY": "Xm7Fj2Lp8KdN5VzQqRw4YeP1GtZbS9Hu",
+    "ADMIN_EMAIL": "kennethoswin289@gmail.com",
+    "SMTP_USER": "kennethoswin289@gmail.com",
+    "SMTP_PASS": "vfsnqijdpbkrdqja"
   },
   "framework": "nextjs"
 }

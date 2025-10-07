@@ -465,6 +465,9 @@ export function PortfolioTracker() {
       // Also save to localStorage as backup
       PortfolioService.saveToLocalStorage(updatedPortfolio)
       
+      // Dispatch event to notify analytics dashboard
+      window.dispatchEvent(new CustomEvent('portfolioUpdated'))
+      
       // Reset form and close modal
       setNewItem({ ticker: '', name: '', shares: '', avgPrice: '' })
       setShowSuggestions(false)

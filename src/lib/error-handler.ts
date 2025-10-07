@@ -205,6 +205,12 @@ export class ErrorHandler {
 
   // Log error for debugging and monitoring
   static logError(error: unknown, context?: string): void {
+    // Skip logging if error is empty or undefined
+    if (!error || (typeof error === 'object' && Object.keys(error).length === 0)) {
+      console.warn('Skipping empty error log:', { error, context })
+      return
+    }
+
     const errorDetails: ErrorDetails = {
       message: error instanceof Error ? error.message : String(error),
       code: error instanceof AppError ? error.code : undefined,
@@ -221,9 +227,16 @@ export class ErrorHandler {
       this.errorLog = this.errorLog.slice(0, this.maxLogSize)
     }
 
-    // Log to console in development
+    // Log to console in development with better error details
     if (process.env.NODE_ENV === 'development') {
-      console.error('Error logged:', errorDetails)
+      console.error('Error logged:', {
+        message: errorDetails.message,
+        code: errorDetails.code,
+        status: errorDetails.status,
+        context: errorDetails.context,
+        timestamp: errorDetails.timestamp,
+        originalError: error
+      })
     }
 
     // TODO: Send to error tracking service in production
