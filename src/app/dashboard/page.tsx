@@ -150,16 +150,19 @@ export default function DashboardPage() {
           toast.warning(limitEnforcement.message)
         }
         
-        // Load watchlist from database for unified cross-device state
-        console.log('🔄 Loading watchlist from database...')
-        const dbWatchlist = await DatabaseWatchlistService.getWatchlist(user.id)
-        // Also mirror to local for offline and pricing refresh
-        localStorage.setItem('oryn_watchlist', JSON.stringify(dbWatchlist))
-        localStorage.setItem('oryn_watchlist_last_modified', Date.now().toString())
+        // Use UnifiedSyncService to ensure data consistency across devices
+        console.log('🔄 Syncing all user data between database and localStorage...')
+        const { UnifiedSyncService } = await import('../../lib/unified-sync-service')
+        await UnifiedSyncService.unifyAll(user.id)
+        
         // Fetch real-time prices and update local for UI display
         const savedWatchlist = await WatchlistService.getWatchlistWithData()
         setWatchlist(savedWatchlist)
-        console.log('✅ Watchlist loaded from DB and refreshed with real-time data')
+        console.log('✅ Watchlist and portfolio synced and refreshed with real-time data')
+        
+        // Trigger analytics dashboard refresh
+        window.dispatchEvent(new CustomEvent('portfolioUpdated'))
+        window.dispatchEvent(new CustomEvent('watchlistUpdated'))
         
         // Load portfolio data
         try {

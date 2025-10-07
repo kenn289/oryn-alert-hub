@@ -1,6 +1,7 @@
 "use client"
 
 import { useState, useEffect } from "react"
+import { useAuth } from "../contexts/AuthContext"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../components/ui/card"
 import { Badge } from "../components/ui/badge"
 import { Button } from "../components/ui/button"
@@ -80,12 +81,15 @@ interface AnalyticsData {
 
 export function AnalyticsDashboard() {
   const { formatCurrency } = useCurrency()
+  const { user } = useAuth()
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
 
   useEffect(() => {
-    loadAnalyticsData()
+    if (user) {
+      loadAnalyticsData()
+    }
     
     // Listen for storage changes to update analytics when portfolio/watchlist changes
     const handleStorageChange = (e: StorageEvent) => {
@@ -109,21 +113,37 @@ export function AnalyticsDashboard() {
       window.removeEventListener('portfolioUpdated', handleDataUpdate)
       window.removeEventListener('watchlistUpdated', handleDataUpdate)
     }
-  }, [])
+  }, [user])
 
   const loadAnalyticsData = async () => {
     setLoading(true)
     try {
-      // Load actual portfolio data from localStorage
-      const portfolioData = localStorage.getItem('oryn_portfolio')
-      const watchlistData = localStorage.getItem('oryn_watchlist')
-      
       let portfolio = []
       let watchlist = []
+      
+      if (user) {
+        console.log('📊 Loading analytics data for user:', user.id)
+        
+        // Ensure data is synced with database
+        try {
+          const { UnifiedSyncService } = await import('../lib/unified-sync-service')
+          await UnifiedSyncService.unifyAll(user.id)
+          console.log('✅ Data synced with database')
+        } catch (error) {
+          console.warn('Could not sync with database:', error)
+        }
+      } else {
+        console.log('📊 No user context, loading from localStorage only')
+      }
+      
+      // Load from localStorage (which should be synced with database)
+      const portfolioData = localStorage.getItem('oryn_portfolio')
+      const watchlistData = localStorage.getItem('oryn_watchlist')
       
       if (portfolioData) {
         try {
           portfolio = JSON.parse(portfolioData)
+          console.log('📊 Loaded portfolio from localStorage:', portfolio.length, 'items')
         } catch (error) {
           console.error('Failed to parse portfolio data:', error)
           portfolio = []
@@ -133,6 +153,7 @@ export function AnalyticsDashboard() {
       if (watchlistData) {
         try {
           watchlist = JSON.parse(watchlistData)
+          console.log('📊 Loaded watchlist from localStorage:', watchlist.length, 'items')
         } catch (error) {
           console.error('Failed to parse watchlist data:', error)
           watchlist = []

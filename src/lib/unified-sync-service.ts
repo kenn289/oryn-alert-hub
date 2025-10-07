@@ -156,5 +156,16 @@ export class UnifiedSyncService {
   static async unifyAll(userId: string): Promise<void> {
     await this.unifyWatchlist(userId)
     await this.unifyPortfolio(userId)
+    await this.unifyAlerts(userId)
+  }
+
+  static async unifyAlerts(userId: string): Promise<void> {
+    try {
+      // For now, alerts are stored in localStorage only
+      // In the future, we can add database persistence for alerts
+      console.log('📊 Alerts are currently stored in localStorage only')
+    } catch (error) {
+      console.error('Error syncing alerts:', error)
+    }
   }
 }

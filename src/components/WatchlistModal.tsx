@@ -19,15 +19,16 @@ interface WatchlistModalProps {
   defaultMarket?: string
 }
 
-const popularStocksData = [
-  { ticker: "AAPL", name: "Apple Inc.", sector: "Technology", price: 175.43, change: "+2.4%" },
-  { ticker: "MSFT", name: "Microsoft Corp.", sector: "Technology", price: 378.85, change: "-1.2%" },
-  { ticker: "GOOGL", name: "Alphabet Inc.", sector: "Technology", price: 142.56, change: "+0.8%" },
-  { ticker: "AMZN", name: "Amazon.com Inc.", sector: "Consumer Discretionary", price: 155.23, change: "+1.5%" },
-  { ticker: "TSLA", name: "Tesla Inc.", sector: "Automotive", price: 248.50, change: "+3.2%" },
-  { ticker: "NVDA", name: "NVIDIA Corp.", sector: "Technology", price: 875.30, change: "+5.1%" },
-  { ticker: "META", name: "Meta Platforms Inc.", sector: "Technology", price: 485.20, change: "+2.8%" },
-  { ticker: "NFLX", name: "Netflix Inc.", sector: "Communication Services", price: 425.60, change: "-0.5%" },
+// Popular stocks with real-time data fetching
+const popularStocksSymbols = [
+  { ticker: "AAPL", name: "Apple Inc.", sector: "Technology" },
+  { ticker: "MSFT", name: "Microsoft Corp.", sector: "Technology" },
+  { ticker: "GOOGL", name: "Alphabet Inc.", sector: "Technology" },
+  { ticker: "AMZN", name: "Amazon.com Inc.", sector: "Consumer Discretionary" },
+  { ticker: "TSLA", name: "Tesla Inc.", sector: "Automotive" },
+  { ticker: "NVDA", name: "NVIDIA Corp.", sector: "Technology" },
+  { ticker: "META", name: "Meta Platforms Inc.", sector: "Technology" },
+  { ticker: "NFLX", name: "Netflix Inc.", sector: "Communication Services" },
 ]
 
 const sectors = [
@@ -44,6 +45,49 @@ export function WatchlistModal({ isOpen, onClose, onAdd, defaultMarket }: Watchl
   const [isLoading, setIsLoading] = useState(false)
   const [isAdding, setIsAdding] = useState(false)
   const [lastAddTime, setLastAddTime] = useState(0)
+  const [popularStocksData, setPopularStocksData] = useState<Array<{ticker: string, name: string, sector: string, price: number, change: string}>>([])
+  const [loadingPopularStocks, setLoadingPopularStocks] = useState(false)
+
+  // Load real-time data for popular stocks
+  useEffect(() => {
+    const loadPopularStocksData = async () => {
+      if (!isOpen) return
+      
+      setLoadingPopularStocks(true)
+      try {
+        const stocksWithData = await Promise.all(
+          popularStocksSymbols.map(async (stock) => {
+            try {
+              const response = await fetch(`/api/stock/multi/${stock.ticker}`)
+              if (response.ok) {
+                const data = await response.json()
+                return {
+                  ...stock,
+                  price: data.price || 0,
+                  change: data.changePercent ? `${data.changePercent > 0 ? '+' : ''}${data.changePercent.toFixed(1)}%` : '+0.0%'
+                }
+              }
+            } catch (error) {
+              console.warn(`Failed to fetch data for ${stock.ticker}:`, error)
+            }
+            // Fallback with default values
+            return {
+              ...stock,
+              price: 0,
+              change: '+0.0%'
+            }
+          })
+        )
+        setPopularStocksData(stocksWithData)
+      } catch (error) {
+        console.error('Error loading popular stocks data:', error)
+      } finally {
+        setLoadingPopularStocks(false)
+      }
+    }
+
+    loadPopularStocksData()
+  }, [isOpen])
 
   // Get suggestions when search term changes
   useEffect(() => {
@@ -226,6 +270,12 @@ export function WatchlistModal({ isOpen, onClose, onAdd, defaultMarket }: Watchl
             <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
               <Star className="h-5 w-5 text-warning" />
               Popular Stocks
+              {loadingPopularStocks && (
+                <div className="flex items-center gap-1 text-sm text-muted-foreground">
+                  <div className="animate-spin h-3 w-3 border border-current border-t-transparent rounded-full"></div>
+                  Loading real-time prices...
+                </div>
+              )}
             </h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
               {filteredStocks.map((stock) => (
@@ -248,7 +298,9 @@ export function WatchlistModal({ isOpen, onClose, onAdd, defaultMarket }: Watchl
                     <div className="flex items-center justify-between">
                       <div className="flex items-center gap-1">
                         <DollarSign className="h-3 w-3 text-success" />
-                        <span className="text-sm font-medium">{formatCurrency(stock.price, 'USD')}</span>
+                        <span className="text-sm font-medium">
+                          {stock.price > 0 ? formatCurrency(stock.price, 'USD') : 'Loading...'}
+                        </span>
                       </div>
                       <span className={`text-sm font-medium ${
                         stock.change.startsWith('+') ? 'text-success' : 'text-destructive'
