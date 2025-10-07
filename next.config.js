@@ -13,36 +13,8 @@ const nextConfig = {
     
     return [
       {
-        source: '/api/stock/:path*',
-        destination: `${backendUrl}/api/stock/:path*`
-      },
-      {
         source: '/api/ai/:path*',
         destination: `${backendUrl}/api/ai/:path*`
-      },
-      {
-        source: '/api/portfolio',
-        destination: `${backendUrl}/api/portfolio`
-      },
-      {
-        source: '/api/watchlist',
-        destination: `${backendUrl}/api/watchlist`
-      },
-      {
-        source: '/api/notifications',
-        destination: `${backendUrl}/api/notifications`
-      },
-      {
-        source: '/api/support/:path*',
-        destination: `${backendUrl}/api/support/:path*`
-      },
-      {
-        source: '/api/razorpay/:path*',
-        destination: `${backendUrl}/api/razorpay/:path*`
-      },
-      {
-        source: '/api/health',
-        destination: `${backendUrl}/api/health`
       }
     ]
   }
