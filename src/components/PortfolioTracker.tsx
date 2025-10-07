@@ -201,16 +201,33 @@ export function PortfolioTracker() {
   }
 
   const calculateSummary = (portfolioData: PortfolioItem[]) => {
-    const totalValue = portfolioData.reduce((sum, item) => sum + item.totalValue, 0)
-    const totalInvested = portfolioData.reduce((sum, item) => sum + (item.shares * item.avgPrice), 0)
+    console.log('📊 Calculating portfolio summary for', portfolioData.length, 'items')
+    
+    // Safe calculation with proper number handling
+    const totalValue = portfolioData.reduce((sum, item) => {
+      const shares = Number(item.shares) || 0
+      const currentPrice = Number(item.currentPrice) || 0
+      const itemValue = shares * currentPrice
+      console.log(`📊 Item ${item.ticker}: shares=${shares}, price=${currentPrice}, value=${itemValue}`)
+      return sum + itemValue
+    }, 0)
+    
+    const totalInvested = portfolioData.reduce((sum, item) => {
+      const shares = Number(item.shares) || 0
+      const avgPrice = Number(item.avgPrice) || 0
+      return sum + (shares * avgPrice)
+    }, 0)
+    
     const totalGainLoss = totalValue - totalInvested
     const totalGainLossPercent = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0
 
+    console.log('📊 Portfolio summary calculated:', { totalValue, totalInvested, totalGainLoss, totalGainLossPercent })
+
     setSummary({
-      totalValue,
-      totalGainLoss,
-      totalGainLossPercent,
-      totalInvested,
+      totalValue: totalValue || 0,
+      totalGainLoss: totalGainLoss || 0,
+      totalGainLossPercent: totalGainLossPercent || 0,
+      totalInvested: totalInvested || 0,
       dayChange: 0, // Real-time calculation will be implemented
       dayChangePercent: 0
     })
