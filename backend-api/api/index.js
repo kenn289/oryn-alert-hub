@@ -5,8 +5,24 @@ const helmet = require('helmet');
 const compression = require('compression');
 const rateLimit = require('express-rate-limit');
 const morgan = require('morgan');
+const RealAIAnalysisService = require('../ai/real-ai-analysis-service');
+const StockDataService = require('../services/stock-data-service');
+const PortfolioService = require('../services/portfolio-service');
+const WatchlistService = require('../services/watchlist-service');
+const NotificationService = require('../services/notification-service');
+const SupportService = require('../services/support-service');
+const PaymentService = require('../services/payment-service');
 
 const app = express();
+
+// Initialize services
+const aiService = RealAIAnalysisService.getInstance();
+const stockService = new StockDataService();
+const portfolioService = new PortfolioService();
+const watchlistService = new WatchlistService();
+const notificationService = new NotificationService();
+const supportService = new SupportService();
+const paymentService = new PaymentService();
 
 // Middleware
 app.use(helmet());
@@ -36,10 +52,18 @@ app.get('/', (req, res) => {
         endpoints: {
             health: '/api/health',
             stock: '/api/stock/:symbol',
+            stockHistory: '/api/stock/:symbol/history',
+            stockSearch: '/api/stock/search?q=AAPL',
+            marketStatus: '/api/stock/market-status',
             predictions: '/api/stock/:symbol/predictions',
+            aiInsights: '/api/ai/insights?symbols=AAPL,TSLA,MSFT',
             portfolio: '/api/portfolio',
             watchlist: '/api/watchlist',
-            support: '/api/support/stats'
+            notifications: '/api/notifications',
+            supportTickets: '/api/support/tickets',
+            supportStats: '/api/support/stats',
+            paymentCheckout: '/api/razorpay/create-checkout-session',
+            paymentVerify: '/api/razorpay/verify-payment'
         },
         documentation: 'https://github.com/your-repo/oryn-alert-hub'
     });
@@ -64,27 +88,35 @@ app.get('/api/health', (req, res) => {
 });
 
 // Stock data endpoint
-app.get('/api/stock/:symbol', (req, res) => {
-    const { symbol } = req.params;
-    const stockData = {
-        symbol: symbol.toUpperCase(),
-        name: `${symbol} Inc.`,
-        price: Math.random() * 1000 + 50,
-        change: (Math.random() - 0.5) * 10,
-        changePercent: (Math.random() - 0.5) * 5,
-        volume: Math.floor(Math.random() * 1000000),
-        currency: 'USD',
-        exchange: 'NASDAQ',
-        market: 'US',
-        timestamp: new Date().toISOString(),
-        source: 'mock'
-    };
-    stockData.changePercent = (stockData.change / (stockData.price - stockData.change)) * 100;
-    res.json({
-        success: true,
-        data: stockData,
-        timestamp: new Date().toISOString()
-    });
+app.get('/api/stock/:symbol', async (req, res) => {
+    try {
+        const { symbol } = req.params;
+        
+        // Validate symbol format
+        if (!symbol || symbol.length < 1 || symbol.length > 10) {
+            return res.status(400).json({
+                success: false,
+                error: 'Invalid stock symbol',
+                message: 'Symbol must be 1-10 characters long'
+            });
+        }
+
+        // Get real stock data
+        const stockData = await stockService.getStockQuote(symbol.toUpperCase());
+        
+        res.json({
+            success: true,
+            data: stockData,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error(`Error fetching stock data for ${req.params.symbol}:`, error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch stock data',
+            message: error.message
+        });
+    }
 });
 
 // ML predictions endpoint
@@ -184,20 +216,347 @@ app.get('/api/watchlist', (req, res) => {
     });
 });
 
+// AI insights endpoint for multiple symbols
+app.get('/api/ai/insights', async (req, res) => {
+    try {
+        const { symbols } = req.query;
+        
+        if (!symbols) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing symbols parameter',
+                message: 'Please provide symbols as query parameter (e.g., ?symbols=AAPL,TSLA,MSFT)',
+                timestamp: new Date().toISOString()
+            });
+        }
+        
+        const symbolList = symbols.split(',').map(s => s.trim().toUpperCase());
+        const predictions = [];
+        
+        // Generate predictions using real AI service
+        try {
+            const realPredictions = await aiService.generateRealPredictions(symbolList);
+            predictions.push(...realPredictions);
+        } catch (error) {
+            console.error('Failed to generate real predictions:', error);
+            // Fallback to individual predictions
+            for (const symbol of symbolList) {
+                try {
+                    const prediction = await aiService.generatePrediction(symbol);
+                    predictions.push(prediction);
+                } catch (error) {
+                    console.error(`Failed to generate prediction for ${symbol}:`, error);
+                }
+            }
+        }
+        
+        res.json({
+            success: true,
+            data: {
+                predictions,
+                totalSymbols: symbolList.length,
+                successfulPredictions: predictions.length,
+                aiModel: {
+                    version: 'v3.1.0-hist',
+                    lastUpdated: new Date().toISOString(),
+                    features: [
+                        'Technical Analysis (RSI, MACD, SMA)',
+                        'Market Sentiment Analysis',
+                        'Risk Assessment',
+                        'Buy/Sell Recommendations',
+                        'Confidence Scoring'
+                    ]
+                }
+            },
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('AI insights error:', error);
+        res.status(500).json({
+            success: false,
+            error: 'AI Insights Failed',
+            message: error.message,
+            timestamp: new Date().toISOString()
+        });
+    }
+});
+
+// Stock history endpoint
+app.get('/api/stock/:symbol/history', async (req, res) => {
+    try {
+        const { symbol } = req.params;
+        const { range = '6mo', interval = '1d' } = req.query;
+        
+        const history = await stockService.getStockHistory(symbol, range, interval);
+        
+        res.json({
+            success: true,
+            data: history,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error(`Error fetching stock history for ${req.params.symbol}:`, error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch stock history',
+            message: error.message
+        });
+    }
+});
+
+// Stock search endpoint
+app.get('/api/stock/search', async (req, res) => {
+    try {
+        const { q } = req.query;
+        
+        if (!q) {
+            return res.status(400).json({
+                success: false,
+                error: 'Missing query parameter',
+                message: 'Please provide a search query (q)'
+            });
+        }
+        
+        const results = await stockService.searchStocks(q);
+        
+        res.json({
+            success: true,
+            data: results,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error searching stocks:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to search stocks',
+            message: error.message
+        });
+    }
+});
+
+// Market status endpoint
+app.get('/api/stock/market-status', async (req, res) => {
+    try {
+        const status = await stockService.getMarketStatus();
+        
+        res.json({
+            success: true,
+            data: status,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching market status:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch market status',
+            message: error.message
+        });
+    }
+});
+
+// Portfolio endpoints
+app.get('/api/portfolio', async (req, res) => {
+    try {
+        const { userId = 'default' } = req.query;
+        const portfolio = await portfolioService.getPortfolio(userId);
+        
+        res.json({
+            success: true,
+            data: portfolio,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching portfolio:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch portfolio',
+            message: error.message
+        });
+    }
+});
+
+app.post('/api/portfolio', async (req, res) => {
+    try {
+        const { userId = 'default', ...stockData } = req.body;
+        const portfolioItem = await portfolioService.addToPortfolio(userId, stockData);
+        
+        res.json({
+            success: true,
+            data: portfolioItem,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error adding to portfolio:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to add to portfolio',
+            message: error.message
+        });
+    }
+});
+
+// Watchlist endpoints
+app.get('/api/watchlist', async (req, res) => {
+    try {
+        const { userId = 'default' } = req.query;
+        const watchlist = await watchlistService.getWatchlist(userId);
+        
+        res.json({
+            success: true,
+            data: watchlist,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching watchlist:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch watchlist',
+            message: error.message
+        });
+    }
+});
+
+app.post('/api/watchlist', async (req, res) => {
+    try {
+        const { userId = 'default', ...stockData } = req.body;
+        const watchlistItem = await watchlistService.addToWatchlist(userId, stockData);
+        
+        res.json({
+            success: true,
+            data: watchlistItem,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error adding to watchlist:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to add to watchlist',
+            message: error.message
+        });
+    }
+});
+
+// Notifications endpoints
+app.get('/api/notifications', async (req, res) => {
+    try {
+        const { userId = 'default' } = req.query;
+        const notifications = await notificationService.getNotifications(userId);
+        
+        res.json({
+            success: true,
+            data: notifications,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching notifications:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch notifications',
+            message: error.message
+        });
+    }
+});
+
+// Support endpoints
+app.get('/api/support/tickets', async (req, res) => {
+    try {
+        const { userId = 'default' } = req.query;
+        const tickets = await supportService.getTickets(userId);
+        
+        res.json({
+            success: true,
+            data: tickets,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching support tickets:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch support tickets',
+            message: error.message
+        });
+    }
+});
+
+app.post('/api/support/tickets', async (req, res) => {
+    try {
+        const { userId = 'default', ...ticketData } = req.body;
+        const ticket = await supportService.createTicket(userId, ticketData);
+        
+        res.json({
+            success: true,
+            data: ticket,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error creating support ticket:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create support ticket',
+            message: error.message
+        });
+    }
+});
+
+// Payment endpoints
+app.post('/api/razorpay/create-checkout-session', async (req, res) => {
+    try {
+        const { userId = 'default', ...planData } = req.body;
+        const session = await paymentService.createCheckoutSession(userId, planData);
+        
+        res.json({
+            success: true,
+            data: session,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error creating checkout session:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to create checkout session',
+            message: error.message
+        });
+    }
+});
+
+app.post('/api/razorpay/verify-payment', async (req, res) => {
+    try {
+        const paymentData = req.body;
+        const verification = await paymentService.verifyPayment(paymentData);
+        
+        res.json({
+            success: true,
+            data: verification,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error verifying payment:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to verify payment',
+            message: error.message
+        });
+    }
+});
+
 // Support stats endpoint
-app.get('/api/support/stats', (req, res) => {
-    const stats = {
-        openTickets: 5,
-        resolvedThisMonth: 12,
-        averageResponseTime: 2.5,
-        customerRating: 4.8,
-        totalTickets: 25
-    };
-    res.json({
-        success: true,
-        data: stats,
-        timestamp: new Date().toISOString()
-    });
+app.get('/api/support/stats', async (req, res) => {
+    try {
+        const stats = await supportService.getSupportStats();
+        
+        res.json({
+            success: true,
+            data: stats,
+            timestamp: new Date().toISOString()
+        });
+    } catch (error) {
+        console.error('Error fetching support stats:', error);
+        res.status(500).json({
+            success: false,
+            error: 'Failed to fetch support stats',
+            message: error.message
+        });
+    }
 });
 
 // 404 handler

@@ -18,8 +18,8 @@
       "destination": "https://backend-api-gray-six.vercel.app/api/stock/$1"
     },
     {
-      "source": "/api/support/(.*)",
-      "destination": "https://backend-api-gray-six.vercel.app/api/support/$1"
+      "source": "/api/ai/(.*)",
+      "destination": "https://backend-api-gray-six.vercel.app/api/ai/$1"
     },
     {
       "source": "/api/portfolio",
@@ -28,6 +28,18 @@
     {
       "source": "/api/watchlist",
       "destination": "https://backend-api-gray-six.vercel.app/api/watchlist"
+    },
+    {
+      "source": "/api/notifications",
+      "destination": "https://backend-api-gray-six.vercel.app/api/notifications"
+    },
+    {
+      "source": "/api/support/(.*)",
+      "destination": "https://backend-api-gray-six.vercel.app/api/support/$1"
+    },
+    {
+      "source": "/api/razorpay/(.*)",
+      "destination": "https://backend-api-gray-six.vercel.app/api/razorpay/$1"
     },
     {
       "source": "/api/health",

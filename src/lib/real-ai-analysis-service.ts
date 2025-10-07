@@ -357,6 +357,7 @@ export class RealAIAnalysisService {
       symbol,
       name,
       currentPrice,
+      currency: marketData.currency,
       predictedPrice,
       confidence,
       timeframe,
