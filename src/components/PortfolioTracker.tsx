@@ -439,8 +439,9 @@ export function PortfolioTracker() {
         return
       }
 
-      // Add to database using PortfolioService
-      const result = await PortfolioService.addPortfolioItem(
+      // Add to database using DatabaseFirstService (database-first approach)
+      const { DatabaseFirstService } = await import('../lib/database-first-service')
+      const result = await DatabaseFirstService.addPortfolioItem(
         user.id,
         newItem.ticker,
         newItem.name,
@@ -457,13 +458,10 @@ export function PortfolioTracker() {
         return
       }
 
-      // Update local state
-      const updatedPortfolio = [...portfolio, result.item!]
+      // Reload portfolio from database to get updated data
+      const updatedPortfolio = await DatabaseFirstService.getPortfolio(user.id)
       setPortfolio(updatedPortfolio)
       calculateSummary(updatedPortfolio)
-      
-      // Also save to localStorage as backup
-      PortfolioService.saveToLocalStorage(updatedPortfolio)
       
       // Dispatch event to notify analytics dashboard
       window.dispatchEvent(new CustomEvent('portfolioUpdated'))

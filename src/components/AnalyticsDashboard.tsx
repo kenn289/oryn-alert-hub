@@ -122,49 +122,82 @@ export function AnalyticsDashboard() {
       let watchlist = []
       
       if (user) {
-        console.log('📊 Loading analytics data for user:', user.id)
+        console.log('📊 Loading analytics data from database (primary source) for user:', user.id)
         
-        // Ensure data is synced with database
+        // Use database-first approach
         try {
-          const { UnifiedSyncService } = await import('../lib/unified-sync-service')
-          await UnifiedSyncService.unifyAll(user.id)
-          console.log('✅ Data synced with database')
+          const { DatabaseFirstService } = await import('../lib/database-first-service')
+          
+          // Load from database (primary source) with localStorage cache
+          portfolio = await DatabaseFirstService.getPortfolio(user.id)
+          watchlist = await DatabaseFirstService.getWatchlist(user.id)
+          
+          console.log('✅ Data loaded from database:', {
+            portfolio: portfolio.length,
+            watchlist: watchlist.length
+          })
         } catch (error) {
-          console.warn('Could not sync with database:', error)
+          console.error('Database load failed:', error)
+          // Fallback to localStorage cache
+          const portfolioData = localStorage.getItem('oryn_portfolio')
+          const watchlistData = localStorage.getItem('oryn_watchlist')
+          
+          if (portfolioData) {
+            try {
+              portfolio = JSON.parse(portfolioData)
+              console.log('📊 Fallback: Loaded portfolio from localStorage cache:', portfolio.length, 'items')
+            } catch (parseError) {
+              console.error('Failed to parse cached portfolio data:', parseError)
+              portfolio = []
+            }
+          }
+          
+          if (watchlistData) {
+            try {
+              watchlist = JSON.parse(watchlistData)
+              console.log('📊 Fallback: Loaded watchlist from localStorage cache:', watchlist.length, 'items')
+            } catch (parseError) {
+              console.error('Failed to parse cached watchlist data:', parseError)
+              watchlist = []
+            }
+          }
         }
       } else {
-        console.log('📊 No user context, loading from localStorage only')
-      }
-      
-      // Load from localStorage (which should be synced with database)
-      const portfolioData = localStorage.getItem('oryn_portfolio')
-      const watchlistData = localStorage.getItem('oryn_watchlist')
-      
-      if (portfolioData) {
-        try {
-          portfolio = JSON.parse(portfolioData)
-          console.log('📊 Loaded portfolio from localStorage:', portfolio.length, 'items')
-        } catch (error) {
-          console.error('Failed to parse portfolio data:', error)
-          portfolio = []
+        console.log('📊 No user context, loading from localStorage cache only')
+        
+        // Load from localStorage cache only
+        const portfolioData = localStorage.getItem('oryn_portfolio')
+        const watchlistData = localStorage.getItem('oryn_watchlist')
+        
+        if (portfolioData) {
+          try {
+            portfolio = JSON.parse(portfolioData)
+            console.log('📊 Loaded portfolio from localStorage cache:', portfolio.length, 'items')
+          } catch (error) {
+            console.error('Failed to parse portfolio data:', error)
+            portfolio = []
+          }
         }
-      }
-      
-      if (watchlistData) {
-        try {
-          watchlist = JSON.parse(watchlistData)
-          console.log('📊 Loaded watchlist from localStorage:', watchlist.length, 'items')
-        } catch (error) {
-          console.error('Failed to parse watchlist data:', error)
-          watchlist = []
+        
+        if (watchlistData) {
+          try {
+            watchlist = JSON.parse(watchlistData)
+            console.log('📊 Loaded watchlist from localStorage cache:', watchlist.length, 'items')
+          } catch (error) {
+            console.error('Failed to parse watchlist data:', error)
+            watchlist = []
+          }
         }
       }
       
       console.log('📊 Analytics Dashboard - Portfolio items:', portfolio.length, 'Watchlist items:', watchlist.length)
+      console.log('📊 Portfolio data:', portfolio)
+      console.log('📊 Watchlist data:', watchlist)
       
       // Calculate portfolio metrics
       const totalValue = portfolio.reduce((sum: number, item: PortfolioItem) => {
         const currentValue = item.shares * item.currentPrice
+        console.log(`📊 Item: ${item.ticker || 'unknown'}, shares: ${item.shares}, currentPrice: ${item.currentPrice}, value: ${currentValue}`)
         return sum + currentValue
       }, 0)
       const totalInvested = portfolio.reduce((sum: number, item: PortfolioItem) => sum + (item.shares * item.avgPrice), 0)
@@ -249,10 +282,11 @@ export function AnalyticsDashboard() {
   const handleRefresh = async () => {
     setRefreshing(true)
     try {
+      console.log('🔄 Manual refresh triggered')
       await loadAnalyticsData()
       toast.success('Analytics data refreshed')
     } catch (error) {
-      console.error('Failed to refresh analytics:', error)
+      console.error('Refresh failed:', error)
       toast.error('Failed to refresh analytics data')
     } finally {
       setRefreshing(false)

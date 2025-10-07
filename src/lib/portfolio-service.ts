@@ -32,7 +32,7 @@ export class PortfolioService {
   static async getPortfolio(userId: string): Promise<PortfolioItem[]> {
     try {
       const { data, error } = await supabase
-        .from('portfolios_fixed')
+        .from('portfolios')
         .select('*')
         .eq('user_id', userId)
         .order('added_at', { ascending: false })
@@ -82,7 +82,7 @@ export class PortfolioService {
       const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
       const { data, error } = await supabase
-        .from('portfolios_fixed')
+        .from('portfolios')
         .insert({
           user_id: userId,
           ticker: ticker.toUpperCase(),

@@ -150,10 +150,10 @@ export default function DashboardPage() {
           toast.warning(limitEnforcement.message)
         }
         
-        // Use UnifiedSyncService to ensure data consistency across devices
-        console.log('🔄 Syncing all user data between database and localStorage...')
-        const { UnifiedSyncService } = await import('../../lib/unified-sync-service')
-        await UnifiedSyncService.unifyAll(user.id)
+        // Use DatabaseFirstService to ensure database is source of truth
+        console.log('🔄 Loading user data from database (source of truth)...')
+        const { DatabaseFirstService } = await import('../../lib/database-first-service')
+        await DatabaseFirstService.syncAllData(user.id)
         
         // Fetch real-time prices and update local for UI display
         const savedWatchlist = await WatchlistService.getWatchlistWithData()
@@ -263,14 +263,17 @@ export default function DashboardPage() {
 
   const handleAddToWatchlist = async (ticker: string, market?: string) => {
     try {
-      const added = await DatabaseWatchlistService.addToWatchlist(user!.id, ticker, ticker, market)
+      // Use database-first approach
+      const { DatabaseFirstService } = await import('../../lib/database-first-service')
+      const added = await DatabaseFirstService.addWatchlistItem(user!.id, ticker, ticker, market)
+      
       if (!added.success) {
         toast.error(added.message)
         return
       }
-      // Mirror to local and refresh UI pricing
-      await DatabaseWatchlistService.syncDatabaseToLocal(user!.id)
-      const updated = await WatchlistService.getWatchlistWithData()
+      
+      // Reload watchlist from database to get updated data
+      const updated = await DatabaseFirstService.getWatchlist(user!.id)
       setWatchlist(updated)
       setLiveStats(prev => ({ ...prev, watchlistCount: updated.length }))
       
