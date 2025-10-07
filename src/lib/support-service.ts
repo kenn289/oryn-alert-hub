@@ -65,7 +65,8 @@ class SupportService {
         return []
       }
 
-      return await response.json()
+      const data = await response.json()
+      return Array.isArray(data) ? data : []
     } catch (error) {
       console.error('Error fetching support tickets:', error)
       // Return empty array instead of throwing error
