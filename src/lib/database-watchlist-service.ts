@@ -24,7 +24,7 @@ export class DatabaseWatchlistService {
   static async getWatchlist(userId: string): Promise<WatchlistItem[]> {
     try {
       const { data, error } = await supabase
-        .from('watchlists_fixed')
+        .from('watchlists')
         .select('*')
         .eq('user_id', userId)
         .order('added_at', { ascending: false })
@@ -85,7 +85,7 @@ export class DatabaseWatchlistService {
 
       // Check if already exists
       const { data: existing } = await supabase
-        .from('watchlists_fixed')
+        .from('watchlists')
         .select('ticker')
         .eq('user_id', userId)
         .eq('ticker', finalTicker)
@@ -97,7 +97,7 @@ export class DatabaseWatchlistService {
 
       // Insert new watchlist item
       const { error } = await supabase
-        .from('watchlists_fixed')
+        .from('watchlists')
         .insert({
           user_id: userId,
           ticker: finalTicker,
@@ -126,7 +126,7 @@ export class DatabaseWatchlistService {
   ): Promise<{ success: boolean; message: string }> {
     try {
       const { error } = await supabase
-        .from('watchlists_fixed')
+        .from('watchlists')
         .delete()
         .eq('user_id', userId)
         .eq('ticker', ticker.toUpperCase())
@@ -160,7 +160,7 @@ export class DatabaseWatchlistService {
     try {
       for (const update of priceUpdates) {
         await supabase
-          .from('watchlists_fixed')
+          .from('watchlists')
           .update({
             price: update.price,
             change: update.change,
@@ -183,7 +183,7 @@ export class DatabaseWatchlistService {
   static async clearWatchlist(userId: string): Promise<void> {
     try {
       await supabase
-        .from('watchlists_fixed')
+        .from('watchlists')
         .delete()
         .eq('user_id', userId)
     } catch (error) {
@@ -217,7 +217,7 @@ export class DatabaseWatchlistService {
   static async getLastUpdatedAt(userId: string): Promise<number | null> {
     try {
       const { data, error } = await supabase
-        .from('watchlists_fixed')
+        .from('watchlists')
         .select('updated_at')
         .eq('user_id', userId)
         .order('updated_at', { ascending: false })

@@ -23,7 +23,7 @@ export async function GET(request: NextRequest) {
     }
 
     const { data: portfolio, error } = await getSupabaseClient()
-      .from('portfolios_fixed')
+      .from('portfolios')
       .select('*')
       .eq('user_id', userId)
       .order('added_at', { ascending: false })
@@ -55,7 +55,7 @@ export async function POST(request: NextRequest) {
     const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
     const { data, error } = await getSupabaseClient()
-      .from('portfolios_fixed')
+      .from('portfolios')
       .insert({
         user_id: userId,
         ticker: ticker.toUpperCase(),
@@ -104,7 +104,7 @@ export async function PUT(request: NextRequest) {
     const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
     const { data, error } = await getSupabaseClient()
-      .from('portfolios_fixed')
+      .from('portfolios')
       .update({
         shares: parseFloat(shares),
         avg_price: parseFloat(avgPrice),
@@ -145,7 +145,7 @@ export async function DELETE(request: NextRequest) {
     }
 
     const { error } = await getSupabaseClient()
-      .from('portfolios_fixed')
+      .from('portfolios')
       .delete()
       .eq('id', id)
       .eq('user_id', userId)
