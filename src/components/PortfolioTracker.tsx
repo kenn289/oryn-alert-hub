@@ -185,16 +185,43 @@ export function PortfolioTracker() {
     
     setLoading(true)
     try {
+      console.log('📊 Loading portfolio for user:', user.id)
+      
       // First try to migrate any localStorage data to database
       await PortfolioService.migrateFromLocalStorage(user.id)
       
       // Load portfolio from database
       const portfolioData = await PortfolioService.getPortfolio(user.id)
+      console.log('📊 Loaded portfolio data:', portfolioData)
+      
       setPortfolio(portfolioData)
-      calculateSummary(portfolioData)
+      
+      // Only calculate summary if we have valid data
+      if (portfolioData && portfolioData.length > 0) {
+        calculateSummary(portfolioData)
+      } else {
+        console.log('📊 No portfolio data, resetting summary')
+        setSummary({
+          totalValue: 0,
+          totalGainLoss: 0,
+          totalGainLossPercent: 0,
+          totalInvested: 0,
+          dayChange: 0,
+          dayChangePercent: 0
+        })
+      }
     } catch (error) {
       console.error('Error loading portfolio:', error)
       toast.error('Failed to load portfolio')
+      // Reset summary on error
+      setSummary({
+        totalValue: 0,
+        totalGainLoss: 0,
+        totalGainLossPercent: 0,
+        totalInvested: 0,
+        dayChange: 0,
+        dayChangePercent: 0
+      })
     } finally {
       setLoading(false)
     }
@@ -238,8 +265,16 @@ export function PortfolioTracker() {
 
   const generateAIAnalysis = async (portfolioData: PortfolioItem[]) => {
     try {
-      const totalValue = portfolioData.reduce((sum, item) => sum + item.totalValue, 0)
-      const totalInvested = portfolioData.reduce((sum, item) => sum + (item.shares * item.avgPrice), 0)
+      const totalValue = portfolioData.reduce((sum, item) => {
+        const shares = Number(item.shares) || 0
+        const currentPrice = Number(item.currentPrice) || 0
+        return sum + (shares * currentPrice)
+      }, 0)
+      const totalInvested = portfolioData.reduce((sum, item) => {
+        const shares = Number(item.shares) || 0
+        const avgPrice = Number(item.avgPrice) || 0
+        return sum + (shares * avgPrice)
+      }, 0)
       const totalGainLoss = totalValue - totalInvested
       const totalGainLossPercent = totalInvested > 0 ? (totalGainLoss / totalInvested) * 100 : 0
       
@@ -659,9 +694,18 @@ export function PortfolioTracker() {
             <DollarSign className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalValue, 'USD')}</div>
+            <div className="text-2xl font-bold">
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : (
+                formatCurrency(summary.totalValue, 'USD')
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">
-              {formatCurrency(summary.dayChange, 'USD')} today
+              {loading ? 'Calculating...' : `${formatCurrency(summary.dayChange, 'USD')} today`}
             </p>
           </CardContent>
         </Card>
@@ -677,10 +721,17 @@ export function PortfolioTracker() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${summary.totalGainLoss >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {formatCurrency(summary.totalGainLoss, 'USD')}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : (
+                formatCurrency(summary.totalGainLoss, 'USD')
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatPercent(summary.totalGainLossPercent)}
+              {loading ? 'Calculating...' : formatPercent(summary.totalGainLossPercent)}
             </p>
           </CardContent>
         </Card>
@@ -691,7 +742,16 @@ export function PortfolioTracker() {
             <BarChart3 className="h-4 w-4 text-muted-foreground" />
           </CardHeader>
           <CardContent>
-            <div className="text-2xl font-bold">{formatCurrency(summary.totalInvested, 'USD')}</div>
+            <div className="text-2xl font-bold">
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : (
+                formatCurrency(summary.totalInvested, 'USD')
+              )}
+            </div>
             <p className="text-xs text-muted-foreground">Initial investment</p>
           </CardContent>
         </Card>
@@ -707,10 +767,17 @@ export function PortfolioTracker() {
           </CardHeader>
           <CardContent>
             <div className={`text-2xl font-bold ${summary.dayChange >= 0 ? 'text-green-500' : 'text-red-500'}`}>
-              {formatCurrency(summary.dayChange, isIndianUser ? 'INR' : 'USD')}
+              {loading ? (
+                <div className="flex items-center gap-2">
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                  Loading...
+                </div>
+              ) : (
+                formatCurrency(summary.dayChange, isIndianUser ? 'INR' : 'USD')
+              )}
             </div>
             <p className="text-xs text-muted-foreground">
-              {formatPercent(summary.dayChangePercent)}
+              {loading ? 'Calculating...' : formatPercent(summary.dayChangePercent)}
             </p>
           </CardContent>
         </Card>
