@@ -28,7 +28,6 @@
     "REDIS_URL": "redis://default:AUMDAAIncDI5MDVmNDRiMWMwYzQ0YTI5OGQyYTYxNzJmNDI3Nzg4YXAyMTcxNTU@glorious-honeybee-17155.upstash.io:6379",
     "ALPHA_VANTAGE_API_KEY": "Q87CVF9TL2VQU0A2",
     "POLYGON_API_KEY": "FJ6anV3GATZrBzpmLwG2pZkMhsa90aBc",
-    "OPENAI_API_KEY": "your_openai_api_key_here",
     "RAZORPAY_KEY_ID": "rzp_live_ROUVLcLuL7BfUs",
     "RAZORPAY_KEY_SECRET": "Et0LtoI8QtpdDvYUkBgGfAlC",
     "RAZORPAY_WEBHOOK_SECRET": "_cJ4Mx_bAawdNs9",
