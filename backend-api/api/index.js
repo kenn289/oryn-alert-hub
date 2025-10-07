@@ -26,6 +26,25 @@ app.use(rateLimit({
     message: 'Too many requests from this IP, please try again later.'
 }));
 
+// Root route
+app.get('/', (req, res) => {
+    res.json({
+        success: true,
+        message: 'Oryn Alert Hub Backend API',
+        version: '1.0.0',
+        timestamp: new Date().toISOString(),
+        endpoints: {
+            health: '/api/health',
+            stock: '/api/stock/:symbol',
+            predictions: '/api/stock/:symbol/predictions',
+            portfolio: '/api/portfolio',
+            watchlist: '/api/watchlist',
+            support: '/api/support/stats'
+        },
+        documentation: 'https://github.com/your-repo/oryn-alert-hub'
+    });
+});
+
 // Health check
 app.get('/api/health', (req, res) => {
     res.json({
