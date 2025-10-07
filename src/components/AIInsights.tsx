@@ -398,7 +398,7 @@ export function AIInsights() {
                     </Badge>
                     <div className="flex items-center gap-1">
                       <Star className="h-4 w-4 text-yellow-500" />
-                                <span className="text-sm font-medium">{prediction.confidence.toFixed(1)}% confidence</span>
+                                <span className="text-sm font-medium">{(Number(prediction.confidence) || 0).toFixed(1)}% confidence</span>
                     </div>
                   </div>
                             <div className="flex items-center gap-2">
@@ -428,7 +428,7 @@ export function AIInsights() {
                         : 'text-red-500'
                     }`}>
                       {prediction.predictedPrice > prediction.currentPrice ? '+' : ''}
-                      {((prediction.predictedPrice - prediction.currentPrice) / prediction.currentPrice * 100).toFixed(2)}%
+                      {((Number(prediction.predictedPrice) - Number(prediction.currentPrice)) / (Number(prediction.currentPrice) || 1) * 100).toFixed(2)}%
                     </div>
                   </div>
                 </div>
@@ -480,13 +480,13 @@ export function AIInsights() {
                                   Technical Indicators
                                 </div>
                                 <div className="space-y-1">
-                                  <div className="text-sm text-muted-foreground">• RSI: {prediction.detailedAnalysis.technicalIndicators.rsi.toFixed(1)}</div>
-                                  <div className="text-sm text-muted-foreground">• MACD: {prediction.detailedAnalysis.technicalIndicators.macd.toFixed(2)}</div>
-                                  <div className="text-sm text-muted-foreground">• SMA 20: {prediction.detailedAnalysis.technicalIndicators.sma20.toFixed(2)}</div>
-                                  <div className="text-sm text-muted-foreground">• SMA 50: {prediction.detailedAnalysis.technicalIndicators.sma50.toFixed(2)}</div>
-                                  <div className="text-sm text-muted-foreground">• SMA 200: {prediction.detailedAnalysis.technicalIndicators.sma200.toFixed(2)}</div>
-                                  <div className="text-sm text-muted-foreground">• Support: {prediction.detailedAnalysis.technicalIndicators.support.toFixed(2)}</div>
-                                  <div className="text-sm text-muted-foreground">• Resistance: {prediction.detailedAnalysis.technicalIndicators.resistance.toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• RSI: {(Number(prediction.detailedAnalysis.technicalIndicators.rsi) || 0).toFixed(1)}</div>
+                                  <div className="text-sm text-muted-foreground">• MACD: {(Number(prediction.detailedAnalysis.technicalIndicators.macd) || 0).toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• SMA 20: {(Number(prediction.detailedAnalysis.technicalIndicators.sma20) || 0).toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• SMA 50: {(Number(prediction.detailedAnalysis.technicalIndicators.sma50) || 0).toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• SMA 200: {(Number(prediction.detailedAnalysis.technicalIndicators.sma200) || 0).toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• Support: {(Number(prediction.detailedAnalysis.technicalIndicators.support) || 0).toFixed(2)}</div>
+                                  <div className="text-sm text-muted-foreground">• Resistance: {(Number(prediction.detailedAnalysis.technicalIndicators.resistance) || 0).toFixed(2)}</div>
                                   <div className="text-sm text-muted-foreground">• Trend: {prediction.detailedAnalysis.technicalIndicators.trend.toUpperCase()}</div>
                                 </div>
                               </div>
@@ -552,7 +552,7 @@ export function AIInsights() {
                             <div className="p-3 border rounded-lg">
                               <div className="text-sm text-muted-foreground mb-1">Expected Move</div>
                               <div className={`text-lg font-semibold ${prediction.predictedPrice >= prediction.currentPrice ? 'text-green-600' : 'text-red-600'}`}>
-                                {((prediction.predictedPrice - prediction.currentPrice) / prediction.currentPrice * 100).toFixed(2)}%
+                                {((Number(prediction.predictedPrice) - Number(prediction.currentPrice)) / (Number(prediction.currentPrice) || 1) * 100).toFixed(2)}%
                               </div>
                               <div className="text-sm text-muted-foreground">Δ {formatCurrency(Math.abs(prediction.predictedPrice - prediction.currentPrice), (prediction as any).currency || 'USD')}</div>
                             </div>

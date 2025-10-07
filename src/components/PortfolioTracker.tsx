@@ -772,11 +772,11 @@ export function PortfolioTracker() {
                             {suggestion.price && (
                               <div className="text-xs text-green-600 font-medium">
                                 {suggestion.currency === 'INR' ? `₹${suggestion.price.toLocaleString('en-IN')}` : 
-                                 suggestion.currency === 'USD' ? `$${suggestion.price.toFixed(2)}` :
-                                 suggestion.currency === 'EUR' ? `€${suggestion.price.toFixed(2)}` :
-                                 suggestion.currency === 'GBP' ? `£${suggestion.price.toFixed(2)}` :
-                                 suggestion.currency === 'JPY' ? `¥${suggestion.price.toFixed(0)}` :
-                                 `$${suggestion.price.toFixed(2)}`}
+                                 suggestion.currency === 'USD' ? `$${(Number(suggestion.price) || 0).toFixed(2)}` :
+                                 suggestion.currency === 'EUR' ? `€${(Number(suggestion.price) || 0).toFixed(2)}` :
+                                 suggestion.currency === 'GBP' ? `£${(Number(suggestion.price) || 0).toFixed(2)}` :
+                                 suggestion.currency === 'JPY' ? `¥${(Number(suggestion.price) || 0).toFixed(0)}` :
+                                 `$${(Number(suggestion.price) || 0).toFixed(2)}`}
                               </div>
                             )}
                           </div>
@@ -788,7 +788,7 @@ export function PortfolioTracker() {
                               <div className={`text-xs font-medium ${
                                 suggestion.changePercent >= 0 ? 'text-green-600' : 'text-red-600'
                               }`}>
-                                {suggestion.changePercent >= 0 ? '+' : ''}{suggestion.changePercent.toFixed(1)}%
+                                {(Number(suggestion.changePercent) || 0) >= 0 ? '+' : ''}{(Number(suggestion.changePercent) || 0).toFixed(1)}%
                               </div>
                             )}
                           </div>

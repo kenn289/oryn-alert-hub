@@ -361,7 +361,7 @@ export function AnalyticsDashboard() {
                 <ArrowDownRight className="h-3 w-3 text-red-500" />
               )}
               <span className={data.portfolio.dayChange >= 0 ? 'text-green-500' : 'text-red-500'}>
-                {data.portfolio.dayChange >= 0 ? '+' : ''}{formatCurrency(data.portfolio.dayChange, 'USD')} ({data.portfolio.dayChangePercent.toFixed(2)}%)
+                {data.portfolio.dayChange >= 0 ? '+' : ''}{formatCurrency(data.portfolio.dayChange, 'USD')} ({(Number(data.portfolio.dayChangePercent) || 0).toFixed(2)}%)
               </span>
             </div>
           </CardContent>
@@ -444,7 +444,7 @@ export function AnalyticsDashboard() {
                 +{formatCurrency(data.watchlist.topGainer.change, 'USD')}
               </div>
               <div className="text-sm text-muted-foreground">
-                {data.watchlist.topGainer.changePercent.toFixed(2)}% today
+                {(Number(data.watchlist.topGainer.changePercent) || 0).toFixed(2)}% today
               </div>
             </div>
 
@@ -459,7 +459,7 @@ export function AnalyticsDashboard() {
                 {formatCurrency(data.watchlist.topLoser.change, 'USD')}
               </div>
               <div className="text-sm text-muted-foreground">
-                {data.watchlist.topLoser.changePercent.toFixed(2)}% today
+                {(Number(data.watchlist.topLoser.changePercent) || 0).toFixed(2)}% today
               </div>
             </div>
           </div>
