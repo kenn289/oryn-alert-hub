@@ -145,7 +145,7 @@ export class PortfolioService {
       const gainLossPercent = avgPrice > 0 ? (gainLoss / (shares * avgPrice)) * 100 : 0
 
       const { data, error } = await supabase
-        .from('portfolios_fixed')
+        .from('portfolios')
         .update({
           shares,
           avg_price: avgPrice,
@@ -194,7 +194,7 @@ export class PortfolioService {
   static async deletePortfolioItem(itemId: string, userId: string): Promise<{ success: boolean; message: string }> {
     try {
       const { error } = await supabase
-        .from('portfolios_fixed')
+        .from('portfolios')
         .delete()
         .eq('id', itemId)
         .eq('user_id', userId)

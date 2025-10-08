@@ -7,6 +7,7 @@ interface CurrencyContextType {
   selectedCurrency: string
   selectedTimezone: string
   setCurrency: (currency: string) => void
+  setSelectedCurrency: (currency: string) => void
   setTimezone: (timezone: string) => void
   formatCurrency: (amount: number, originalCurrency?: string) => string
   convertCurrency: (amount: number, fromCurrency: string, toCurrency?: string) => number
@@ -139,6 +140,7 @@ export function CurrencyProvider({ children }: CurrencyProviderProps) {
     selectedCurrency,
     selectedTimezone,
     setCurrency,
+    setSelectedCurrency,
     setTimezone,
     formatCurrency,
     convertCurrency,

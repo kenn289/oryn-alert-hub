@@ -255,6 +255,13 @@ export const getStockSuggestions = async (query: string): Promise<Array<{ticker:
     { ticker: "MAZDOCK.NS", name: "Mazagon Dock Shipbuilders", sector: "Defence" },
     { ticker: "COCHINSHIP.NS", name: "Cochin Shipyard Ltd", sector: "Defence" },
     { ticker: "GRSE.NS", name: "Garden Reach Shipbuilders", sector: "Defence" },
+    { ticker: "HAL", name: "Hindustan Aeronautics Ltd", sector: "Defence" },
+    { ticker: "BEML", name: "BEML Ltd", sector: "Defence" },
+    { ticker: "BEL", name: "Bharat Electronics Ltd", sector: "Defence" },
+    { ticker: "BDL", name: "Bharat Dynamics Ltd", sector: "Defence" },
+    { ticker: "MAZDOCK", name: "Mazagon Dock Shipbuilders", sector: "Defence" },
+    { ticker: "COCHINSHIP", name: "Cochin Shipyard Ltd", sector: "Defence" },
+    { ticker: "GRSE", name: "Garden Reach Shipbuilders", sector: "Defence" },
     
     // Pharma (including Pfizer as requested)
     { ticker: "SUNPHARMA.NS", name: "Sun Pharmaceutical Industries", sector: "Pharma" },
@@ -646,9 +653,13 @@ export class WatchlistService {
   // Get watchlist with real-time data
   static async getWatchlistWithData(): Promise<WatchlistItem[]> {
     try {
-      return await this.fetchWatchlistData()
+      console.log('🔄 Getting watchlist with real-time data...')
+      const result = await this.fetchWatchlistData()
+      console.log(`✅ Successfully fetched real-time data for ${result.length} watchlist items`)
+      return result
     } catch (error) {
-      console.error('Error fetching watchlist data:', error)
+      console.error('❌ Error fetching watchlist data:', error)
+      console.warn('⚠️ Falling back to cached data without real-time prices')
       // Return cached data if API fails
       return this.getWatchlist()
     }

@@ -68,7 +68,12 @@ class StockDataService {
         throw new Error(`API request failed: ${response.status}`)
       }
       
-      const data = await response.json() as T
+      const responseText = await response.text()
+      if (!responseText || responseText.trim() === '') {
+        throw new Error('Empty response from API')
+      }
+      
+      const data = JSON.parse(responseText) as T
       this.cache.set(cacheKey, { data, timestamp: now })
       return data
     } catch (error) {
@@ -92,37 +97,32 @@ class StockDataService {
       const cachedResult = await dataCache.getWithFallback(
         cacheKey,
         async () => {
-          // Fetch from Yahoo Finance (primary and only source)
-          console.log(`Fetching ${normalizedSymbol} from Yahoo Finance...`)
-          const yahooUrl = `https://query1.finance.yahoo.com/v8/finance/chart/${normalizedSymbol}`
-          const yahooData = await this.fetchWithCache(yahooUrl, `yahoo_${normalizedSymbol}`)
+          // Use internal API endpoint (works reliably)
+          console.log(`Fetching ${normalizedSymbol} from internal API...`)
+          const apiUrl = `/api/stock/global/${normalizedSymbol}`
+          const stockData = await this.fetchWithCache(apiUrl, `internal_${normalizedSymbol}`)
           
-          if (yahooData && yahooData.chart && yahooData.chart.result && yahooData.chart.result.length > 0) {
-            const result = yahooData.chart.result[0]
-            const meta = result.meta
-            
-            if (meta && meta.regularMarketPrice) {
-              console.log(`Successfully fetched ${normalizedSymbol} from Yahoo Finance`)
-              return {
-                symbol: meta.symbol,
-                name: meta.longName || this.getStockName(normalizedSymbol),
-                price: meta.regularMarketPrice,
-                change: meta.regularMarketPrice - meta.previousClose,
-                changePercent: ((meta.regularMarketPrice - meta.previousClose) / meta.previousClose) * 100,
-                volume: meta.regularMarketVolume || 0,
-                avgVolume: Math.floor((meta.regularMarketVolume || 0) * 0.8),
-                high: meta.regularMarketDayHigh || meta.regularMarketPrice,
-                low: meta.regularMarketDayLow || meta.regularMarketPrice,
-                open: meta.regularMarketOpen || meta.regularMarketPrice,
-                previousClose: meta.previousClose,
-                marketCap: meta.marketCap || (meta.regularMarketPrice * (meta.regularMarketVolume || 0) * 0.1),
-                pe: meta.trailingPE || 20,
-                timestamp: new Date().toISOString()
-              }
+          if (stockData && stockData.price && stockData.price > 0) {
+            console.log(`Successfully fetched ${normalizedSymbol} from internal API`)
+            return {
+              symbol: stockData.symbol || normalizedSymbol,
+              name: stockData.name || this.getStockName(normalizedSymbol),
+              price: stockData.price,
+              change: stockData.change || 0,
+              changePercent: stockData.changePercent || 0,
+              volume: stockData.volume || 0,
+              avgVolume: stockData.avgVolume || 0,
+              high: stockData.high || stockData.price,
+              low: stockData.low || stockData.price,
+              open: stockData.open || stockData.price,
+              previousClose: stockData.previousClose || stockData.price,
+              marketCap: stockData.marketCap || 0,
+              pe: stockData.pe || 20,
+              timestamp: new Date().toISOString()
             }
           }
           
-          throw new Error(`No data available for ${normalizedSymbol} from Yahoo Finance`)
+          throw new Error(`No data available for ${normalizedSymbol} from internal API`)
         },
         {
           allowStale: true,

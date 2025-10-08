@@ -24,16 +24,16 @@ interface PrioritySupportProps {
     maxCustomWebhooks: number
     maxTeamMembers: number
     features: {
-      watchlist: { enabled: boolean; unlimited: boolean }
-      priceAlerts: { enabled: boolean; unlimited: boolean }
-      emailNotifications: { enabled: boolean; unlimited: boolean }
-      basicOptionsFlow: { enabled: boolean; unlimited: boolean }
-      advancedOptionsFlow: { enabled: boolean; unlimited: boolean }
-      portfolioAnalytics: { enabled: boolean; unlimited: boolean }
-      customWebhooks: { enabled: boolean; unlimited: boolean }
-      teamCollaboration: { enabled: boolean; unlimited: boolean }
-      prioritySupport: { enabled: boolean; unlimited: boolean }
-      aiInsights: { enabled: boolean; unlimited: boolean }
+      watchlist: { enabled: boolean; unlimited?: boolean }
+      priceAlerts: { enabled: boolean; unlimited?: boolean }
+      emailNotifications: { enabled: boolean; unlimited?: boolean }
+      basicOptionsFlow: { enabled: boolean; unlimited?: boolean }
+      advancedOptionsFlow: { enabled: boolean; unlimited?: boolean }
+      portfolioAnalytics: { enabled: boolean; unlimited?: boolean }
+      customWebhooks: { enabled: boolean; unlimited?: boolean }
+      teamCollaboration: { enabled: boolean; unlimited?: boolean }
+      prioritySupport: { enabled: boolean; unlimited?: boolean }
+      aiInsights: { enabled: boolean; unlimited?: boolean }
     }
   }
   subscriptionStatus?: {

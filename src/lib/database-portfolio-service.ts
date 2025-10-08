@@ -111,30 +111,58 @@ export class DatabasePortfolioService {
         return { success: false, message: 'Invalid ticker' }
       }
 
+      // Try to insert new portfolio item, handle duplicates by updating
       const { error } = await supabase
         .from('portfolios')
-        .upsert(
-          [{
-            user_id: userId,
-            ticker: cleanTicker,
-            name: name.trim() || cleanTicker,
-            shares,
-            avg_price: avgPrice,
-            current_price: currentPrice,
-            market: market?.toUpperCase(),
-            currency,
-            exchange,
-            updated_at: new Date().toISOString(),
-          }],
-          { onConflict: 'user_id,ticker' }
-        )
+        .upsert([{
+          user_id: userId,
+          ticker: cleanTicker,
+          name: name.trim() || cleanTicker,
+          shares,
+          avg_price: avgPrice,
+          current_price: currentPrice,
+          total_value: shares * currentPrice,
+          market: market?.toUpperCase(),
+          currency,
+          exchange
+        }])
 
       if (error) {
-        console.error('Error upserting portfolio item:', error)
-        return { success: false, message: 'Failed to save portfolio item' }
+        console.error('❌ Database upsert error:', error)
+        console.error('❌ Error details:', {
+          code: error.code,
+          message: error.message,
+          details: error.details,
+          hint: error.hint,
+          constraint: error.constraint
+        })
+        
+        // Handle unique constraint violation
+        if (error.code === '23505' && error.message.includes('portfolios_user_id_ticker_key')) {
+          return { 
+            success: false, 
+            message: `${cleanTicker} already exists in your portfolio. Please delete the existing entry first or use a different approach.` 
+          }
+        }
+        
+        // Handle column doesn't exist error
+        if (error.code === '42703') {
+          return { 
+            success: false, 
+            message: 'Database schema issue. Please contact support.' 
+          }
+        }
+        
+        return { 
+          success: false, 
+          message: `Failed to save portfolio item: ${error.message}` 
+        }
       }
 
-      return { success: true, message: `Saved ${cleanTicker} in portfolio` }
+      return { 
+        success: true, 
+        message: `${cleanTicker} added/updated in portfolio!` 
+      }
     } catch (error) {
       console.error('Error upserting portfolio item:', error)
       return { success: false, message: 'Failed to save portfolio item' }

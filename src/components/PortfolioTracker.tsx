@@ -71,7 +71,9 @@ export function PortfolioTracker() {
     ticker: '',
     name: '',
     shares: '',
-    avgPrice: '',
+    avgPriceUSD: '',
+    avgPriceLocal: '',
+    avgPriceCurrency: 'USD',
     market: 'US',
     currency: 'USD'
   })
@@ -79,6 +81,11 @@ export function PortfolioTracker() {
   const [showGlobalSelector, setShowGlobalSelector] = useState(false)
   const [currentPrice, setCurrentPrice] = useState<number | null>(null)
   const [loadingPrice, setLoadingPrice] = useState(false)
+  const [conversionRate, setConversionRate] = useState(1)
+  const [isConverting, setIsConverting] = useState(false)
+
+  // Get currency context early to avoid initialization issues
+  const { formatCurrency: contextFormatCurrency, selectedCurrency, setSelectedCurrency } = useCurrency()
 
   useEffect(() => {
     if (user) {
@@ -87,6 +94,14 @@ export function PortfolioTracker() {
     }
     detectUserLocation()
   }, [user])
+
+  // Load conversion rate when global currency changes
+  useEffect(() => {
+    if (selectedCurrency) {
+      loadConversionRate()
+    }
+  }, [selectedCurrency])
+
 
   const detectUserLocation = () => {
     const timezone = Intl.DateTimeFormat().resolvedOptions().timeZone
@@ -98,9 +113,72 @@ export function PortfolioTracker() {
       setNewItem(prev => ({
         ...prev,
         market: 'IN',
-        currency: 'INR'
+        currency: 'INR',
+        avgPriceCurrency: 'INR'
       }))
     }
+  }
+
+  // Load conversion rate for the selected currency
+  const loadConversionRate = async () => {
+    if (selectedCurrency === 'USD') {
+      setConversionRate(1)
+      return
+    }
+
+    try {
+      setIsConverting(true)
+      const rate = await currencyConversionService.getConversionRate('USD', selectedCurrency)
+      setConversionRate(rate)
+    } catch (error) {
+      console.error('Error loading conversion rate:', error)
+      // Use fallback rates
+      const fallbackRates: { [key: string]: number } = {
+        'INR': 83.5,
+        'EUR': 0.92,
+        'GBP': 0.79,
+        'JPY': 150,
+        'AUD': 1.52,
+        'CAD': 1.36
+      }
+      setConversionRate(fallbackRates[selectedCurrency] || 1)
+    } finally {
+      setIsConverting(false)
+    }
+  }
+
+  // Convert USD to local currency
+  const convertUSDToLocal = (usdAmount: number) => {
+    return usdAmount * conversionRate
+  }
+
+  // Convert local currency to USD
+  const convertLocalToUSD = (localAmount: number) => {
+    return localAmount / conversionRate
+  }
+
+  // Handle USD price change
+  const handleUSDPriceChange = (usdPrice: string) => {
+    const usdValue = parseFloat(usdPrice) || 0
+    const localValue = convertUSDToLocal(usdValue)
+    
+    setNewItem(prev => ({
+      ...prev,
+      avgPriceUSD: usdPrice,
+      avgPriceLocal: localValue.toFixed(2)
+    }))
+  }
+
+  // Handle local currency price change
+  const handleLocalPriceChange = (localPrice: string) => {
+    const localValue = parseFloat(localPrice) || 0
+    const usdValue = convertLocalToUSD(localValue)
+    
+    setNewItem(prev => ({
+      ...prev,
+      avgPriceLocal: localPrice,
+      avgPriceUSD: usdValue.toFixed(2)
+    }))
   }
 
   const loadUserPlan = async () => {
@@ -166,6 +244,15 @@ export function PortfolioTracker() {
           setNewItem(prev => ({ ...prev, currency: 'USD' }))
           setCurrentPrice(priceInUSD)
           console.log(`✅ Final price for ${ticker}: $${priceInUSD.toFixed(2)} USD`)
+          
+          // Auto-populate both USD and local currency fields
+          const localPrice = convertUSDToLocal(priceInUSD)
+          
+          setNewItem(prev => ({
+            ...prev,
+            avgPriceUSD: priceInUSD.toFixed(2),
+            avgPriceLocal: localPrice.toFixed(2)
+          }))
         } else {
           setCurrentPrice(null)
         }
@@ -191,14 +278,41 @@ export function PortfolioTracker() {
       await PortfolioService.migrateFromLocalStorage(user.id)
       
       // Load portfolio from database
-      const portfolioData = await PortfolioService.getPortfolio(user.id)
-      console.log('📊 Loaded portfolio data:', portfolioData)
+      let portfolioData = await PortfolioService.getPortfolio(user.id)
+      console.log('📊 Loaded portfolio data from database:', portfolioData)
       
-      setPortfolio(portfolioData)
+      // If no data in database, try localStorage as fallback
+      if (!portfolioData || portfolioData.length === 0) {
+        console.log('📊 No database data, checking localStorage...')
+        const localData = PortfolioService.getPortfolioFromLocalStorage()
+        if (localData && localData.length > 0) {
+          console.log('📊 Found localStorage data, migrating to database...')
+          // Migrate localStorage data to database
+          for (const item of localData) {
+            await PortfolioService.addToPortfolio(
+              item.ticker,
+              item.name,
+              item.shares,
+              item.avgPrice,
+              item.currentPrice,
+              item.market,
+              item.currency,
+              user.id
+            )
+          }
+          // Reload from database after migration
+          portfolioData = await PortfolioService.getPortfolio(user.id)
+          console.log('📊 Portfolio data after migration:', portfolioData)
+        }
+      }
+      
+      setPortfolio(portfolioData || [])
       
       // Only calculate summary if we have valid data
       if (portfolioData && portfolioData.length > 0) {
         calculateSummary(portfolioData)
+        // Also save to localStorage for consistency
+        PortfolioService.saveToLocalStorage(portfolioData)
       } else {
         console.log('📊 No portfolio data, resetting summary')
         setSummary({
@@ -453,10 +567,37 @@ export function PortfolioTracker() {
       return
     }
 
-    console.log('handleAddStock called with:', newItem)
-    if (!newItem.ticker || !newItem.shares || !newItem.avgPrice) {
-      toast.error('Please fill in all required fields')
+    console.log('🚀 handleAddStock called with:', newItem)
+    console.log('🔍 Validation check:', {
+      ticker: newItem.ticker,
+      shares: newItem.shares,
+      avgPriceUSD: newItem.avgPriceUSD,
+      avgPriceLocal: newItem.avgPriceLocal,
+      avgPriceCurrency: newItem.avgPriceCurrency,
+      name: newItem.name,
+      market: newItem.market,
+      currency: newItem.currency
+    })
+    
+    // Check if we have either USD or local currency price
+    const hasUSDPrice = newItem.avgPriceUSD && newItem.avgPriceUSD.trim() !== ''
+    const hasLocalPrice = newItem.avgPriceLocal && newItem.avgPriceLocal.trim() !== ''
+    
+    if (!newItem.ticker || !newItem.shares || (!hasUSDPrice && !hasLocalPrice)) {
+      console.log('❌ Validation failed - missing required fields')
+      toast.error('Please fill in all required fields (ticker, shares, and at least one price)')
       return
+    }
+    
+    // If we only have local price, convert it to USD
+    if (!hasUSDPrice && hasLocalPrice) {
+      const localAmount = parseFloat(newItem.avgPriceLocal)
+      const usdAmount = convertLocalToUSD(localAmount)
+      setNewItem(prev => ({
+        ...prev,
+        avgPriceUSD: usdAmount.toFixed(2)
+      }))
+      console.log('💱 Converted local price to USD:', localAmount, '→', usdAmount)
     }
 
     // Check plan limits
@@ -476,15 +617,15 @@ export function PortfolioTracker() {
     try {
       // Validate numeric inputs first
       const shares = parseFloat(newItem.shares)
-      const avgPrice = parseFloat(newItem.avgPrice)
+      const avgPriceUSD = parseFloat(newItem.avgPriceUSD)
       
-      if (isNaN(shares) || isNaN(avgPrice) || shares <= 0 || avgPrice <= 0) {
+      if (isNaN(shares) || isNaN(avgPriceUSD) || shares <= 0 || avgPriceUSD <= 0) {
         toast.error('Please enter valid numbers for shares and price')
         return
       }
 
       // Use the current price that was already fetched and converted in fetchCurrentPrice
-      const fetchedCurrentPrice = currentPrice || avgPrice
+      const fetchedCurrentPrice = currentPrice || avgPriceUSD
       
       if (!fetchedCurrentPrice) {
         toast.error('Unable to fetch current price. Please try again.')
@@ -492,34 +633,56 @@ export function PortfolioTracker() {
       }
 
       // Add to database using DatabaseFirstService (database-first approach)
+      console.log('📊 Adding stock to database with params:', {
+        userId: user.id,
+        ticker: newItem.ticker,
+        name: newItem.name,
+        shares,
+        avgPriceUSD,
+        currentPrice: fetchedCurrentPrice,
+        market: newItem.market,
+        currency: newItem.currency
+      })
+      
       const { DatabaseFirstService } = await import('../lib/database-first-service')
       const result = await DatabaseFirstService.addPortfolioItem(
         user.id,
         newItem.ticker,
         newItem.name,
         shares,
-        avgPrice,
+        avgPriceUSD,
         fetchedCurrentPrice,
         newItem.market,
         newItem.currency,
         newItem.market === 'IN' ? 'NSE' : newItem.market === 'US' ? 'NASDAQ' : 'Unknown'
       )
+      
+      console.log('📊 Database operation result:', result)
 
       if (!result.success) {
+        console.error('❌ Database operation failed:', result.message)
         toast.error(result.message)
         return
       }
 
+      console.log('✅ Database operation successful, reloading portfolio...')
+      
       // Reload portfolio from database to get updated data
       const updatedPortfolio = await DatabaseFirstService.getPortfolio(user.id)
+      console.log('📊 Reloaded portfolio from database:', updatedPortfolio.length, 'items')
+      console.log('📊 Portfolio items:', updatedPortfolio)
+      
       setPortfolio(updatedPortfolio)
       calculateSummary(updatedPortfolio)
+      
+      // Also save to localStorage for consistency
+      PortfolioService.saveToLocalStorage(updatedPortfolio)
       
       // Dispatch event to notify analytics dashboard
       window.dispatchEvent(new CustomEvent('portfolioUpdated'))
       
       // Reset form and close modal
-      setNewItem({ ticker: '', name: '', shares: '', avgPrice: '' })
+      setNewItem({ ticker: '', name: '', shares: '', avgPriceUSD: '', avgPriceLocal: '', avgPriceCurrency: 'USD', market: 'US', currency: 'USD' })
       setShowSuggestions(false)
       setAdding(false)
       toast.success(result.message)
@@ -609,8 +772,6 @@ export function PortfolioTracker() {
     }
   }
 
-  const { formatCurrency: contextFormatCurrency } = useCurrency()
-  
   const formatCurrency = (amount: number, currency?: string, originalCurrency?: string) => {
     // Use the currency context for consistent formatting
     return contextFormatCurrency(amount, originalCurrency)
@@ -972,47 +1133,53 @@ export function PortfolioTracker() {
               </div>
               <div>
                 <Label htmlFor="avgPrice">Average Price per Share *</Label>
-                <div className="flex items-center gap-2">
-                  <Input
-                    id="avgPrice"
-                    type="number"
-                    min="0.01"
-                    step="0.01"
-                    value={newItem.avgPrice}
-                    onChange={(e) => setNewItem({ ...newItem, avgPrice: e.target.value })}
-                    placeholder="e.g., 150.00"
-                    required
-                    className="flex-1"
-                  />
-                  <div className="flex flex-col gap-1">
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const currentPrice = parseFloat(newItem.avgPrice) || 0
-                        setNewItem({ ...newItem, avgPrice: (currentPrice + 1).toString() })
-                      }}
-                      className="h-8 w-8 p-0"
-                    >
-                      +
-                    </Button>
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => {
-                        const currentPrice = parseFloat(newItem.avgPrice) || 0
-                        if (currentPrice > 0.01) {
-                          setNewItem({ ...newItem, avgPrice: (currentPrice - 1).toString() })
-                        }
-                      }}
-                      className="h-8 w-8 p-0"
-                    >
-                      -
-                    </Button>
+                <div className="grid md:grid-cols-2 gap-4 mt-2">
+                  {/* USD Price Box */}
+                  <div>
+                    <Label htmlFor="avgPriceUSD" className="text-sm font-medium">
+                      Price in USD ($)
+                    </Label>
+                    <Input
+                      id="avgPriceUSD"
+                      type="number"
+                      min="0.01"
+                      step="0.01"
+                      value={newItem.avgPriceUSD}
+                      onChange={(e) => handleUSDPriceChange(e.target.value)}
+                      placeholder="e.g., 150.00"
+                      required
+                    />
+                  </div>
+                  
+                  {/* Local Currency Price Box */}
+                  <div>
+                    <Label htmlFor="avgPriceLocal" className="text-sm font-medium">
+                      Price in {selectedCurrency}
+                    </Label>
+                    <div className="flex gap-2">
+                      <Input
+                        id="avgPriceLocal"
+                        type="number"
+                        min="0.01"
+                        step="0.01"
+                        value={newItem.avgPriceLocal}
+                        onChange={(e) => handleLocalPriceChange(e.target.value)}
+                        placeholder={`e.g., ${selectedCurrency === 'INR' ? '12,500' : '150.00'}`}
+                        required
+                        className="flex-1"
+                      />
+                    </div>
                   </div>
                 </div>
+                
+                {/* Tip */}
+                <div className="mt-2 text-xs text-muted-foreground">
+                  💡 Tip: Click on the stock ticker above to get the current market price, then click on "Current Price" to automatically fill both price boxes with the live market rate.
+                </div>
+                <div className="mt-1 text-xs text-muted-foreground">
+                  Enter the price you bought the stock at. Both boxes will sync automatically.
+                </div>
+                
               </div>
             </div>
             <div className="flex gap-2">
@@ -1076,7 +1243,11 @@ export function PortfolioTracker() {
                         {item.shares} shares
                       </Badge>
                     </div>
-                    <div className="grid grid-cols-2 md:grid-cols-4 gap-4 text-sm">
+                    <div className="grid grid-cols-2 md:grid-cols-5 gap-4 text-sm">
+                      <div>
+                        <div className="text-muted-foreground">Price Bought At</div>
+                        <div className="font-medium">{formatCurrency(item.avgPrice, 'USD')}</div>
+                      </div>
                       <div>
                         <div className="text-muted-foreground">Current Price</div>
                         <div className="font-medium">{formatCurrency(item.currentPrice, 'USD')}</div>

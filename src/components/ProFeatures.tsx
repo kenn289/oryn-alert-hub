@@ -123,17 +123,27 @@ export function ProFeatures() {
         }
       }
 
-      // Load watchlist data from localStorage
+      // Load watchlist data from localStorage (prioritize recent data)
       const watchlist = localStorage.getItem('oryn_watchlist')
+      const watchlistLastModified = localStorage.getItem('oryn_watchlist_last_modified')
+      
       if (watchlist) {
         try {
           const watchlistItems = JSON.parse(watchlist) as Array<{ changePercent: number }>
           setWatchlistData(watchlistItems)
           
+          console.log('📊 ProFeatures: Loaded watchlist data with', watchlistItems.length, 'items')
+          console.log('📊 Watchlist items sample:', watchlistItems.slice(0, 3).map(item => ({
+            changePercent: item.changePercent,
+            hasData: item.changePercent !== undefined && item.changePercent !== null
+          })))
+          
           // Calculate watchlist performance
-          const gainers = watchlistItems.filter((item) => item.changePercent > 0).length
-          const losers = watchlistItems.filter((item) => item.changePercent < 0).length
-          const unchanged = watchlistItems.filter((item) => item.changePercent === 0).length
+          const gainers = watchlistItems.filter((item) => (Number(item.changePercent) || 0) > 0).length
+          const losers = watchlistItems.filter((item) => (Number(item.changePercent) || 0) < 0).length
+          const unchanged = watchlistItems.filter((item) => (Number(item.changePercent) || 0) === 0).length
+          
+          console.log('📊 Watchlist performance calculated:', { gainers, losers, unchanged })
           
           setAnalyticsData(prev => ({
             ...prev,

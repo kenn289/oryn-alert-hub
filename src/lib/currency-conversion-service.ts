@@ -41,17 +41,29 @@ export class CurrencyConversionService {
       // Try to fetch real-time rates from a free API
       const response = await fetch('https://api.exchangerate-api.com/v4/latest/USD')
       if (response.ok) {
-        const data = await response.json()
-        this.rates = {
-          USD: 1,
-          INR: data.rates.INR || 83.5,
-          GBP: data.rates.GBP || 0.79,
-          JPY: data.rates.JPY || 150,
-          AUD: data.rates.AUD || 1.52,
-          CAD: data.rates.CAD || 1.36,
-          EUR: data.rates.EUR || 0.92
+        const responseText = await response.text()
+        if (!responseText || responseText.trim() === '') {
+          console.warn('Empty response from currency API, using fallback rates')
+          return
         }
-        this.lastUpdated = now
+        
+        const data = JSON.parse(responseText)
+        if (data && data.rates) {
+          this.rates = {
+            USD: 1,
+            INR: data.rates.INR || 83.5,
+            GBP: data.rates.GBP || 0.79,
+            JPY: data.rates.JPY || 150,
+            AUD: data.rates.AUD || 1.52,
+            CAD: data.rates.CAD || 1.36,
+            EUR: data.rates.EUR || 0.92
+          }
+          this.lastUpdated = now
+        } else {
+          console.warn('Invalid currency API response format, using fallback rates')
+        }
+      } else {
+        console.warn(`Currency API returned ${response.status}, using fallback rates`)
       }
     } catch (error) {
       console.warn('Failed to fetch currency rates, using cached values:', error)
@@ -111,6 +123,16 @@ export class CurrencyConversionService {
 
     const formatter = formatters[toCurrency] || formatters['USD']
     return formatter.format(convertedAmount)
+  }
+
+  async getConversionRate(fromCurrency: string, toCurrency: string): Promise<number> {
+    if (fromCurrency === toCurrency) return 1
+    
+    // Update rates if needed
+    await this.updateRates()
+    
+    // Get the rate from USD to target currency
+    return this.rates[toCurrency as keyof CurrencyRates]
   }
 
   // Get current rates for display

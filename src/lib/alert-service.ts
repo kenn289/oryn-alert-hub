@@ -25,6 +25,7 @@ export interface Alert {
   message?: string
   time?: string
   severity?: 'low' | 'medium' | 'high'
+  data?: any
 }
 
 export class AlertService {

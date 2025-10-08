@@ -9,6 +9,7 @@ import { Progress } from "../components/ui/progress"
 import { 
   TrendingUp, 
   TrendingDown,
+  Minus,
   BarChart3, 
   PieChart,
   Activity,
@@ -38,6 +39,7 @@ interface WatchlistItem {
   change?: number
   changePercent?: number
   symbol: string
+  name?: string
 }
 
 interface AnalyticsData {
@@ -85,6 +87,7 @@ export function AnalyticsDashboard() {
   const [data, setData] = useState<AnalyticsData | null>(null)
   const [loading, setLoading] = useState(true)
   const [refreshing, setRefreshing] = useState(false)
+  const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
 
   useEffect(() => {
     if (user) {
@@ -124,15 +127,26 @@ export function AnalyticsDashboard() {
       if (user) {
         console.log('📊 Loading analytics data from database (primary source) for user:', user.id)
         
-        // Use database-first approach
+        // Use database-first approach for portfolio only
         try {
           const { DatabaseFirstService } = await import('../lib/database-first-service')
           
-          // Load from database (primary source) with localStorage cache
+          // Load portfolio from database (primary source)
           portfolio = await DatabaseFirstService.getPortfolio(user.id)
-          watchlist = await DatabaseFirstService.getWatchlist(user.id)
           
-          console.log('✅ Data loaded from database:', {
+          // Load watchlist from localStorage only (don't affect main watchlist)
+          const watchlistData = localStorage.getItem('oryn_watchlist')
+          if (watchlistData) {
+            try {
+              watchlist = JSON.parse(watchlistData)
+              console.log('📊 Loaded watchlist from localStorage for analytics:', watchlist.length, 'items')
+            } catch (parseError) {
+              console.error('Failed to parse watchlist data:', parseError)
+              watchlist = []
+            }
+          }
+          
+          console.log('✅ Data loaded:', {
             portfolio: portfolio.length,
             watchlist: watchlist.length
           })
@@ -193,6 +207,9 @@ export function AnalyticsDashboard() {
       console.log('📊 Analytics Dashboard - Portfolio items:', portfolio.length, 'Watchlist items:', watchlist.length)
       console.log('📊 Portfolio data:', portfolio)
       console.log('📊 Watchlist data:', watchlist)
+      
+      // Set watchlist state for component use
+      setWatchlist(watchlist)
       
       // Calculate portfolio metrics with safe number handling
       const totalValue = portfolio.reduce((sum: number, item: PortfolioItem) => {
@@ -462,6 +479,138 @@ export function AnalyticsDashboard() {
                 {(Number(data.watchlist.topLoser.changePercent) || 0).toFixed(2)}% today
               </div>
             </div>
+          </div>
+        </CardContent>
+      </Card>
+
+      {/* Detailed Watchlist Performance Breakdown */}
+      <Card>
+        <CardHeader>
+          <CardTitle className="flex items-center gap-2">
+            <BarChart3 className="h-5 w-5" />
+            Detailed Performance Breakdown
+          </CardTitle>
+          <CardDescription>
+            Individual stock performance in your watchlist
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="space-y-6">
+            {/* Gainers Section */}
+            {data.watchlist.gainers > 0 && (
+              <div>
+                <h4 className="text-lg font-semibold text-green-600 mb-3 flex items-center gap-2">
+                  <TrendingUp className="h-4 w-4" />
+                  Gainers ({data.watchlist.gainers})
+                </h4>
+                <div className="space-y-2">
+                  {watchlist
+                    .filter((item: WatchlistItem) => (Number(item.changePercent) || 0) > 0)
+                    .sort((a: WatchlistItem, b: WatchlistItem) => (Number(b.changePercent) || 0) - (Number(a.changePercent) || 0))
+                    .map((item: WatchlistItem, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-green-50 dark:bg-green-950/20 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                            {item.symbol?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className="font-medium">{item.symbol || 'Unknown'}</div>
+                            <div className="text-sm text-muted-foreground">{item.name || 'Unknown Company'}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-green-600">
+                            +{formatCurrency(Number(item.change) || 0, 'USD')}
+                          </div>
+                          <div className="text-sm text-green-500">
+                            +{(Number(item.changePercent) || 0).toFixed(2)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Losers Section */}
+            {data.watchlist.losers > 0 && (
+              <div>
+                <h4 className="text-lg font-semibold text-red-600 mb-3 flex items-center gap-2">
+                  <TrendingDown className="h-4 w-4" />
+                  Losers ({data.watchlist.losers})
+                </h4>
+                <div className="space-y-2">
+                  {watchlist
+                    .filter((item: WatchlistItem) => (Number(item.changePercent) || 0) < 0)
+                    .sort((a: WatchlistItem, b: WatchlistItem) => (Number(a.changePercent) || 0) - (Number(b.changePercent) || 0))
+                    .map((item: WatchlistItem, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-red-50 dark:bg-red-950/20 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-red-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                            {item.symbol?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className="font-medium">{item.symbol || 'Unknown'}</div>
+                            <div className="text-sm text-muted-foreground">{item.name || 'Unknown Company'}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-red-600">
+                            {formatCurrency(Number(item.change) || 0, 'USD')}
+                          </div>
+                          <div className="text-sm text-red-500">
+                            {(Number(item.changePercent) || 0).toFixed(2)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* Unchanged Section */}
+            {data.watchlist.unchanged > 0 && (
+              <div>
+                <h4 className="text-lg font-semibold text-blue-600 mb-3 flex items-center gap-2">
+                  <Minus className="h-4 w-4" />
+                  Unchanged ({data.watchlist.unchanged})
+                </h4>
+                <div className="space-y-2">
+                  {watchlist
+                    .filter((item: WatchlistItem) => (Number(item.changePercent) || 0) === 0)
+                    .map((item: WatchlistItem, index: number) => (
+                      <div key={index} className="flex items-center justify-between p-3 bg-blue-50 dark:bg-blue-950/20 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <div className="w-8 h-8 bg-blue-500 rounded-full flex items-center justify-center text-white text-sm font-bold">
+                            {item.symbol?.charAt(0) || '?'}
+                          </div>
+                          <div>
+                            <div className="font-medium">{item.symbol || 'Unknown'}</div>
+                            <div className="text-sm text-muted-foreground">{item.name || 'Unknown Company'}</div>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <div className="font-semibold text-blue-600">
+                            {formatCurrency(Number(item.change) || 0, 'USD')}
+                          </div>
+                          <div className="text-sm text-blue-500">
+                            {(Number(item.changePercent) || 0).toFixed(2)}%
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              </div>
+            )}
+
+            {/* No Data Message */}
+            {data.watchlist.totalStocks === 0 && (
+              <div className="text-center py-8 text-muted-foreground">
+                <BarChart3 className="h-12 w-12 mx-auto mb-4 opacity-50" />
+                <p>No stocks in your watchlist yet</p>
+                <p className="text-sm">Add stocks to your watchlist to see performance breakdown</p>
+              </div>
+            )}
           </div>
         </CardContent>
       </Card>

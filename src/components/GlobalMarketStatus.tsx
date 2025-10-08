@@ -6,6 +6,10 @@ import { Badge } from "../components/ui/badge"
 import { Clock, Globe, TrendingUp, TrendingDown, AlertCircle } from "lucide-react"
 import { globalStockService, MarketInfo } from "../lib/global-stock-service"
 import { useCurrency } from "../contexts/CurrencyContext"
+import { useAuth } from "../contexts/AuthContext"
+import { MarketInsightsDashboard } from "./MarketInsightsDashboard"
+import { FreeUserMarketModal } from "./FreeUserMarketModal"
+import { subscriptionService } from "../lib/subscription-service"
 
 interface GlobalMarketStatusProps {
   selectedMarket?: string
@@ -14,19 +18,32 @@ interface GlobalMarketStatusProps {
 
 export function GlobalMarketStatus({ selectedMarket = 'US', onMarketChange }: GlobalMarketStatusProps) {
   const { selectedTimezone } = useCurrency()
+  const { user } = useAuth()
   const [marketInfo, setMarketInfo] = useState<MarketInfo | null>(null)
   const [allMarkets, setAllMarkets] = useState<MarketInfo[]>([])
   const [loading, setLoading] = useState(true)
   const [userTimezone, setUserTimezone] = useState('')
   const [isIndianUser, setIsIndianUser] = useState(false)
   const [currentMarket, setCurrentMarket] = useState(selectedMarket)
+  const [selectedMarketForInsights, setSelectedMarketForInsights] = useState<string | null>(null)
+  const [showFreeUserModal, setShowFreeUserModal] = useState(false)
+  const [userTier, setUserTier] = useState<'free' | 'pro' | 'master'>('free')
 
   useEffect(() => {
     detectUserLocation()
     loadMarketInfo()
+    loadUserTier()
     const interval = setInterval(loadMarketInfo, 60000) // Update every minute
     return () => clearInterval(interval)
-  }, [currentMarket])
+  }, [currentMarket, user])
+
+  // Force refresh on mount to ensure data is loaded
+  useEffect(() => {
+    const timer = setTimeout(() => {
+      loadMarketInfo()
+    }, 1000)
+    return () => clearTimeout(timer)
+  }, [])
 
   useEffect(() => {
     setCurrentMarket(selectedMarket)
@@ -46,6 +63,52 @@ export function GlobalMarketStatus({ selectedMarket = 'US', onMarketChange }: Gl
       setCurrentMarket('IN')
       // Intentionally do not call onMarketChange here to avoid opening any dialog automatically
     }
+  }
+
+  const loadUserTier = async () => {
+    if (!user) {
+      setUserTier('free')
+      return
+    }
+
+    try {
+      const subscription = await subscriptionService.getSubscriptionStatus(user.id, user.email || '')
+      if (subscription?.plan === 'master') {
+        setUserTier('master')
+      } else if (subscription?.plan === 'pro') {
+        setUserTier('pro')
+      } else {
+        setUserTier('free')
+      }
+    } catch (error) {
+      console.warn('Failed to load user tier:', error)
+      setUserTier('free')
+    }
+  }
+
+  const handleMarketClick = (market: string) => {
+    // Convert market code to the correct market name for AI insights
+    const marketName = getMarketNameForInsights(market)
+    setSelectedMarketForInsights(marketName)
+    
+    if (userTier === 'free') {
+      setShowFreeUserModal(true)
+    }
+    // For pro/master users, the MarketInsightsDashboard will show automatically
+  }
+
+  const handleCloseInsights = () => {
+    setSelectedMarketForInsights(null)
+  }
+
+  const handleCloseFreeModal = () => {
+    setShowFreeUserModal(false)
+    setSelectedMarketForInsights(null)
+  }
+
+  const handleUpgrade = () => {
+    // Navigate to pricing page or show upgrade modal
+    window.location.href = '/pricing'
   }
 
   const loadMarketInfo = async () => {
@@ -148,13 +211,6 @@ export function GlobalMarketStatus({ selectedMarket = 'US', onMarketChange }: Gl
     return userTime
   }
 
-  const handleMarketClick = (market: string) => {
-    setCurrentMarket(market)
-    if (onMarketChange) {
-      onMarketChange(market)
-    }
-  }
-
   const getExchangeName = (market: string) => {
     const exchanges: { [key: string]: string } = {
       'US': 'NYSE & NASDAQ',
@@ -167,6 +223,35 @@ export function GlobalMarketStatus({ selectedMarket = 'US', onMarketChange }: Gl
       'FR': 'EPA'
     }
     return exchanges[market] || market
+  }
+
+  const getMarketDisplayName = (market: string) => {
+    const displayNames: { [key: string]: string } = {
+      'US': 'NASDAQ',
+      'IN': 'NSE',
+      'UK': 'LSE',
+      'JP': 'TSE',
+      'AU': 'ASX',
+      'CA': 'TSX',
+      'DE': 'FSE',
+      'FR': 'EPA'
+    }
+    return displayNames[market] || market
+  }
+
+  const getMarketNameForInsights = (market: string) => {
+    // Map country codes to the market names expected by AI insights service
+    const marketNames: { [key: string]: string } = {
+      'US': 'US',        // US market uses 'US' key in AI service
+      'IN': 'IN',        // Indian market uses 'IN' key
+      'GB': 'GB',        // UK market uses 'GB' key  
+      'JP': 'JP',        // Japanese market uses 'JP' key
+      'AU': 'AU',        // Australian market uses 'AU' key
+      'CA': 'CA',        // Canadian market uses 'CA' key
+      'DE': 'DE',        // German market uses 'DE' key
+      'FR': 'FR'         // French market uses 'FR' key
+    }
+    return marketNames[market] || market
   }
 
   if (loading) {
@@ -320,6 +405,24 @@ export function GlobalMarketStatus({ selectedMarket = 'US', onMarketChange }: Gl
       </Card>
 
       {/* Stock selection handled by parent via onMarketChange */}
+
+      {/* Market Insights Dashboard for Pro/Master users */}
+      {selectedMarketForInsights && userTier !== 'free' && (
+        <MarketInsightsDashboard
+          market={selectedMarketForInsights}
+          onClose={handleCloseInsights}
+        />
+      )}
+
+      {/* Free User Modal */}
+      {showFreeUserModal && selectedMarketForInsights && (
+        <FreeUserMarketModal
+          market={selectedMarketForInsights}
+          isOpen={showFreeUserModal}
+          onClose={handleCloseFreeModal}
+          onUpgrade={handleUpgrade}
+        />
+      )}
     </div>
   )
 }

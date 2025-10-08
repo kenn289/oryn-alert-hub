@@ -95,9 +95,16 @@ export class UnifiedSyncService {
       localStorage.setItem(this.WATCHLIST_LAST_MODIFIED_KEY, Date.now().toString())
     } else {
       // Replace DB with local (one-time) and pull back
-      await DatabaseWatchlistService.replaceAll(userId, localClean.map(i => ({ ticker: i.ticker, name: i.name, market: i.market })))
-      await DatabaseWatchlistService.syncDatabaseToLocal(userId)
-      localStorage.setItem(this.WATCHLIST_LAST_MODIFIED_KEY, Date.now().toString())
+      try {
+        console.log('🔄 Syncing local watchlist to database...')
+        await DatabaseWatchlistService.replaceAll(userId, localClean.map(i => ({ ticker: i.ticker, name: i.name, market: i.market })))
+        await DatabaseWatchlistService.syncDatabaseToLocal(userId)
+        localStorage.setItem(this.WATCHLIST_LAST_MODIFIED_KEY, Date.now().toString())
+        console.log('✅ Watchlist sync completed')
+      } catch (error) {
+        console.error('❌ Error syncing watchlist to database:', error)
+        // Continue with local data if database sync fails
+      }
     }
   }
 

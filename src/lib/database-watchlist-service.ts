@@ -183,7 +183,7 @@ export class DatabaseWatchlistService {
   static async clearWatchlist(userId: string): Promise<void> {
     try {
       await supabase
-        .from('watchlists')
+        .from('watchlist_items')
         .delete()
         .eq('user_id', userId)
     } catch (error) {
@@ -196,18 +196,38 @@ export class DatabaseWatchlistService {
    */
   static async replaceAll(userId: string, items: Array<{ ticker: string; name: string; market?: string }>): Promise<void> {
     try {
+      console.log(`🔄 Replacing watchlist for user ${userId} with ${items.length} items`)
+      
+      // Clear existing watchlist
       await this.clearWatchlist(userId)
-      if (items.length === 0) return
+      
+      if (items.length === 0) {
+        console.log('📝 No items to insert, watchlist cleared')
+        return
+      }
+      
+      // Prepare payload
       const payload = items.map((i) => ({
         user_id: userId,
         ticker: i.ticker.toUpperCase(),
         name: (i.name || i.ticker).trim(),
-        market: i.market?.toUpperCase(),
+        market: i.market?.toUpperCase() || 'US',
       }))
+      
+      console.log('📝 Inserting watchlist items:', payload)
+      
+      // Insert new items
       const { error } = await supabase.from('watchlist_items').insert(payload)
-      if (error) console.error('Error replacing watchlist:', error)
+      
+      if (error) {
+        console.error('❌ Error replacing watchlist:', error)
+        throw error
+      }
+      
+      console.log('✅ Watchlist replaced successfully')
     } catch (error) {
-      console.error('Error replacing watchlist:', error)
+      console.error('❌ Error replacing watchlist:', error)
+      throw error
     }
   }
 

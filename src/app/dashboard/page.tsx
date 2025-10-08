@@ -28,8 +28,10 @@ import { PortfolioTracker } from "../../components/PortfolioTracker"
 import { AlertManager } from "../../components/AlertManager"
 import { GlobalMarketStatus } from "../../components/GlobalMarketStatus"
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from "../../components/ui/dialog"
+import { useAutoRefresh } from "../../hooks/use-auto-refresh"
 import { GlobalStockSelector } from "../../components/GlobalStockSelector"
 import { AlertService, Alert } from "../../lib/alert-service"
+import { realAlertsService } from "../../lib/real-alerts-service"
 import { ErrorHandler, handleAsyncError } from "../../lib/error-handler"
 import { useCurrency } from "../../contexts/CurrencyContext"
 import { LoadingStates } from "../../components/LoadingStates"
@@ -41,7 +43,11 @@ import { NetworkStatus } from "../../components/NetworkStatus"
 export default function DashboardPage() {
   const router = useRouter()
   const { user, signOut, loading } = useAuth()
-  const { formatCurrency } = useCurrency()
+  const { formatCurrency, selectedCurrency, setSelectedCurrency } = useCurrency()
+  
+  // Auto-refresh hook for background data updates
+  const { data: refreshData, isRefreshing, lastUpdated, forceRefresh } = useAutoRefresh()
+  
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
   const [alerts, setAlerts] = useState<Alert[]>([])
   const [liveStats, setLiveStats] = useState({
@@ -103,7 +109,7 @@ export default function DashboardPage() {
               const userExists = await UserInitializationService.userExists(user.id)
               if (!userExists) {
                 console.log('🆕 New user detected, initializing...')
-                await UserInitializationService.initializeNewUser(user.id, user.email)
+                await UserInitializationService.initializeNewUser(user.id, user.email || '')
               }
             }
           } catch (error) {
@@ -116,7 +122,7 @@ export default function DashboardPage() {
 
         // Get secure subscription status (force refresh from database)
         const status = await handleAsyncError(
-          () => subscriptionService.getSubscriptionStatus(user.id, user.email),
+          () => subscriptionService.getSubscriptionStatus(user.id, user.email || ''),
           'loading subscription status'
         )
         if (status) {
@@ -131,17 +137,30 @@ export default function DashboardPage() {
         )
         if (plan) setUserPlan(plan)
         
-        // Validate data integrity first
-        const integrityCheck = WatchlistService.validateDataIntegrity()
-        if (!integrityCheck.valid) {
-          console.warn('Data integrity check failed:', integrityCheck.message)
-          ErrorHandler.handleError(new Error(`Data integrity check failed: ${integrityCheck.message}`), 'validating data integrity')
+        // Validate data integrity first (with error handling)
+        try {
+          const integrityCheck = WatchlistService.validateDataIntegrity()
+          if (!integrityCheck.valid) {
+            console.warn('Data integrity check failed:', integrityCheck.message)
+            // Don't block the dashboard, just log the warning
+            console.log('Continuing with dashboard load despite integrity check failure')
+          }
+        } catch (error) {
+          console.warn('Data integrity validation failed:', error)
+          // Don't block the dashboard, just log the warning
+          console.log('Continuing with dashboard load despite validation error')
         }
         
         // Validate and sanitize watchlist data
-        const validation = WatchlistService.validateWatchlistData()
-        if (!validation.valid) {
-          toast.warning(validation.message)
+        try {
+          const validation = WatchlistService.validateWatchlistData()
+          if (!validation.valid) {
+            console.warn('Watchlist validation failed:', validation.message)
+            // Don't block dashboard loading
+          }
+        } catch (error) {
+          console.warn('Watchlist validation error:', error)
+          // Don't block dashboard loading
         }
         
         // Enforce limits on existing data
@@ -154,6 +173,9 @@ export default function DashboardPage() {
         console.log('🔄 Loading user data from database (source of truth)...')
         const { DatabaseFirstService } = await import('../../lib/database-first-service')
         await DatabaseFirstService.syncAllData(user.id)
+        
+        // Load watchlist from database first, then fetch real-time data
+        const dbWatchlist = await DatabaseFirstService.getWatchlist(user.id)
         
         // Fetch real-time prices and update local for UI display
         const savedWatchlist = await WatchlistService.getWatchlistWithData()
@@ -250,6 +272,34 @@ export default function DashboardPage() {
 
     return () => clearInterval(interval)
   }, [watchlist, alerts])
+
+  // Handle auto-refresh data updates
+  useEffect(() => {
+    if (refreshData) {
+      console.log('🔄 Auto-refresh data received:', {
+        portfolio: refreshData.portfolio.length,
+        watchlist: refreshData.watchlist.length,
+        lastUpdated: refreshData.lastUpdated
+      })
+
+      // Update watchlist if we have new data
+      if (refreshData.watchlist.length > 0) {
+        setWatchlist(refreshData.watchlist)
+        console.log('✅ Watchlist updated from auto-refresh')
+      }
+
+      // Update data freshness indicator
+      setDataFreshness({
+        source: 'fresh',
+        rateLimited: false,
+        age: 'Live'
+      })
+
+      // Dispatch events for other components to update
+      window.dispatchEvent(new CustomEvent('watchlistUpdated'))
+      window.dispatchEvent(new CustomEvent('portfolioUpdated'))
+    }
+  }, [refreshData])
 
   const handleSignOut = async () => {
     await signOut()
@@ -350,7 +400,7 @@ export default function DashboardPage() {
       console.log('🔄 Refreshing watchlist prices with fresh Yahoo Finance data...')
       
       // Update prices for existing watchlist items
-      const freshWatchlist = await WatchlistService.forceRefreshWatchlist()
+      const freshWatchlist = await WatchlistService.getWatchlistWithData()
       setWatchlist(freshWatchlist)
       
       toast.success('Watchlist prices refreshed with fresh Yahoo Finance data')
@@ -364,7 +414,7 @@ export default function DashboardPage() {
 
   const handleRefreshAlerts = async () => {
     try {
-      console.log('🔄 Generating real-time alerts from Yahoo Finance data...')
+      console.log('🔄 Generating real-time alerts from live market data...')
       
       // Generate real-time alerts based on current watchlist
       const watchlistTickers = watchlist ? watchlist.map(item => item.ticker) : []
@@ -374,20 +424,22 @@ export default function DashboardPage() {
         return
       }
 
-      console.log(`📊 Generating alerts for ${watchlistTickers.length} watchlist stocks...`)
-      const newAlerts = await AlertService.generateAlerts(watchlistTickers)
+      console.log(`📊 Generating real alerts for ${watchlistTickers.length} watchlist stocks...`)
+      const newAlerts = await realAlertsService.generateRealAlerts(watchlistTickers)
       setAlerts(newAlerts)
       
-      // Update live stats
-      const optionsFlowAlerts = newAlerts.filter(alert => alert.type === 'options_flow')
+      // Update live stats with real data
+      const priceMovementAlerts = realAlertsService.getPriceMovementAlerts()
+      const optionsFlowAlerts = realAlertsService.getOptionsFlowAlerts()
+      
       setLiveStats(prev => ({
         ...prev,
-        activeAlerts: newAlerts.length,
+        activeAlerts: priceMovementAlerts.length,
         optionsFlowCount: optionsFlowAlerts.length
       }))
       
-      console.log(`✅ Generated ${newAlerts.length} real-time alerts`)
-      toast.success(`Generated ${newAlerts.length} real-time alerts from Yahoo Finance`)
+      console.log(`✅ Generated ${newAlerts.length} real alerts (${priceMovementAlerts.length} price movements, ${optionsFlowAlerts.length} options flow)`)
+      toast.success(`Generated ${newAlerts.length} real alerts from live market data`)
     } catch (error) {
       console.error('Error refreshing alerts:', error)
       toast.error('Failed to refresh alerts')
@@ -398,10 +450,15 @@ export default function DashboardPage() {
     try {
       // Generate real-time options flow alerts
       const watchlistTickers = watchlist ? watchlist.map(item => item.ticker) : []
-      const newAlerts = await AlertService.generateAlerts(watchlistTickers)
       
-      // Filter for options flow alerts
-      const optionsFlowAlerts = newAlerts.filter(alert => alert.type === 'options_flow')
+      if (watchlistTickers.length === 0) {
+        toast.info('Add stocks to your watchlist to generate options flow alerts')
+        return
+      }
+
+      console.log(`📊 Generating real options flow alerts for ${watchlistTickers.length} stocks...`)
+      await realAlertsService.generateRealAlerts(watchlistTickers)
+      const optionsFlowAlerts = realAlertsService.getOptionsFlowAlerts()
       
       // Update stats
       setLiveStats(prev => ({
@@ -409,7 +466,8 @@ export default function DashboardPage() {
         optionsFlowCount: optionsFlowAlerts.length
       }))
       
-      toast.success(`Options flow refreshed - ${optionsFlowAlerts.length} unusual activities detected`)
+      console.log(`✅ Generated ${optionsFlowAlerts.length} real options flow alerts`)
+      toast.success(`Generated ${optionsFlowAlerts.length} real options flow alerts`)
     } catch (error) {
       console.error('Error refreshing options flow:', error)
       toast.error('Failed to refresh options flow')
@@ -576,6 +634,47 @@ export default function DashboardPage() {
             selectedMarket={selectedMarket}
             onMarketChange={handleOpenMarketSelector}
           />
+          
+          {/* Auto-refresh status indicator */}
+          <div className="mt-2 flex items-center justify-between">
+            <div className="flex items-center gap-2 text-sm text-muted-foreground">
+              {isRefreshing ? (
+                <>
+                  <RefreshCw className="w-4 h-4 animate-spin text-blue-500" />
+                  <span>Refreshing data...</span>
+                </>
+              ) : (
+                <>
+                  <div className="w-2 h-2 bg-green-500 rounded-full animate-pulse" />
+                  <span>Live data • Auto-refresh every 2s</span>
+                </>
+              )}
+            </div>
+            <div className="flex items-center gap-4">
+              {/* Currency Selector */}
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Currency:</span>
+                <select
+                  value={selectedCurrency}
+                  onChange={(e) => setSelectedCurrency(e.target.value)}
+                  className="px-3 py-1 text-sm border border-border rounded-md bg-background text-foreground focus:border-primary focus:ring-primary/20"
+                >
+                  <option value="USD">USD ($)</option>
+                  <option value="INR">INR (₹)</option>
+                  <option value="EUR">EUR (€)</option>
+                  <option value="GBP">GBP (£)</option>
+                  <option value="JPY">JPY (¥)</option>
+                  <option value="AUD">AUD (A$)</option>
+                  <option value="CAD">CAD (C$)</option>
+                </select>
+              </div>
+              {lastUpdated && (
+                <div className="text-xs text-muted-foreground">
+                  Last updated: {new Date(lastUpdated).toLocaleTimeString()}
+                </div>
+              )}
+            </div>
+          </div>
         </div>
 
         {/* Stats Cards */}
@@ -785,7 +884,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {alerts && alerts.length > 0 && alerts.slice(0, 3).map((alert) => {
+              {alerts && realAlertsService.getPriceMovementAlerts().slice(0, 3).map((alert) => {
                 const severityColors = {
                   low: 'from-blue-500/10 to-blue-500/5 border-blue-500/20',
                   medium: 'from-yellow-500/10 to-yellow-500/5 border-yellow-500/20',
@@ -799,7 +898,7 @@ export default function DashboardPage() {
                 }
 
                 return (
-                  <div key={alert.id} className={`p-4 bg-gradient-to-r ${severityColors[alert.severity]} border rounded-lg`}>
+                  <div key={alert.id} className={`p-4 bg-gradient-to-r ${severityColors[alert.severity as keyof typeof severityColors]} border rounded-lg`}>
                     <div className="flex items-center justify-between mb-2">
                       <div className="flex items-center gap-2">
                         <div className={`w-2 h-2 rounded-full animate-pulse ${
@@ -807,7 +906,7 @@ export default function DashboardPage() {
                           alert.severity === 'medium' ? 'bg-yellow-500' : 'bg-blue-500'
                         }`}></div>
                         <span className="font-medium">{alert.ticker}</span>
-                        <span className="text-xs">{severityIcons[alert.severity]}</span>
+                        <span className="text-xs">{severityIcons[alert.severity as keyof typeof severityIcons]}</span>
                       </div>
                       <span className="text-xs text-muted-foreground">{alert.time}</span>
                     </div>
@@ -823,7 +922,7 @@ export default function DashboardPage() {
                   </div>
                 )
               })}
-              {(!alerts || alerts.length === 0) && (
+              {(!alerts || realAlertsService.getPriceMovementAlerts().length === 0) && (
                 <div className="text-center py-8 text-muted-foreground">
                   <AlertCircle className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <p className="text-lg font-medium mb-2">No active alerts</p>
@@ -858,7 +957,7 @@ export default function DashboardPage() {
               </div>
             </CardHeader>
             <CardContent className="space-y-3">
-              {alerts && alerts.filter(alert => alert.type === 'options_flow').slice(0, 3).map((alert) => {
+              {alerts && realAlertsService.getOptionsFlowAlerts().slice(0, 3).map((alert) => {
                 return (
                   <div key={alert.id} className="p-4 bg-gradient-to-r from-secondary/10 to-secondary/5 border-secondary/20 border rounded-lg">
                     <div className="flex items-center justify-between mb-2">
@@ -875,7 +974,7 @@ export default function DashboardPage() {
                   </div>
                 )
               })}
-              {(!alerts || alerts.filter(alert => alert.type === 'options_flow').length === 0) && (
+              {(!alerts || realAlertsService.getOptionsFlowAlerts().length === 0) && (
                 <div className="text-center py-8 text-muted-foreground">
                   <Zap className="h-12 w-12 mx-auto mb-4 text-muted-foreground/50" />
                   <p className="text-lg font-medium mb-2">No options flow detected</p>
@@ -1039,7 +1138,7 @@ export default function DashboardPage() {
                         {((Number(item.changePercent) || 0) >= 0 ? '+' : '')}{(Number(item.changePercent) || 0).toFixed(2)}%
                       </div>
                           <div className="text-xs text-muted-foreground">
-                            {(item.market || '')}{item.exchange ? ` • ${item.exchange}` : ''}
+                            {item.market || 'US'}
                           </div>
                         </div>
                         <Button
