@@ -6,42 +6,46 @@ const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.
 
 const supabase = createClient(supabaseUrl, supabaseServiceKey)
 
-export async function GET(request: NextRequest) {
+export async function PUT(
+  request: NextRequest,
+  { params }: { params: Promise<{ id: string }> }
+) {
   try {
-    // Get users from the users table instead of auth.users
-    const { data: users, error } = await supabase
+    const { plan } = await request.json()
+    const { id: userId } = await params
+
+    if (!plan || !['free', 'pro', 'master'].includes(plan)) {
+      return NextResponse.json({ error: 'Invalid plan' }, { status: 400 })
+    }
+
+    // Update user plan in the users table instead of auth metadata
+    const { data, error } = await supabase
       .from('users')
-      .select('*')
-      .order('created_at', { ascending: false })
+      .update({ 
+        plan: plan,
+        updated_at: new Date().toISOString()
+      })
+      .eq('id', userId)
+      .select()
+      .single()
 
     if (error) {
-      console.error('Error fetching users:', error)
+      console.error('Error updating user plan:', error)
       
       // Check if it's a table not found error
       if (error.code === 'PGRST205' || error.message.includes('Could not find the table')) {
         return NextResponse.json({ 
           error: 'Database table not found. Please run the database setup script.',
-          details: 'The users table is missing. Run fix-database.sql in your Supabase SQL Editor.',
-          users: []
+          details: 'The users table is missing. Run COMPLETE_DATABASE_SETUP_FINAL.sql in your Supabase SQL Editor.'
         }, { status: 503 })
       }
       
-      return NextResponse.json({ error: 'Failed to fetch users' }, { status: 500 })
+      return NextResponse.json({ error: 'Failed to update user plan' }, { status: 500 })
     }
 
-    // Transform the data to match expected format
-    const usersWithPlans = (users || []).map(user => ({
-      id: user.id,
-      email: user.email,
-      plan: user.plan || 'free',
-      created_at: user.created_at,
-      last_login: user.last_login,
-      is_active: user.is_active !== false
-    }))
-
-    return NextResponse.json(usersWithPlans)
+    return NextResponse.json({ success: true, plan, user: data })
   } catch (error) {
-    console.error('Error in GET /api/master/users:', error)
+    console.error('Error in PUT /api/master/users/[id]/plan:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

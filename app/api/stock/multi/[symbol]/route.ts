@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { multiApiStockService } from '../../../../src/lib/multi-api-stock-service'
+import { multiApiStockService } from '../../../../../src/lib/multi-api-stock-service'
 
 export async function GET(
   request: NextRequest,

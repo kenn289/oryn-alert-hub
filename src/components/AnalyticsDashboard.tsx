@@ -140,6 +140,34 @@ export function AnalyticsDashboard() {
             try {
               watchlist = JSON.parse(watchlistData)
               console.log('📊 Loaded watchlist from localStorage for analytics:', watchlist.length, 'items')
+              
+              // Ensure we have company names - fetch them if missing
+              const watchlistWithNames = await Promise.all(
+                watchlist.map(async (item: any) => {
+                  if (!item.name || item.name === 'Unknown') {
+                    try {
+                      // Try to get company name from the stock data
+                      const response = await fetch(`/api/stock/global/${item.ticker || item.symbol}`)
+                      if (response.ok) {
+                        const stockData = await response.json()
+                        return {
+                          ...item,
+                          name: stockData.name || item.name || 'Unknown Company',
+                          symbol: item.ticker || item.symbol
+                        }
+                      }
+                    } catch (error) {
+                      console.warn(`Failed to fetch name for ${item.ticker || item.symbol}:`, error)
+                    }
+                  }
+                  return {
+                    ...item,
+                    name: item.name || 'Unknown Company',
+                    symbol: item.ticker || item.symbol
+                  }
+                })
+              )
+              watchlist = watchlistWithNames
             } catch (parseError) {
               console.error('Failed to parse watchlist data:', parseError)
               watchlist = []
@@ -520,10 +548,10 @@ export function AnalyticsDashboard() {
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-green-600">
-                            +{formatCurrency(Number(item.change) || 0, 'USD')}
+                            +{(Number(item.changePercent) || 0).toFixed(2)}%
                           </div>
                           <div className="text-sm text-green-500">
-                            +{(Number(item.changePercent) || 0).toFixed(2)}%
+                            +{formatCurrency(Number(item.change) || 0, 'USD')}
                           </div>
                         </div>
                       </div>
@@ -556,10 +584,10 @@ export function AnalyticsDashboard() {
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-red-600">
-                            {formatCurrency(Number(item.change) || 0, 'USD')}
+                            {(Number(item.changePercent) || 0).toFixed(2)}%
                           </div>
                           <div className="text-sm text-red-500">
-                            {(Number(item.changePercent) || 0).toFixed(2)}%
+                            {formatCurrency(Number(item.change) || 0, 'USD')}
                           </div>
                         </div>
                       </div>
@@ -591,10 +619,10 @@ export function AnalyticsDashboard() {
                         </div>
                         <div className="text-right">
                           <div className="font-semibold text-blue-600">
-                            {formatCurrency(Number(item.change) || 0, 'USD')}
+                            {(Number(item.changePercent) || 0).toFixed(2)}%
                           </div>
                           <div className="text-sm text-blue-500">
-                            {(Number(item.changePercent) || 0).toFixed(2)}%
+                            {formatCurrency(Number(item.change) || 0, 'USD')}
                           </div>
                         </div>
                       </div>
