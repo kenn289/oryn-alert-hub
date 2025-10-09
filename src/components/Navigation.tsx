@@ -4,7 +4,7 @@ import { useState, useEffect } from "react"
 import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { Button } from "../components/ui/button"
-import { Menu, X, LogOut, BarChart3, Brain, Zap, Users, Headphones, Shield } from "lucide-react"
+import { Menu, X, LogOut, BarChart3, Brain, Zap, Users, Headphones, Shield, CreditCard } from "lucide-react"
 import { useTheme } from "next-themes"
 import { useAuth } from "../contexts/AuthContext"
 import { OrynLogo } from "../components/OrynLogo"
@@ -154,6 +154,15 @@ export function Navigation() {
                 >
                   Dashboard
                 </Link>
+                <Link 
+                  href="/subscription"
+                  className={`text-sm font-medium hover:text-primary transition-colors ${
+                    pathname === '/subscription' ? 'text-primary' : ''
+                  }`}
+                >
+                  <CreditCard className="h-4 w-4 inline mr-1" />
+                  Subscription
+                </Link>
                 {userPlan === 'master' && (
                   <Link 
                     href="/master-dashboard"
@@ -252,7 +261,16 @@ export function Navigation() {
                   >
                     Dashboard
                   </Link>
-                  
+                  <Link 
+                    href="/subscription"
+                    className={`text-sm font-medium hover:text-primary transition-colors text-left ${
+                      pathname === '/subscription' ? 'text-primary' : ''
+                    }`}
+                    onClick={() => setIsOpen(false)}
+                  >
+                    <CreditCard className="h-4 w-4 inline mr-1" />
+                    Subscription
+                  </Link>
                   
                   {/* Master dashboard - only show for master accounts */}
                   {userPlan === 'master' && (

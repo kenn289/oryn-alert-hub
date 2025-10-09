@@ -314,7 +314,7 @@ export default function DashboardPage() {
   const handleAddToWatchlist = async (ticker: string, market?: string) => {
     try {
       // Use database-first approach
-      const { DatabaseFirstService } = await import('../../lib/database-first-service')
+      const { DatabaseFirstService } = await import('../../src/lib/database-first-service')
       const added = await DatabaseFirstService.addWatchlistItem(user!.id, ticker, ticker, market)
       
       if (!added.success) {
@@ -790,7 +790,7 @@ export default function DashboardPage() {
                           {subscriptionStatus.isMasterAccount 
                             ? 'Master Account' 
                             : subscriptionStatus.isTrial 
-                              ? 'Pro Trial' 
+                              ? 'Pro Plan' 
                               : 'Pro Plan'
                           }
                           {!subscriptionStatus.isMasterAccount && subscriptionStatus.daysRemaining !== null && subscriptionStatus.daysRemaining > 0 && (
@@ -1187,3 +1187,4 @@ export default function DashboardPage() {
     </TooltipProvider>
   )
 }
+

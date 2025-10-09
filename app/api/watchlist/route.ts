@@ -22,7 +22,7 @@ export async function GET(request: NextRequest) {
       return NextResponse.json({ error: 'User ID is required' }, { status: 400 })
     }
 
-    const { data: watchlist, error } = await supabase
+    const { data: watchlist, error } = await getSupabaseClient()
       .from('watchlists')
       .select('*')
       .eq('user_id', userId)
@@ -51,7 +51,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Check if item already exists
-    const { data: existing } = await supabase
+    const { data: existing } = await getSupabaseClient()
       .from('watchlists')
       .select('id')
       .eq('user_id', userId)
@@ -125,3 +125,4 @@ export async function DELETE(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+

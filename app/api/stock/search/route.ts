@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { globalStockService } from '../../../../lib/global-stock-service'
+import { globalStockService } from '../../../../src/lib/global-stock-service'
 
 export async function GET(request: NextRequest) {
   try {
@@ -30,3 +30,4 @@ export async function GET(request: NextRequest) {
     )
   }
 }
+

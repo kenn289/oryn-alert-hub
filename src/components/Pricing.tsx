@@ -8,6 +8,7 @@ import { toast } from "sonner"
 import { useAuth } from "../contexts/AuthContext"
 import { paymentService } from "../lib/payment-service"
 import { useCurrency } from "../contexts/CurrencyContext"
+import { PaymentAuthGuard, SecurePaymentButton } from "./PaymentAuthGuard"
 
 // Pricing will be generated dynamically based on currency
 
@@ -24,7 +25,7 @@ export function Pricing() {
       period: "forever",
       description: "Perfect for getting started",
       features: [
-        "Unlimited watchlist items",
+        "15 watchlist items",
         "Real-time price alerts",
         "Email notifications",
         "Basic options flow",
@@ -52,7 +53,7 @@ export function Pricing() {
         "White-label options",
         "Priority support"
       ],
-      cta: "Start Pro Trial",
+      cta: "Subscribe to Pro",
       variant: "gradient" as const,
       popular: true
     }
@@ -69,11 +70,7 @@ export function Pricing() {
   }
 
   const handleStartProTrial = async () => {
-    if (!user) {
-      toast.error('Please sign in first to start your Pro trial')
-      window.location.href = '/auth'
-      return
-    }
+    // Authentication is now handled by PaymentAuthGuard
 
     setLoading(true)
     
@@ -90,8 +87,8 @@ export function Pricing() {
         key: paymentOrder.key,
         amount: paymentOrder.amount,
         currency: paymentOrder.currency,
-        name: 'Oryn Pro Trial',
-        description: '7-day Pro trial with full access to all features',
+        name: 'Oryn Pro Subscription',
+        description: 'Pro subscription with full access to all features',
         order_id: paymentOrder.orderId,
         handler: async (response: {
           razorpay_order_id: string
@@ -104,11 +101,12 @@ export function Pricing() {
               response.razorpay_order_id,
               response.razorpay_payment_id,
               response.razorpay_signature,
-              user.id
+              user.id,
+              user.email || ''
             )
 
             if (verification.success) {
-              toast.success('Pro trial activated! You now have access to all Pro features for 7 days.')
+              toast.success('Pro subscription activated! You now have access to all Pro features.')
               
               // Update localStorage with verified subscription
               localStorage.setItem('oryn_user_plan', JSON.stringify({
@@ -116,8 +114,6 @@ export function Pricing() {
                 maxWatchlistItems: -1,
                 maxPriceAlerts: -1,
                 maxOptionsFlow: -1,
-                trialEndsAt: verification.subscription?.trialEndsAt,
-                isTrial: true,
                 verified: true
               }))
               
@@ -164,7 +160,14 @@ export function Pricing() {
       } else if (errorMessage.includes('Database service not configured')) {
         toast.error('Database service is not configured. Please contact support.')
       } else if (errorMessage.includes('User authentication required')) {
-        toast.error('Please sign in to start your Pro trial.')
+        toast.error('Please sign in to subscribe to Pro.')
+      } else if (errorMessage.includes('Authentication required') || errorMessage.includes('Invalid user credentials')) {
+        toast.error('Please sign in to make payments')
+        window.location.href = '/auth'
+      } else if (errorMessage.includes('pending payment')) {
+        toast.error('You already have a pending payment. Please complete or cancel it first.')
+      } else if (errorMessage.includes('Invalid payment request')) {
+        toast.error('Invalid payment request. Please check your details and try again.')
       } else if (errorMessage.includes('Invalid plan')) {
         toast.error('Invalid subscription plan. Please try again.')
       } else if (errorMessage.includes('Payment service is currently unavailable')) {
@@ -229,22 +232,31 @@ export function Pricing() {
                   ))}
                 </ul>
 
-                <Button 
-                  variant={plan.variant} 
-                  className="w-full"
-                  size="lg"
-                  onClick={plan.name === 'Free' ? handleGetStarted : handleStartProTrial}
-                  disabled={loading}
-                >
-                  {loading && plan.name === 'Pro' ? (
-                    <>
-                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                      Starting Trial...
-                    </>
-                  ) : (
-                    plan.cta
-                  )}
-                </Button>
+                {plan.name === 'Free' ? (
+                  <Button 
+                    variant={plan.variant} 
+                    className="w-full"
+                    size="lg"
+                    onClick={handleGetStarted}
+                  >
+                    {plan.cta}
+                  </Button>
+                ) : (
+                  <SecurePaymentButton
+                    onClick={handleStartProTrial}
+                    disabled={loading}
+                    className="w-full"
+                  >
+                    {loading ? (
+                      <>
+                        <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                        Processing...
+                      </>
+                    ) : (
+                      plan.cta
+                    )}
+                  </SecurePaymentButton>
+                )}
               </CardContent>
             </Card>
           ))}
@@ -262,9 +274,9 @@ export function Pricing() {
               </p>
             </Card>
             <Card className="p-6">
-              <h4 className="font-semibold mb-2">Is there a free trial?</h4>
+              <h4 className="font-semibold mb-2">What's included in the Free plan?</h4>
               <p className="text-sm text-muted-foreground">
-                Pro plan comes with a 7-day free trial. No credit card required to start.
+                Free plan includes 15 watchlist items, real-time alerts, basic options flow, and community support.
               </p>
             </Card>
             <Card className="p-6">

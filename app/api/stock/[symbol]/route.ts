@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server'
-import { stockDataService } from '../../../../lib/stock-data-service'
+import { stockDataService } from '../../../../src/lib/stock-data-service'
 
 export async function GET(
   request: NextRequest,

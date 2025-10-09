@@ -80,7 +80,7 @@ export async function POST(request: NextRequest) {
 
     // Send email notification to admin (simulated)
     try {
-      const { simpleEmailService } = await import('../../../../lib/simple-email-service')
+      const { simpleEmailService } = await import('../../../../src/lib/simple-email-service')
       await simpleEmailService.sendTicketNotification(ticket)
       console.log('✅ Email notification logged for ticket:', ticket.id)
     } catch (emailError) {
@@ -177,3 +177,4 @@ async function sendEmailNotification(ticket: any, type: string) {
     console.error('Error sending email notification:', error)
   }
 }
+

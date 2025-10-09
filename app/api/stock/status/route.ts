@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server'
-import { multiApiStockService } from '../../../../lib/multi-api-stock-service'
+import { multiApiStockService } from '../../../../src/lib/multi-api-stock-service'
 
 export async function GET() {
   try {
@@ -30,6 +30,7 @@ export async function GET() {
     )
   }
 }
+
 
 
 

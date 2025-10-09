@@ -147,130 +147,19 @@ export function TeamCollaboration() {
 
   const handleInviteMember = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-
-    try {
-      // Create team invite in localStorage (in real app, this would be API call)
-      const inviteId = `invite_${Math.floor(Math.random() * 1000000)}`
-      const newInvite: TeamInvite = {
-        id: inviteId,
-        email: inviteData.email,
-        role: inviteData.role,
-        invitedBy: 'Kenneth Oswin',
-        invitedAt: '2024-01-15T10:30:00Z',
-        expiresAt: '2024-01-22T10:30:00Z', // 7 days
-        status: 'pending'
-      }
-
-      // Store invite in localStorage
-      const existingInvites = JSON.parse(localStorage.getItem('oryn_team_invites') || '[]')
-      existingInvites.push(newInvite)
-      localStorage.setItem('oryn_team_invites', JSON.stringify(existingInvites))
-      
-      // Add team activity
-      const newActivity = {
-        description: `Invited ${inviteData.email} to join the team`,
-        timestamp: '2024-01-15T10:30:00Z'
-      }
-      const existingActivity = JSON.parse(localStorage.getItem('oryn_team_activity') || '[]')
-      existingActivity.unshift(newActivity)
-      localStorage.setItem('oryn_team_activity', JSON.stringify(existingActivity))
-      setTeamActivity(existingActivity)
-
-      // Create invite email with actual invitation link
-      const inviteLink = `${window.location.origin}/team/join?token=${inviteId}&email=${encodeURIComponent(inviteData.email)}`
-      const subject = `Invitation to join Oryn Pro Team`
-      const body = `Hi there!
-
-You've been invited to join our Oryn Pro team by Kenneth Oswin${inviteData.message ? ` with the message: "${inviteData.message}"` : ''}.
-
-As a team member, you'll get access to:
-- Shared analytics and insights
-- Collaborative watchlists  
-- Team portfolio tracking
-- Priority support
-- Real-time market data sharing
-
-Click here to accept the invitation: ${inviteLink}
-
-This invitation expires in 7 days.
-
-Best regards,
-Kenneth Oswin (Team Owner)
-kennethoswin289@gmail.com`
-      
-      const mailtoLink = `mailto:${inviteData.email}?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`
-      window.open(mailtoLink)
-      
-      toast.success(`Invitation sent to ${inviteData.email}. They can join using the link in their email.`)
-      setIsInviteModalOpen(false)
-      setInviteData({ email: '', role: 'member', message: '' })
-      
-      // Refresh pending invites
-      loadPendingInvites()
-    } catch (error) {
-      console.error('Error sending invitation:', error)
-      toast.error('Failed to send invitation. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    toast.info('🚧 Team collaboration feature is not yet released. Coming soon!')
+    return
   }
 
   const handleShareAnalytics = async (e: React.FormEvent) => {
     e.preventDefault()
-    setLoading(true)
-
-    try {
-      // Create new shared analytics entry
-      const newAnalytics: SharedAnalytics = {
-        id: `analytics_${Math.floor(Math.random() * 1000000)}`,
-        title: shareData.title,
-        type: shareData.type,
-        sharedBy: 'Kenneth Oswin',
-        sharedAt: '2024-01-15T10:30:00Z',
-        views: 0,
-        isPublic: shareData.isPublic,
-        description: shareData.description,
-        data: {
-          type: shareData.type,
-          timestamp: '2024-01-15T10:30:00Z',
-          sharedBy: 'Kenneth Oswin'
-        }
-      }
-
-      // Store in localStorage
-      const existing = JSON.parse(localStorage.getItem('oryn_shared_analytics') || '[]')
-      existing.unshift(newAnalytics) // Add to beginning
-      localStorage.setItem('oryn_shared_analytics', JSON.stringify(existing))
-      
-      // Update state
-      setSharedAnalytics(existing)
-      
-      // Add team activity
-      const newActivity = {
-        description: `Shared ${shareData.title} with the team`,
-        timestamp: '2024-01-15T10:30:00Z'
-      }
-      const existingActivity = JSON.parse(localStorage.getItem('oryn_team_activity') || '[]')
-      existingActivity.unshift(newActivity)
-      localStorage.setItem('oryn_team_activity', JSON.stringify(existingActivity))
-      setTeamActivity(existingActivity)
-      
-      toast.success('Analytics shared with team successfully!')
-      setIsShareModalOpen(false)
-      setShareData({ title: '', description: '', type: 'portfolio', isPublic: false })
-    } catch (error) {
-      console.error('Error sharing analytics:', error)
-      toast.error('Failed to share analytics. Please try again.')
-    } finally {
-      setLoading(false)
-    }
+    toast.info('🚧 Team collaboration feature is not yet released. Coming soon!')
+    return
   }
 
   const copyInviteLink = () => {
-    const inviteLink = `${window.location.origin}/team/join?ref=pro-team`
-    navigator.clipboard.writeText(inviteLink)
-    toast.success('Invite link copied to clipboard!')
+    toast.info('🚧 Team collaboration feature is not yet released. Coming soon!')
+    return
   }
 
   const getRoleColor = (role: string) => {

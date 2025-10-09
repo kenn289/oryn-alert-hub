@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "../../contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
-import { Button } from "../../components/ui/button"
+import { useAuth } from "../../src/contexts/AuthContext"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../src/components/ui/card"
+import { Button } from "../../src/components/ui/button"
 import { Activity, ArrowLeft, Zap, TrendingUp, DollarSign } from "lucide-react"
-import { OptionsFlow } from "../../components/OptionsFlow"
-import { useFeatures } from "../../hooks/use-features"
-import { PLANS } from "../../lib/watchlist"
+import { OptionsFlow } from "../../src/components/OptionsFlow"
+import { useFeatures } from "../../src/hooks/use-features"
+import { PLANS } from "../../src/lib/watchlist"
 
 export default function OptionsPage() {
   const router = useRouter()
@@ -144,3 +144,4 @@ export default function OptionsPage() {
     </div>
   )
 }
+

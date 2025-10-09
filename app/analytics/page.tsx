@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "../../contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
-import { Button } from "../../components/ui/button"
+import { useAuth } from "../../src/contexts/AuthContext"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../src/components/ui/card"
+import { Button } from "../../src/components/ui/button"
 import { BarChart3, TrendingUp, TrendingDown, Target, AlertTriangle, ArrowLeft } from "lucide-react"
-import { AnalyticsDashboard } from "../../components/AnalyticsDashboard"
-import { useFeatures } from "../../hooks/use-features"
-import { PLANS } from "../../lib/watchlist"
+import { AnalyticsDashboard } from "../../src/components/AnalyticsDashboard"
+import { useFeatures } from "../../src/hooks/use-features"
+import { PLANS } from "../../src/lib/watchlist"
 
 export default function AnalyticsPage() {
   const router = useRouter()
@@ -144,3 +144,4 @@ export default function AnalyticsPage() {
     </div>
   )
 }
+

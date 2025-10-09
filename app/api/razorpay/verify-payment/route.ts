@@ -2,18 +2,29 @@ import { NextRequest, NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import { createClient } from '@supabase/supabase-js'
 import crypto from 'crypto'
+import { verifyPaymentAuth } from '../middleware'
 
 const razorpay = new Razorpay({
-  key_id: process.env.RAZORPAY_KEY_ID || 'rzp_test_1234567890',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'test_secret_1234567890',
+  key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 })
 
 export async function POST(request: NextRequest) {
   try {
-    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId } = await request.json()
+    // Parse request body once
+    const { razorpay_order_id, razorpay_payment_id, razorpay_signature, userId, userEmail } = await request.json()
+    
+    // Verify authentication using middleware with parsed body
+    const authError = await verifyPaymentAuth(request, { userId, userEmail })
+    if (authError) {
+      return authError
+    }
 
-    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature || !userId) {
-      return NextResponse.json({ error: 'Missing payment details' }, { status: 400 })
+    // Check required payment details
+    if (!razorpay_order_id || !razorpay_payment_id || !razorpay_signature) {
+      return NextResponse.json({ 
+        error: 'Missing payment details. Please try the payment again.' 
+      }, { status: 400 })
     }
 
     // Verify payment signature
@@ -58,35 +69,65 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ error: 'Failed to update payment status' }, { status: 500 })
     }
 
-    // Create user subscription
-    const trialEndsAt = new Date()
-    trialEndsAt.setDate(trialEndsAt.getDate() + 7) // 7-day trial
-
-    const { error: subscriptionError } = await supabase
-      .from('user_subscriptions')
-      .insert({
-        user_id: userId,
-        plan: orderData.plan,
-        status: 'active',
-        trial: true,
-        trial_ends_at: trialEndsAt.toISOString(),
-        created_at: new Date().toISOString()
-      })
-
-    if (subscriptionError) {
-      console.error('Subscription creation error:', subscriptionError)
-      return NextResponse.json({ error: 'Failed to create subscription' }, { status: 500 })
-    }
-
-    return NextResponse.json({
-      success: true,
-      message: 'Payment verified successfully',
-      subscription: {
-        plan: orderData.plan,
-        trial: true,
-        trialEndsAt: trialEndsAt.toISOString()
+    // Activate subscription using the lifecycle service
+    try {
+      const { subscriptionLifecycleService } = await import('../../../../src/lib/subscription-lifecycle-service')
+      const { invoiceService } = await import('../../../../src/lib/invoice-service')
+      const { emailService } = await import('../../../../src/lib/email-service')
+      
+      // Get user details
+      const { data: userData } = await supabase
+        .from('users')
+        .select('name')
+        .eq('id', userId)
+        .single()
+      
+      const userName = userData?.name || 'User'
+      
+      // Activate subscription
+      const subscription = await subscriptionLifecycleService.activateSubscription(
+        userId,
+        orderData.plan,
+        orderData.amount,
+        orderData.currency || 'INR',
+        false, // Not a trial for paid subscriptions
+        0 // No trial days
+      )
+      
+      // Update invoice status if exists
+      if (orderData.invoice_id) {
+        await invoiceService.updateInvoiceStatus(
+          orderData.invoice_id,
+          'paid',
+          razorpay_payment_id
+        )
+        
+        // Send payment confirmation email
+        const invoice = await invoiceService.getInvoice(orderData.invoice_id)
+        if (invoice) {
+          await emailService.sendPaymentConfirmationEmail(invoice)
+        }
       }
-    })
+      
+      console.log('✅ Subscription activated successfully for user:', userId)
+      
+      return NextResponse.json({
+        success: true,
+        message: 'Payment verified and subscription activated successfully!',
+        subscription: {
+          plan: subscription.plan,
+          status: subscription.status,
+          daysRemaining: subscription.daysRemaining,
+          endDate: subscription.endDate
+        }
+      })
+      
+    } catch (activationError) {
+      console.error('Error activating subscription:', activationError)
+      return NextResponse.json({ 
+        error: 'Payment verified but subscription activation failed. Please contact support.' 
+      }, { status: 500 })
+    }
 
   } catch (error) {
     console.error('Payment verification error:', error)
@@ -95,3 +136,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+

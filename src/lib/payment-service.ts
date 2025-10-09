@@ -53,13 +53,52 @@ export class PaymentService {
       })
 
       if (!response.ok) {
-        const error = await response.json()
-        throw new Error(error.error || 'Failed to create payment order')
+        let error
+        try {
+          const responseText = await response.text()
+          
+          if (responseText.trim()) {
+            error = JSON.parse(responseText)
+          } else {
+            error = { error: 'Empty response from payment service' }
+          }
+        } catch (parseError) {
+          console.error('Failed to parse error response:', parseError)
+          error = { error: 'Invalid response from payment service' }
+        }
+        
+        console.error('Payment API error:', error)
+        
+        // Handle specific error cases
+        if (response.status === 401) {
+          throw new Error(error.error || 'Authentication required. Please sign in to make payments.')
+        } else if (response.status === 400) {
+          throw new Error(error.error || 'Invalid payment request. Please check your details.')
+        } else if (response.status === 409) {
+          throw new Error(error.error || 'You already have a pending payment. Please complete or cancel it first.')
+        } else {
+          throw new Error(error.error || 'Payment service is temporarily unavailable. Please try again later.')
+        }
       }
 
       return await response.json()
     } catch (error) {
       console.error('Payment order creation failed:', error)
+      
+      // Re-throw specific errors from the API
+      if (error instanceof Error && (
+        error.message.includes('Authentication required') ||
+        error.message.includes('Invalid user credentials') ||
+        error.message.includes('Please sign in')
+      )) {
+        throw error
+      } else if (error instanceof Error && error.message.includes('pending payment')) {
+        throw error
+      } else if (error instanceof Error && error.message.includes('Invalid payment request')) {
+        throw error
+      }
+      
+      // Generic fallback for network or other errors
       throw new Error('Payment service is currently unavailable. Please try again later or contact support.')
     }
   }
@@ -71,7 +110,8 @@ export class PaymentService {
     razorpay_order_id: string,
     razorpay_payment_id: string,
     razorpay_signature: string,
-    userId: string
+    userId: string,
+    userEmail: string
   ): Promise<PaymentVerification> {
     try {
       const response = await fetch('/api/razorpay/verify-payment', {
@@ -83,7 +123,8 @@ export class PaymentService {
           razorpay_order_id,
           razorpay_payment_id,
           razorpay_signature,
-          userId
+          userId,
+          userEmail
         })
       })
 

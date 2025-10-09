@@ -106,3 +106,4 @@ async function fetchNSEStockData(symbol: string) {
     return null
   }
 }
+

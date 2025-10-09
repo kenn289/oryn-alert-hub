@@ -2,11 +2,11 @@
 
 import { useState, useEffect, Suspense } from "react"
 import { useRouter, useSearchParams } from "next/navigation"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../components/ui/card"
-import { Button } from "../../../components/ui/button"
-import { Input } from "../../../components/ui/input"
-import { Label } from "../../../components/ui/label"
-import { Badge } from "../../../components/ui/badge"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../../src/components/ui/card"
+import { Button } from "../../../src/components/ui/button"
+import { Input } from "../../../src/components/ui/input"
+import { Label } from "../../../src/components/ui/label"
+import { Badge } from "../../../src/components/ui/badge"
 import { 
   Users, 
   ArrowLeft, 
@@ -17,7 +17,7 @@ import {
   Crown
 } from "lucide-react"
 import { toast } from "sonner"
-import { useAuth } from "../../../contexts/AuthContext"
+import { useAuth } from "../../../src/contexts/AuthContext"
 
 function TeamJoinContent() {
   const router = useRouter()
@@ -232,3 +232,4 @@ export default function TeamJoinPage() {
     </Suspense>
   )
 }
+

@@ -106,3 +106,4 @@ async function fetchBSEStockData(symbol: string) {
     return null
   }
 }
+

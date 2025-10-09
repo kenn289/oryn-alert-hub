@@ -1,22 +1,22 @@
 import { NextRequest, NextResponse } from 'next/server'
 import Razorpay from 'razorpay'
 import { createClient } from '@supabase/supabase-js'
+import { verifyPaymentAuth } from '../middleware'
 
 const razorpay = new Razorpay({
-  key_id: process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID || 'rzp_live_ROUVLcLuL7BfUs',
-  key_secret: process.env.RAZORPAY_KEY_SECRET || 'Et0LtoI8QtpdDvYUkBgGfAlC',
+  key_id: process.env.RAZORPAY_KEY_ID || process.env.NEXT_PUBLIC_RAZORPAY_KEY_ID,
+  key_secret: process.env.RAZORPAY_KEY_SECRET,
 })
 
 export async function POST(request: NextRequest) {
   try {
-    // Using hardcoded credentials as fallback
-
-    // Using hardcoded Supabase credentials as fallback
-
+    // Parse request body once
     const { plan, userId, userEmail } = await request.json()
-
-    if (!userId || !userEmail) {
-      return NextResponse.json({ error: 'User authentication required' }, { status: 401 })
+    
+    // Verify authentication using middleware with parsed body
+    const authError = await verifyPaymentAuth(request, { userId, userEmail })
+    if (authError) {
+      return authError
     }
 
     // Validate plan
@@ -39,12 +39,12 @@ export async function POST(request: NextRequest) {
       order = await razorpay.orders.create({
         amount: amount,
         currency: currency,
-        receipt: `oryn_${plan}_${userId}_${Date.now()}`,
+        receipt: `oryn_${plan}_${Date.now()}`,
         notes: {
           plan: plan,
           userId: userId,
           userEmail: userEmail,
-          trial: 'true' // This is a trial subscription
+          trial: 'false' // This is a paid subscription
         }
       })
     } catch (razorpayError) {
@@ -61,6 +61,14 @@ export async function POST(request: NextRequest) {
     )
     
     try {
+      // First, clear any old pending payments for this user
+      await supabase
+        .from('payment_orders')
+        .delete()
+        .eq('user_id', userId)
+        .eq('status', 'created')
+
+      // Then insert the new payment order
       const { error: dbError } = await supabase
         .from('payment_orders')
         .insert({
@@ -70,7 +78,6 @@ export async function POST(request: NextRequest) {
           amount: amount,
           currency: currency,
           status: 'created',
-          trial: true,
           created_at: new Date().toISOString()
         })
 
@@ -101,3 +108,4 @@ export async function POST(request: NextRequest) {
     }, { status: 500 })
   }
 }
+

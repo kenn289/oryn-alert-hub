@@ -28,3 +28,4 @@ export async function HEAD() {
   // Simple HEAD request for network connectivity testing
   return new NextResponse(null, { status: 200 })
 }
+

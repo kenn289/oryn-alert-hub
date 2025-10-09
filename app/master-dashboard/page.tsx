@@ -27,13 +27,16 @@ import {
   Trash2,
   Star,
   Calendar,
-  Mail as MailIcon
+  Mail as MailIcon,
+  DollarSign,
+  BarChart3
 } from 'lucide-react'
 import { toast } from 'sonner'
 import { useAuth } from '../../src/contexts/AuthContext'
 import { realtimeSupportService } from '../../src/lib/realtime-support-service'
 import { RealtimeStatus } from '../../src/components/RealtimeStatus'
 import { realtimeNotificationService } from '../../src/lib/realtime-notifications'
+import { RevenueAnalyticsDashboard } from '../../src/components/RevenueAnalyticsDashboard'
 
 interface User {
   id: string
@@ -445,8 +448,12 @@ export default function MasterDashboard() {
           </div>
         </div>
 
-        <Tabs defaultValue="users" className="space-y-6">
-          <TabsList className="grid w-full grid-cols-3 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg">
+        <Tabs defaultValue="analytics" className="space-y-6">
+          <TabsList className="grid w-full grid-cols-4 bg-background/80 backdrop-blur-sm border border-border/50 shadow-lg">
+            <TabsTrigger value="analytics" className="flex items-center gap-2 data-[state=active]:bg-green-500/20 data-[state=active]:text-green-500 data-[state=active]:border-green-500/30">
+              <BarChart3 className="h-4 w-4" />
+              Analytics
+            </TabsTrigger>
             <TabsTrigger value="users" className="flex items-center gap-2 data-[state=active]:bg-primary/20 data-[state=active]:text-primary data-[state=active]:border-primary/30">
               <Users className="h-4 w-4" />
               Users ({users.length})
@@ -460,6 +467,11 @@ export default function MasterDashboard() {
               Notifications
             </TabsTrigger>
           </TabsList>
+
+          {/* Analytics Tab */}
+          <TabsContent value="analytics" className="space-y-6">
+            <RevenueAnalyticsDashboard />
+          </TabsContent>
 
           {/* Users Tab */}
           <TabsContent value="users" className="space-y-6">
@@ -772,3 +784,4 @@ export default function MasterDashboard() {
     </div>
   )
 }
+

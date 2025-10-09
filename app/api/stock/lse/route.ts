@@ -78,3 +78,4 @@ async function fetchLSEStockData(symbol: string) {
     return null
   }
 }
+

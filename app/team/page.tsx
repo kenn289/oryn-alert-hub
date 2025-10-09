@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "../../contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
-import { Button } from "../../components/ui/button"
+import { useAuth } from "../../src/contexts/AuthContext"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../src/components/ui/card"
+import { Button } from "../../src/components/ui/button"
 import { Users, ArrowLeft, Share2, BarChart3, Settings } from "lucide-react"
-import { TeamCollaboration } from "../../components/TeamCollaboration"
-import { useFeatures } from "../../hooks/use-features"
-import { PLANS } from "../../lib/watchlist"
+import { TeamCollaboration } from "../../src/components/TeamCollaboration"
+import { useFeatures } from "../../src/hooks/use-features"
+import { PLANS } from "../../src/lib/watchlist"
 
 export default function TeamPage() {
   const router = useRouter()
@@ -157,3 +157,4 @@ export default function TeamPage() {
     </div>
   )
 }
+

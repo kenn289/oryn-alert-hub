@@ -55,34 +55,8 @@ export function AlertManager() {
   }
 
   const handleCreateAlert = () => {
-    if (!newAlert.symbol || !newAlert.value) {
-      toast.error('Please fill in all required fields')
-      return
-    }
-
-    const value = parseFloat(newAlert.value)
-    if (isNaN(value) || value <= 0) {
-      toast.error('Please enter a valid price value')
-      return
-    }
-
-    const condition = getConditionText(newAlert.type, value)
-    
-    try {
-      const alert = alertService.createAlert({
-        symbol: newAlert.symbol.toUpperCase(),
-        type: newAlert.type,
-        condition,
-        value
-      })
-      
-      setAlerts([...alerts, alert])
-      setNewAlert({ symbol: '', type: 'price_above', condition: '', value: '' })
-      setShowCreateForm(false)
-    } catch (error) {
-      console.error('Error creating alert:', error)
-      toast.error('Failed to create alert')
-    }
+    toast.info('🚧 Alert creation feature is not yet released. Coming soon!')
+    return
   }
 
   const handleDeleteAlert = (id: string) => {

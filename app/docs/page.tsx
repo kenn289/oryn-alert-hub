@@ -1,8 +1,8 @@
 "use client"
 
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
-import { Badge } from "../../components/ui/badge"
-import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../components/ui/tabs"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../src/components/ui/card"
+import { Badge } from "../../src/components/ui/badge"
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "../../src/components/ui/tabs"
 import { 
   BookOpen, 
   TrendingUp, 
@@ -740,3 +740,4 @@ export default function DocsPage() {
     </div>
   )
 }
+

@@ -78,3 +78,4 @@ async function fetchTSEStockData(symbol: string) {
     return null
   }
 }
+

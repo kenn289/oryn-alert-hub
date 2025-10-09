@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "../../contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
-import { Button } from "../../components/ui/button"
+import { useAuth } from "../../src/contexts/AuthContext"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../src/components/ui/card"
+import { Button } from "../../src/components/ui/button"
 import { Brain, ArrowLeft, Zap, Target, TrendingUp } from "lucide-react"
-import { AIInsights } from "../../components/AIInsights"
-import { useFeatures } from "../../hooks/use-features"
-import { PLANS } from "../../lib/watchlist"
+import { AIInsights } from "../../src/components/AIInsights"
+import { useFeatures } from "../../src/hooks/use-features"
+import { PLANS } from "../../src/lib/watchlist"
 
 export default function InsightsPage() {
   const router = useRouter()
@@ -144,3 +144,4 @@ export default function InsightsPage() {
     </div>
   )
 }
+

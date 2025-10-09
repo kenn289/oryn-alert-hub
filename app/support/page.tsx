@@ -2,13 +2,13 @@
 
 import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
-import { useAuth } from "../../contexts/AuthContext"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../components/ui/card"
-import { Button } from "../../components/ui/button"
+import { useAuth } from "../../src/contexts/AuthContext"
+import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "../../src/components/ui/card"
+import { Button } from "../../src/components/ui/button"
 import { Headphones, ArrowLeft, Zap, Clock, Shield } from "lucide-react"
-import { PrioritySupport } from "../../components/PrioritySupport"
-import { useFeatures } from "../../hooks/use-features"
-import { PLANS } from "../../lib/watchlist"
+import { PrioritySupport } from "../../src/components/PrioritySupport"
+import { useFeatures } from "../../src/hooks/use-features"
+import { PLANS } from "../../src/lib/watchlist"
 
 export default function SupportPage() {
   const router = useRouter()
@@ -144,3 +144,4 @@ export default function SupportPage() {
     </div>
   )
 }
+

@@ -49,7 +49,7 @@ export async function POST(request: NextRequest) {
     }
 
     // Send real-time notifications to all users
-    const { realtimeNotificationService } = await import('../../../../../lib/realtime-notifications')
+    const { realtimeNotificationService } = await import('../../../../../src/lib/realtime-notifications')
     await realtimeNotificationService.broadcastNotification(title, message, type)
 
     return NextResponse.json({ 
@@ -63,4 +63,5 @@ export async function POST(request: NextRequest) {
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }
+
 
