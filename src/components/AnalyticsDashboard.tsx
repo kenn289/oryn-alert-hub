@@ -134,6 +134,38 @@ export function AnalyticsDashboard() {
           // Load portfolio from database (primary source)
           portfolio = await DatabaseFirstService.getPortfolio(user.id)
           
+          // Ensure portfolio items have company names
+          if (portfolio && portfolio.length > 0) {
+            console.log('📊 Fetching company names for portfolio items:', portfolio.length)
+            portfolio = await Promise.all(
+              portfolio.map(async (item: any) => {
+                const ticker = item.ticker || item.symbol
+                if (!item.name || item.name === 'Unknown' || item.name === 'Unknown Company') {
+                  try {
+                    console.log(`📊 Fetching company name for portfolio item: ${ticker}`)
+                    const response = await fetch(`/api/stock/global/${ticker}`)
+                    if (response.ok) {
+                      const stockData = await response.json()
+                      console.log(`📊 Fetched portfolio data for ${ticker}:`, stockData.name)
+                      return {
+                        ...item,
+                        name: stockData.name || item.name || 'Unknown Company',
+                        symbol: ticker
+                      }
+                    }
+                  } catch (error) {
+                    console.warn(`📊 Failed to fetch portfolio name for ${ticker}:`, error)
+                  }
+                }
+                return {
+                  ...item,
+                  name: item.name || 'Unknown Company',
+                  symbol: ticker
+                }
+              })
+            )
+          }
+          
           // Load watchlist from localStorage only (don't affect main watchlist)
           const watchlistData = localStorage.getItem('oryn_watchlist')
           if (watchlistData) {
@@ -142,32 +174,49 @@ export function AnalyticsDashboard() {
               console.log('📊 Loaded watchlist from localStorage for analytics:', watchlist.length, 'items')
               
               // Ensure we have company names - fetch them if missing
+              console.log('📊 Fetching company names for watchlist items:', watchlist.length)
               const watchlistWithNames = await Promise.all(
                 watchlist.map(async (item: any) => {
-                  if (!item.name || item.name === 'Unknown') {
+                  const ticker = item.ticker || item.symbol
+                  console.log(`📊 Processing item: ${ticker}, current name: ${item.name}`)
+                  
+                  if (!item.name || item.name === 'Unknown' || item.name === 'Unknown Company') {
                     try {
+                      console.log(`📊 Fetching company name for: ${ticker}`)
                       // Try to get company name from the stock data
-                      const response = await fetch(`/api/stock/global/${item.ticker || item.symbol}`)
+                      const response = await fetch(`/api/stock/global/${ticker}`)
                       if (response.ok) {
                         const stockData = await response.json()
+                        console.log(`📊 Fetched data for ${ticker}:`, stockData.name)
                         return {
                           ...item,
                           name: stockData.name || item.name || 'Unknown Company',
-                          symbol: item.ticker || item.symbol
+                          symbol: ticker
                         }
+                      } else {
+                        console.warn(`📊 API returned ${response.status} for ${ticker}`)
                       }
                     } catch (error) {
-                      console.warn(`Failed to fetch name for ${item.ticker || item.symbol}:`, error)
+                      console.warn(`📊 Failed to fetch name for ${ticker}:`, error)
                     }
                   }
+                  
                   return {
                     ...item,
                     name: item.name || 'Unknown Company',
-                    symbol: item.ticker || item.symbol
+                    symbol: ticker
                   }
                 })
               )
               watchlist = watchlistWithNames
+              
+              // Update localStorage with the fetched company names
+              try {
+                localStorage.setItem('oryn_watchlist', JSON.stringify(watchlistWithNames))
+                console.log('📊 Updated localStorage with company names')
+              } catch (error) {
+                console.warn('📊 Failed to update localStorage:', error)
+              }
             } catch (parseError) {
               console.error('Failed to parse watchlist data:', parseError)
               watchlist = []
