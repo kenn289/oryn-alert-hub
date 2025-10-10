@@ -9,54 +9,54 @@ const supabase = createClient(
 
 export async function POST(request: NextRequest) {
   try {
-    const { action, refreshToken } = await request.json()
+    // Get refresh token from cookies
+    const refreshToken = request.cookies.get('refresh_token')?.value
 
-    if (action === 'refresh') {
-      if (!refreshToken) {
-        return NextResponse.json({ error: 'Refresh token required' }, { status: 400 })
-      }
-
-      const newTokens = await authSessionService.refreshAccessToken(refreshToken)
-      
-      if (!newTokens) {
-        return NextResponse.json({ error: 'Invalid refresh token' }, { status: 401 })
-      }
-
-      const response = NextResponse.json({
-        success: true,
-        accessToken: newTokens.accessToken,
-        expiresAt: newTokens.expiresAt
-      })
-
-      // Set secure cookies
-      authSessionService.setSecureCookies(response, newTokens)
-
-      return response
+    if (!refreshToken) {
+      return NextResponse.json({ error: 'No refresh token found' }, { status: 401 })
     }
 
-    if (action === 'revoke') {
-      if (!refreshToken) {
-        return NextResponse.json({ error: 'Refresh token required' }, { status: 400 })
-      }
-
-      const success = await authSessionService.revokeRefreshToken(refreshToken)
-      
-      if (!success) {
-        return NextResponse.json({ error: 'Failed to revoke token' }, { status: 500 })
-      }
-
-      const response = NextResponse.json({ success: true })
-      
-      // Clear authentication cookies
-      authSessionService.clearAuthCookies(response)
-
-      return response
+    const newTokens = await authSessionService.refreshAccessToken(refreshToken)
+    
+    if (!newTokens) {
+      return NextResponse.json({ error: 'Invalid refresh token' }, { status: 401 })
     }
 
-    return NextResponse.json({ error: 'Invalid action' }, { status: 400 })
+    const response = NextResponse.json({
+      success: true,
+      accessToken: newTokens.accessToken,
+      expiresAt: newTokens.expiresAt
+    })
+
+    // Set secure cookies
+    authSessionService.setSecureCookies(response, newTokens)
+
+    return response
 
   } catch (error) {
     console.error('Session management error:', error)
+    return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
+  }
+}
+
+export async function DELETE(request: NextRequest) {
+  try {
+    // Get refresh token from cookies
+    const refreshToken = request.cookies.get('refresh_token')?.value
+
+    if (refreshToken) {
+      await authSessionService.revokeRefreshToken(refreshToken)
+    }
+
+    const response = NextResponse.json({ success: true })
+    
+    // Clear authentication cookies
+    authSessionService.clearAuthCookies(response)
+
+    return response
+
+  } catch (error) {
+    console.error('Sign out error:', error)
     return NextResponse.json({ error: 'Internal server error' }, { status: 500 })
   }
 }

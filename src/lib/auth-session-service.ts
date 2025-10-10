@@ -1,6 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
-import jwt from 'jsonwebtoken'
 import crypto from 'crypto'
+
+// Server-side only imports
+let jwt: any = null
+if (typeof window === 'undefined') {
+  try {
+    jwt = require('jsonwebtoken')
+  } catch (error) {
+    console.warn('jsonwebtoken not available in this environment')
+  }
+}
 
 // Lazy initialization of Supabase client
 let supabase: any = null
@@ -42,6 +51,10 @@ export class AuthSessionService {
    */
   async generateSessionTokens(userId: string, email: string): Promise<SessionTokens> {
     try {
+      if (!jwt) {
+        throw new Error('JWT functionality not available in this environment')
+      }
+
       // Generate unique token ID for refresh token tracking
       const tokenId = crypto.randomUUID()
       
@@ -118,6 +131,11 @@ export class AuthSessionService {
    */
   verifyAccessToken(token: string): { userId: string; email: string } | null {
     try {
+      if (!jwt) {
+        console.warn('JWT functionality not available in this environment')
+        return null
+      }
+
       const decoded = jwt.verify(token, this.JWT_SECRET) as any
       
       if (decoded.type !== 'access') {
@@ -139,6 +157,11 @@ export class AuthSessionService {
    */
   async refreshAccessToken(refreshToken: string): Promise<SessionTokens | null> {
     try {
+      if (!jwt) {
+        console.warn('JWT functionality not available in this environment')
+        return null
+      }
+
       // Verify refresh token
       const decoded = jwt.verify(refreshToken, this.REFRESH_TOKEN_SECRET) as RefreshTokenPayload
       
@@ -203,6 +226,11 @@ export class AuthSessionService {
    */
   async revokeRefreshToken(refreshToken: string): Promise<boolean> {
     try {
+      if (!jwt) {
+        console.warn('JWT functionality not available in this environment')
+        return false
+      }
+
       const decoded = jwt.verify(refreshToken, this.REFRESH_TOKEN_SECRET) as RefreshTokenPayload
       
       if (decoded.type !== 'refresh') {

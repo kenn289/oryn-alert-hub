@@ -4,7 +4,7 @@ import { PaymentStateService } from './payment-state-service'
 import { WebhookLoggingService } from './webhook-logging-service'
 import { SubscriptionLifecycleService } from './subscription-lifecycle-service'
 import { EmailService } from './email-service'
-import { NotificationService } from './notification-service'
+import { SimpleNotificationService } from './simple-notification-service'
 
 const supabase = createClient(
   process.env.NEXT_PUBLIC_SUPABASE_URL || 'https://bwrurebhoxyozdjbokhe.supabase.co',
@@ -57,14 +57,14 @@ export class EnhancedPaymentVerificationService {
   private webhookLoggingService: WebhookLoggingService
   private subscriptionLifecycleService: SubscriptionLifecycleService
   private emailService: EmailService
-  private notificationService: NotificationService
+  private notificationService: SimpleNotificationService
 
   constructor() {
     this.paymentStateService = new PaymentStateService()
     this.webhookLoggingService = new WebhookLoggingService()
     this.subscriptionLifecycleService = new SubscriptionLifecycleService()
     this.emailService = new EmailService()
-    this.notificationService = new NotificationService()
+    this.notificationService = new SimpleNotificationService()
   }
 
   /**

@@ -5,7 +5,7 @@ import { User, Session } from "@supabase/supabase-js"
 import { supabase } from "../lib/supabase"
 import { UserInitializationService } from "../lib/user-initialization-service"
 import { UnifiedSyncService } from "../lib/unified-sync-service"
-import { authSessionService } from "../lib/auth-session-service"
+import { clientAuthService } from "../lib/client-auth-service"
 
 interface AuthContextType {
   user: User | null
@@ -128,25 +128,9 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const refreshSession = async () => {
     try {
-      // Get refresh token from cookies
-      const refreshToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('refresh_token='))
-        ?.split('=')[1]
-
-      if (!refreshToken) {
-        setIsTokenExpired(true)
-        return
-      }
-
-      // Try to refresh the access token
-      const newTokens = await authSessionService.refreshAccessToken(refreshToken)
+      const success = await clientAuthService.refreshSession()
       
-      if (newTokens) {
-        // Update cookies with new tokens
-        document.cookie = `access_token=${newTokens.accessToken}; path=/; secure; samesite=strict; max-age=${60 * 60}`
-        document.cookie = `refresh_token=${newTokens.refreshToken}; path=/; secure; samesite=strict; max-age=${7 * 24 * 60 * 60}`
-        
+      if (success) {
         setIsTokenExpired(false)
         console.log('✅ Session refreshed successfully')
       } else {
@@ -161,16 +145,8 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
 
   const signOut = async () => {
     try {
-      // Get refresh token from cookies
-      const refreshToken = document.cookie
-        .split('; ')
-        .find(row => row.startsWith('refresh_token='))
-        ?.split('=')[1]
-
-      // Revoke refresh token if exists
-      if (refreshToken) {
-        await authSessionService.revokeRefreshToken(refreshToken)
-      }
+      // Use client auth service to sign out
+      await clientAuthService.signOut()
 
       // Preserve important user data before clearing storage
       const portfolioData = localStorage.getItem('oryn_portfolio')
@@ -181,10 +157,6 @@ export const AuthProvider = ({ children }: { children: React.ReactNode }) => {
       
       // Clear all sessions and local storage
       await supabase.auth.signOut()
-      
-      // Clear authentication cookies
-      document.cookie = 'access_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
-      document.cookie = 'refresh_token=; path=/; expires=Thu, 01 Jan 1970 00:00:00 GMT'
       
       // Clear any cached data
       localStorage.clear()
