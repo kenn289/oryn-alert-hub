@@ -73,6 +73,8 @@ export default function MasterDashboard() {
   const [notificationMessage, setNotificationMessage] = useState('')
   const [notificationType, setNotificationType] = useState('info')
   const [isSendingNotification, setIsSendingNotification] = useState(false)
+  const [subscriptionStats, setSubscriptionStats] = useState<any>(null)
+  const [isRecalculatingStats, setIsRecalculatingStats] = useState(false)
 
   // Check if user is master account
   const isMasterAccount = user?.email === 'kennethoswin289@gmail.com'
@@ -94,9 +96,10 @@ export default function MasterDashboard() {
   const loadMasterData = async () => {
     try {
       setLoading(true)
-      const [usersResponse, ticketsResponse] = await Promise.all([
+      const [usersResponse, ticketsResponse, statsResponse] = await Promise.all([
         fetch('/api/master/users'),
-        fetch('/api/master/tickets')
+        fetch('/api/master/tickets'),
+        fetch('/api/admin/subscription-stats')
       ])
       
       // Handle users data with better error handling
@@ -133,6 +136,17 @@ export default function MasterDashboard() {
         } else {
           toast.error('Failed to load tickets data')
         }
+      }
+      
+      // Handle subscription stats
+      let statsData = null
+      if (statsResponse.ok) {
+        const statsResult = await statsResponse.json()
+        statsData = statsResult.data
+        setSubscriptionStats(statsData)
+      } else {
+        console.error('Failed to fetch subscription stats:', statsResponse.status)
+        toast.error('Failed to load subscription statistics')
       }
       
       setUsers(usersData)
@@ -212,6 +226,61 @@ export default function MasterDashboard() {
       }
     } catch (error) {
       toast.error('Failed to update ticket')
+    }
+  }
+
+  const recalculateStats = async () => {
+    try {
+      setIsRecalculatingStats(true)
+      
+      const response = await fetch('/api/admin/subscription-stats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'recalculate' })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        setSubscriptionStats(result.data)
+        toast.success('Statistics recalculated successfully')
+      } else {
+        toast.error('Failed to recalculate statistics')
+      }
+    } catch (error) {
+      console.error('Error recalculating stats:', error)
+      toast.error('Failed to recalculate statistics')
+    } finally {
+      setIsRecalculatingStats(false)
+    }
+  }
+
+  const syncWithRazorpay = async () => {
+    try {
+      setIsRecalculatingStats(true)
+      
+      const response = await fetch('/api/admin/subscription-stats', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ action: 'sync-razorpay' })
+      })
+
+      if (response.ok) {
+        const result = await response.json()
+        toast.success(`Synced ${result.data.synced} subscriptions, ${result.data.errors} errors`)
+        // Reload stats after sync
+        await loadMasterData()
+      } else {
+        toast.error('Failed to sync with Razorpay')
+      }
+    } catch (error) {
+      console.error('Error syncing with Razorpay:', error)
+      toast.error('Failed to sync with Razorpay')
+    } finally {
+      setIsRecalculatingStats(false)
     }
   }
 
@@ -423,7 +492,9 @@ export default function MasterDashboard() {
                 <div className="flex items-center justify-between">
                   <div>
                     <p className="text-sm font-medium text-green-500/80">Pro Users</p>
-                    <p className="text-3xl font-bold text-green-500">{users.filter(u => u.plan === 'pro').length}</p>
+                    <p className="text-3xl font-bold text-green-500">
+                      {subscriptionStats?.proUsers || users.filter(u => u.plan === 'pro').length}
+                    </p>
                   </div>
                   <div className="p-3 bg-green-500/20 rounded-lg group-hover:bg-green-500/30 transition-colors">
                     <CheckCircle className="h-6 w-6 text-green-500" />
@@ -446,6 +517,63 @@ export default function MasterDashboard() {
               </CardContent>
             </Card>
           </div>
+          
+          {/* Stats Management */}
+          <Card className="card-hover animate-scale-in bg-gradient-to-br from-blue-500/10 to-blue-500/5 border-blue-500/20 group" style={{ animationDelay: '0.5s' }}>
+            <CardContent className="p-6">
+              <div className="flex items-center justify-between">
+                <div>
+                  <h3 className="text-lg font-semibold text-blue-500/80 mb-2">Subscription Statistics</h3>
+                  <p className="text-sm text-blue-500/60 mb-4">
+                    Manage and sync subscription data with Razorpay
+                  </p>
+                  <div className="flex gap-3">
+                    <Button 
+                      onClick={recalculateStats}
+                      disabled={isRecalculatingStats}
+                      variant="outline"
+                      size="sm"
+                      className="border-blue-500/30 text-blue-500 hover:bg-blue-500/10"
+                    >
+                      {isRecalculatingStats ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-blue-500 mr-2"></div>
+                          Recalculating...
+                        </>
+                      ) : (
+                        <>
+                          <BarChart3 className="h-4 w-4 mr-2" />
+                          Recalculate Stats
+                        </>
+                      )}
+                    </Button>
+                    <Button 
+                      onClick={syncWithRazorpay}
+                      disabled={isRecalculatingStats}
+                      variant="outline"
+                      size="sm"
+                      className="border-green-500/30 text-green-500 hover:bg-green-500/10"
+                    >
+                      {isRecalculatingStats ? (
+                        <>
+                          <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-green-500 mr-2"></div>
+                          Syncing...
+                        </>
+                      ) : (
+                        <>
+                          <TrendingUp className="h-4 w-4 mr-2" />
+                          Sync with Razorpay
+                        </>
+                      )}
+                    </Button>
+                  </div>
+                </div>
+                <div className="p-3 bg-blue-500/20 rounded-lg group-hover:bg-blue-500/30 transition-colors">
+                  <DollarSign className="h-6 w-6 text-blue-500" />
+                </div>
+              </div>
+            </CardContent>
+          </Card>
         </div>
 
         <Tabs defaultValue="analytics" className="space-y-6">

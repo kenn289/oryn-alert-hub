@@ -1,5 +1,6 @@
 import { supabase } from './supabase'
 import { multiApiStockService } from './multi-api-stock-service'
+import { WatchlistProtectionService } from './watchlist-protection-service'
 
 export interface WatchlistItem {
   id: string
@@ -210,19 +211,31 @@ export class WatchlistService {
     currency: string = 'USD'
   ): Promise<{ success: boolean; message: string; item?: WatchlistItem }> {
     try {
+      // Create backup before adding item
+      await WatchlistProtectionService.createBackup(userId, 'before_update', {
+        reason: 'Before adding new watchlist item',
+        trigger: 'add_item'
+      })
+
+      // Validate ticker format
+      const cleanTicker = ticker.trim().toUpperCase()
+      if (!cleanTicker || cleanTicker.length === 0 || cleanTicker.length > 10) {
+        return { success: false, message: 'Invalid ticker symbol' }
+      }
+
       // Check if item already exists
       const { data: existing } = await supabase
         .from('watchlist_items')
         .select('id')
         .eq('user_id', userId)
-        .eq('ticker', ticker.toUpperCase())
+        .eq('ticker', cleanTicker)
         .eq('market', market)
         .single()
 
       if (existing) {
         return { 
           success: false, 
-          message: `${ticker} is already in your watchlist` 
+          message: `${cleanTicker} is already in your watchlist` 
         }
       }
 
@@ -230,8 +243,8 @@ export class WatchlistService {
         .from('watchlist_items')
         .insert({
           user_id: userId,
-          ticker: ticker.toUpperCase(),
-          name: name || ticker.toUpperCase(),
+          ticker: cleanTicker,
+          name: (name && name.trim()) ? name.trim().substring(0, 100) : cleanTicker,
           market,
           currency
         })
@@ -255,9 +268,15 @@ export class WatchlistService {
         addedAt: data.added_at
       }
 
+      // Validate watchlist after adding
+      const validation = await WatchlistProtectionService.validateWatchlist(userId)
+      if (!validation.isValid) {
+        console.warn('Watchlist validation failed after adding item:', validation.errors)
+      }
+
       return { 
         success: true, 
-        message: `${ticker} added to watchlist!`,
+        message: `${cleanTicker} added to watchlist!`,
         item: newItem
       }
     } catch (error) {
@@ -272,6 +291,12 @@ export class WatchlistService {
     userId: string
   ): Promise<{ success: boolean; message: string }> {
     try {
+      // Create backup before removing item
+      await WatchlistProtectionService.createBackup(userId, 'before_delete', {
+        reason: 'Before removing watchlist item',
+        trigger: 'remove_item'
+      })
+
       const { error } = await supabase
         .from('watchlist_items')
         .delete()
@@ -281,6 +306,12 @@ export class WatchlistService {
       if (error) {
         console.error('Error removing watchlist item:', error)
         return { success: false, message: 'Failed to remove watchlist item' }
+      }
+
+      // Validate watchlist after removal
+      const validation = await WatchlistProtectionService.validateWatchlist(userId)
+      if (!validation.isValid) {
+        console.warn('Watchlist validation failed after removing item:', validation.errors)
       }
 
       return { success: true, message: 'Item removed from watchlist!' }

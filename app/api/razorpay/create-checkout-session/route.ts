@@ -61,14 +61,25 @@ export async function POST(request: NextRequest) {
     )
     
     try {
-      // First, clear any old pending payments for this user
-      await supabase
-        .from('payment_orders')
-        .delete()
-        .eq('user_id', userId)
-        .eq('status', 'created')
+      // Import payment state service
+      const { paymentStateService } = await import('../../../../src/lib/payment-state-service')
+      
+      // First, cancel any existing pending payments for this user
+      const existingPayment = await paymentStateService.hasPendingPayment(userId)
+      if (existingPayment) {
+        await paymentStateService.handlePaymentCancellation(existingPayment.orderId)
+      }
 
-      // Then insert the new payment order
+      // Create new payment state
+      const paymentState = await paymentStateService.createPaymentState(
+        userId,
+        order.id,
+        plan,
+        amount,
+        currency
+      )
+
+      // Also store in payment_orders for backward compatibility
       const { error: dbError } = await supabase
         .from('payment_orders')
         .insert({

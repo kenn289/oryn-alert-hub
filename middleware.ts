@@ -1,5 +1,6 @@
 import { NextResponse } from 'next/server'
 import type { NextRequest } from 'next/server'
+import { authSessionService } from './src/lib/auth-session-service'
 
 // Define route access levels
 const ROUTE_ACCESS = {
@@ -59,25 +60,51 @@ export function middleware(request: NextRequest) {
     return NextResponse.next()
   }
   
-  // For protected routes, redirect to auth if not authenticated
+  // For protected routes, check JWT authentication
   if (isProtectedRoute(pathname)) {
-    // Check for authentication token in cookies
-    const authToken = request.cookies.get('oryn-auth-token')
+    // Check for access token in cookies
+    const accessToken = request.cookies.get('access_token')?.value
     
-    if (!authToken) {
+    if (!accessToken) {
       // Redirect to auth page with return URL
       const authUrl = new URL('/auth', request.url)
       authUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(authUrl)
     }
+
+    // Verify access token
+    const tokenData = authSessionService.verifyAccessToken(accessToken)
+    
+    if (!tokenData) {
+      // Try to refresh the token
+      const refreshToken = request.cookies.get('refresh_token')?.value
+      
+      if (!refreshToken) {
+        const authUrl = new URL('/auth', request.url)
+        authUrl.searchParams.set('redirect', pathname)
+        return NextResponse.redirect(authUrl)
+      }
+      
+      // If refresh token exists, let the client handle the refresh
+      // The client will attempt to refresh and redirect if needed
+    }
   }
   
   // For Pro routes, check subscription status
   if (isProRoute(pathname)) {
-    const authToken = request.cookies.get('oryn-auth-token')
+    const accessToken = request.cookies.get('access_token')?.value
     const subscriptionStatus = request.cookies.get('oryn-subscription-status')
     
-    if (!authToken) {
+    if (!accessToken) {
+      const authUrl = new URL('/auth', request.url)
+      authUrl.searchParams.set('redirect', pathname)
+      return NextResponse.redirect(authUrl)
+    }
+    
+    // Verify access token
+    const tokenData = authSessionService.verifyAccessToken(accessToken)
+    
+    if (!tokenData) {
       const authUrl = new URL('/auth', request.url)
       authUrl.searchParams.set('redirect', pathname)
       return NextResponse.redirect(authUrl)

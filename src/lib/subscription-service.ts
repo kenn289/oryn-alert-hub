@@ -1,6 +1,7 @@
 import { paymentService } from './payment-service'
 import { UserPlan, PLANS } from './watchlist'
 import { supabase } from './supabase'
+import { ManualProService } from './manual-pro-service'
 
 export interface SubscriptionStatus {
   hasActiveSubscription: boolean
@@ -61,6 +62,21 @@ export class SubscriptionService {
           isExpired: false,
           daysRemaining: null,
           isMasterAccount: true
+        }
+      }
+
+      // Check for manual Pro override first
+      const hasManualProOverride = await ManualProService.hasValidManualProAccess(userId)
+      if (hasManualProOverride) {
+        console.log(`🔓 Manual Pro override active for user ${userId}`)
+        return {
+          hasActiveSubscription: true,
+          plan: 'pro',
+          isTrial: false,
+          trialEndsAt: null,
+          isExpired: false,
+          daysRemaining: null,
+          isMasterAccount: false
         }
       }
 

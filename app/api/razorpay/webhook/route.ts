@@ -29,7 +29,27 @@ export async function POST(request: NextRequest) {
     }
 
     const event = JSON.parse(body)
-    console.log('Razorpay webhook event:', event.type)
+    console.log('🔔 Razorpay webhook event received:', event.type)
+
+    // Import webhook logging service
+    const { webhookLoggingService } = await import('../../../../src/lib/webhook-logging-service')
+
+    // Process webhook with comprehensive logging
+    const success = await webhookLoggingService.processWebhookEvent(
+      event.type,
+      event.event_id || event.id,
+      event,
+      event.payload?.payment?.entity?.order_id || event.payload?.order?.entity?.id,
+      event.payload?.payment?.entity?.id,
+      event.payload?.payment?.entity?.notes?.userId,
+      event.payload?.payment?.entity?.amount,
+      event.payload?.payment?.entity?.currency
+    )
+
+    if (!success) {
+      console.error('❌ Failed to process webhook event:', event.type)
+      return NextResponse.json({ error: 'Webhook processing failed' }, { status: 500 })
+    }
 
     // Handle different payment events
     switch (event.type) {
@@ -46,7 +66,7 @@ export async function POST(request: NextRequest) {
         break
       
       default:
-        console.log('Unhandled webhook event:', event.type)
+        console.log('ℹ️ Unhandled webhook event:', event.type)
     }
 
     return NextResponse.json({ received: true })
@@ -59,9 +79,30 @@ export async function POST(request: NextRequest) {
 
 async function handlePaymentCaptured(payment: any) {
   try {
-    console.log('Payment captured:', payment.id)
+    console.log('💰 Payment captured:', payment.id)
     
-    // Update payment status in database
+    // Import services
+    const { paymentStateService } = await import('../../../../src/lib/payment-state-service')
+    const { webhookLoggingService } = await import('../../../../src/lib/webhook-logging-service')
+    
+    // Handle payment success using payment state service
+    const success = await paymentStateService.handlePaymentSuccess(
+      payment.order_id,
+      payment.id
+    )
+
+    if (!success) {
+      console.error('Failed to handle payment success for order:', payment.order_id)
+      return
+    }
+
+    // Confirm revenue transaction
+    await webhookLoggingService.confirmRevenueTransaction(
+      payment.order_id,
+      payment.id
+    )
+
+    // Also update payment_orders for backward compatibility
     const { error } = await supabase
       .from('payment_orders')
       .update({
@@ -72,38 +113,20 @@ async function handlePaymentCaptured(payment: any) {
       .eq('order_id', payment.order_id)
 
     if (error) {
-      console.error('Error updating payment status:', error)
+      console.error('Error updating payment_orders:', error)
     }
 
-    // Create or update user subscription
-    const { data: orderData } = await supabase
-      .from('payment_orders')
-      .select('user_id, plan')
-      .eq('order_id', payment.order_id)
-      .single()
-
-    if (orderData) {
-      const trialEndsAt = new Date()
-      trialEndsAt.setDate(trialEndsAt.getDate() + 7) // 7-day trial
-
-      const { error: subscriptionError } = await supabase
-        .from('user_subscriptions')
-        .upsert({
-          user_id: orderData.user_id,
-          plan: orderData.plan,
-          status: 'active',
-          trial: true,
-          trial_ends_at: trialEndsAt.toISOString(),
-          updated_at: new Date().toISOString()
-        })
-
-      if (subscriptionError) {
-        console.error('Error creating subscription:', subscriptionError)
-      }
-    }
+    console.log('✅ Payment processed and revenue confirmed for order:', payment.order_id)
 
   } catch (error) {
     console.error('Error handling payment captured:', error)
+    
+    // Mark revenue transaction as failed
+    const { webhookLoggingService } = await import('../../../../src/lib/webhook-logging-service')
+    await webhookLoggingService.markRevenueTransactionFailed(
+      payment.order_id,
+      error instanceof Error ? error.message : 'Unknown error'
+    )
   }
 }
 
@@ -111,7 +134,20 @@ async function handlePaymentFailed(payment: any) {
   try {
     console.log('Payment failed:', payment.id)
     
-    // Update payment status in database
+    // Import payment state service
+    const { paymentStateService } = await import('../../../../src/lib/payment-state-service')
+    
+    // Handle payment failure using payment state service
+    const success = await paymentStateService.handlePaymentFailure(
+      payment.order_id,
+      payment.error_description || 'Payment failed'
+    )
+
+    if (!success) {
+      console.error('Failed to handle payment failure for order:', payment.order_id)
+    }
+
+    // Also update payment_orders for backward compatibility
     const { error } = await supabase
       .from('payment_orders')
       .update({
@@ -122,8 +158,10 @@ async function handlePaymentFailed(payment: any) {
       .eq('order_id', payment.order_id)
 
     if (error) {
-      console.error('Error updating failed payment status:', error)
+      console.error('Error updating payment_orders:', error)
     }
+
+    console.log('❌ Payment failed for order:', payment.order_id)
 
   } catch (error) {
     console.error('Error handling payment failed:', error)

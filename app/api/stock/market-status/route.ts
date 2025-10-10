@@ -84,36 +84,19 @@ const marketConfigs = {
   }
 }
 
-function getMarketStatus(market: string) {
+async function getMarketStatus(market: string) {
   const config = marketConfigs[market as keyof typeof marketConfigs]
   if (!config) {
     throw new Error(`Unsupported market: ${market}`)
   }
 
-  const now = new Date()
-  const currentTime = now.toISOString()
+  // Import timezone service
+  const { timezoneService } = await import('../../../../src/lib/timezone-service')
   
-  // Simple market status logic
-  const hour = now.getHours()
-  const day = now.getDay()
-  
-  // Check if it's a weekday
-  const isWeekday = day >= 1 && day <= 5
-  
-  // Simple open/closed logic based on time
-  let isOpen = false
-  let marketStatus = 'closed'
-  
-  if (isWeekday) {
-    if (hour >= 9 && hour < 16) {
-      isOpen = true
-      marketStatus = 'open'
-    } else if (hour >= 8 && hour < 9) {
-      marketStatus = 'pre-market'
-    } else if (hour >= 16 && hour < 20) {
-      marketStatus = 'after-hours'
-    }
-  }
+  const marketTime = timezoneService.getMarketTime(market)
+  const isOpen = timezoneService.isMarketOpen(market)
+  const status = timezoneService.getMarketStatus(market)
+  const nextOpen = timezoneService.getNextMarketOpen(market)
 
   return {
     country: market,
@@ -121,11 +104,11 @@ function getMarketStatus(market: string) {
     exchange: config.exchanges[0],
     timezone: config.timezone,
     isOpen,
-    nextOpen: isOpen ? null : new Date(now.getTime() + 24 * 60 * 60 * 1000).toISOString(),
-    nextClose: isOpen ? new Date(now.getTime() + 7 * 60 * 60 * 1000).toISOString() : null,
+    nextOpen: nextOpen.toISOString(),
+    nextClose: isOpen ? new Date(marketTime.getTime() + 7 * 60 * 60 * 1000).toISOString() : null,
     tradingHours: config.tradingHours,
-    currentTime,
-    marketStatus
+    currentTime: marketTime.toISOString(),
+    marketStatus: status
   }
 }
 
@@ -162,28 +145,12 @@ export async function GET(request: NextRequest) {
       const markets = ['US', 'IN', 'GB', 'JP', 'AU', 'CA', 'DE', 'FR']
       const allMarkets = []
       
-      for (const marketCode of markets) {
-        try {
-          const marketInfo = getMarketStatus(marketCode)
-          allMarkets.push(marketInfo)
-        } catch (error) {
-          console.error(`Error getting market info for ${marketCode}:`, error)
-          // Add fallback market info
-          allMarkets.push({
-            country: marketCode,
-            currency: 'USD',
-            exchange: 'Unknown',
-            timezone: 'UTC',
-            isOpen: false,
-            marketStatus: 'closed',
-            currentTime: new Date().toISOString(),
-            tradingHours: {
-              open: '09:30',
-              close: '16:00',
-              days: ['Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday']
-            }
-          })
-        }
+      // Use timezone service for all markets
+      const { timezoneService } = await import('../../../../src/lib/timezone-service')
+      const allMarketStatuses = timezoneService.getAllMarketStatuses()
+      
+      for (const [marketCode, status] of Object.entries(allMarketStatuses)) {
+        allMarkets.push(status)
       }
       
       return NextResponse.json({
